@@ -33,13 +33,6 @@ const envSchema = z.object({
   S3_REGION: z.string().default("us-east-1"),
   S3_PUBLIC_URL: z.string().optional(),
 
-  // Redis
-  REDIS_HOST: z.string().default("localhost"),
-  REDIS_PORT: z.coerce.number().default(6379),
-  REDIS_PASSWORD: z.string().optional(),
-  REDIS_DB: z.coerce.number().default(0),
-  REDIS_TTL: z.coerce.number().default(300),
-
   // SMTP Email
   SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),
   SMTP_PORT: z.coerce.number().default(587),
@@ -112,14 +105,6 @@ export const twilioConfig = registerAs("twilio", () => ({
   authToken: process.env.TWILIO_AUTH_TOKEN,
   phoneNumber: process.env.TWILIO_PHONE,
   enabled: !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN,
-}));
-
-export const redisConfig = registerAs("redis", () => ({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379", 10),
-  password: process.env.REDIS_PASSWORD,
-  db: parseInt(process.env.REDIS_DB || "0", 10),
-  ttl: parseInt(process.env.REDIS_TTL || "300", 10),
 }));
 
 export const s3Config = registerAs("s3", () => ({
