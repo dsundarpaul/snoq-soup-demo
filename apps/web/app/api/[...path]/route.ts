@@ -25,7 +25,9 @@ const FORWARD_REQUEST_HEADERS = [
   "x-device-id",
 ] as const;
 
-const DEFAULT_DEV_BACKEND = "http://localhost:3001";
+// const DEFAULT_DEV_BACKEND = "http://localhost:3001";
+const DEFAULT_DEV_BACKEND =
+  "snoq-soup-demo-ipsjhyprt-dsundarpauls-projects.vercel.app";
 
 function getBackendBase(): string | null {
   const raw = process.env.BACKEND_URL?.trim();
@@ -52,7 +54,10 @@ function applyUpstreamHeaders(res: NextResponse, upstream: Response) {
   });
 }
 
-async function proxy(req: NextRequest, pathSegments: string[]): Promise<Response> {
+async function proxy(
+  req: NextRequest,
+  pathSegments: string[]
+): Promise<Response> {
   const base = getBackendBase();
   if (!base) {
     return NextResponse.json(
@@ -60,7 +65,7 @@ async function proxy(req: NextRequest, pathSegments: string[]): Promise<Response
         message:
           "BACKEND_URL is not set. Add it to your environment (e.g. BACKEND_URL=https://your-api-origin) for production.",
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
