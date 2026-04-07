@@ -1,0 +1,40 @@
+import { Global, Module } from "@nestjs/common";
+import { MongooseModule } from "@nestjs/mongoose";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { DatabaseService } from "./database.service";
+
+import { Merchant, MerchantSchema } from "./schemas/merchant.schema";
+import { Drop, DropSchema } from "./schemas/drop.schema";
+import { Voucher, VoucherSchema } from "./schemas/voucher.schema";
+import { Hunter, HunterSchema } from "./schemas/hunter.schema";
+import { Admin, AdminSchema } from "./schemas/admin.schema";
+import { PromoCode, PromoCodeSchema } from "./schemas/promo-code.schema";
+import {
+  RefreshToken,
+  RefreshTokenSchema,
+} from "./schemas/refresh-token.schema";
+
+@Global()
+@Module({
+  imports: [
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>("MONGODB_URI"),
+      }),
+      inject: [ConfigService],
+    }),
+    MongooseModule.forFeature([
+      { name: Merchant.name, schema: MerchantSchema },
+      { name: Drop.name, schema: DropSchema },
+      { name: Voucher.name, schema: VoucherSchema },
+      { name: Hunter.name, schema: HunterSchema },
+      { name: Admin.name, schema: AdminSchema },
+      { name: PromoCode.name, schema: PromoCodeSchema },
+      { name: RefreshToken.name, schema: RefreshTokenSchema },
+    ]),
+  ],
+  providers: [DatabaseService],
+  exports: [DatabaseService],
+})
+export class DatabaseModule {}
