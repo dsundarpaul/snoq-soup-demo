@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Types } from "mongoose";
-import { DatabaseService } from "@/database/database.service";
-import { Hunter } from "@/database/schemas/hunter.schema";
+import { DatabaseService } from "../../database/database.service";
+import { Hunter } from "../../database/schemas/hunter.schema";
 import { UpdateProfileDto } from "./dto/request/update-profile.dto";
 import { HunterResponseDto } from "./dto/response/hunter-response.dto";
 import {

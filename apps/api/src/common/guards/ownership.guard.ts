@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Request } from "express";
-import { DatabaseService } from "@/database/database.service";
+import { DatabaseService } from "../../database/database.service";
 import { Types } from "mongoose";
 
 interface RequestWithUser extends Request {

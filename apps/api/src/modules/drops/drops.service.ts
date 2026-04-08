@@ -4,8 +4,8 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PipelineStage, Types } from "mongoose";
-import { DatabaseService } from "@/database/database.service";
-import { Drop, DropDocument } from "@/database/schemas/drop.schema";
+import { DatabaseService } from "../../database/database.service";
+import { Drop, DropDocument } from "../../database/schemas/drop.schema";
 import { CreateDropDto } from "./dto/request/create-drop.dto";
 import { UpdateDropDto } from "./dto/request/update-drop.dto";
 import { DropResponseDto } from "./dto/response/drop-response.dto";

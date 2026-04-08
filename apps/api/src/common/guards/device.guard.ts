@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { Request } from "express";
-import { DatabaseService } from "@/database/database.service";
+import { DatabaseService } from "../../database/database.service";
 
 interface RequestWithDevice extends Request {
   deviceId?: string;

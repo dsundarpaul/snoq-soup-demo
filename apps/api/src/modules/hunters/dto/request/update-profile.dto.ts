@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsEnum, IsDateString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { Gender } from "@/database/schemas/hunter.schema";
+import { Gender } from "../../../../database/schemas/hunter.schema";
 
 export class UpdateProfileDto {
   @ApiProperty({

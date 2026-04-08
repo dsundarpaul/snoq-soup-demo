@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
-import { config } from "@/config/app.config";
+import { config } from "../../config/app.config";
 import {
   S3Client,
   PutObjectCommand,

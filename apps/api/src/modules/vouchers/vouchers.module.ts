@@ -2,13 +2,13 @@ import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { VouchersService } from "./vouchers.service";
 import { VouchersController } from "./vouchers.controller";
-import { Voucher, VoucherSchema } from "@/database/schemas/voucher.schema";
-import { Drop, DropSchema } from "@/database/schemas/drop.schema";
+import { Voucher, VoucherSchema } from "../../database/schemas/voucher.schema";
+import { Drop, DropSchema } from "../../database/schemas/drop.schema";
 import {
   PromoCode,
   PromoCodeSchema,
-} from "@/database/schemas/promo-code.schema";
-import { Hunter, HunterSchema } from "@/database/schemas/hunter.schema";
+} from "../../database/schemas/promo-code.schema";
+import { Hunter, HunterSchema } from "../../database/schemas/hunter.schema";
 
 @Module({
   imports: [

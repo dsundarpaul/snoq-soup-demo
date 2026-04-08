@@ -20,14 +20,14 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { PromoCodesService } from "./promo-codes.service";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { RolesGuard } from "@/common/guards/roles.guard";
-import { Roles } from "@/common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { Roles } from "../../common/decorators/roles.decorator";
 import {
   CurrentUser,
   CurrentUserType,
-} from "@/common/decorators/current-user.decorator";
-import { UserRole } from "@/common/enums/user-role.enum";
+} from "../../common/decorators/current-user.decorator";
+import { UserRole } from "../../common/enums/user-role.enum";
 import { CreatePromoCodeDto } from "./dto/request/create-promo-code.dto";
 import { BulkCreatePromoCodesDto } from "./dto/request/bulk-create-promo-codes.dto";
 import { PromoCodeResponseDto } from "./dto/response/promo-code-response.dto";
@@ -35,7 +35,7 @@ import {
   PromoCodeListDto,
   PromoCodeStatsDto,
 } from "./dto/response/promo-code-list.dto";
-import { PromoCodeStatus } from "@/database/schemas/promo-code.schema";
+import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 
 @ApiTags("Promo Codes")
 @Controller("merchants/me/drops/:dropId/codes")

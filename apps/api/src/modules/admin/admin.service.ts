@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PipelineStage, Types } from "mongoose";
-import { DatabaseService } from "@/database/database.service";
+import { DatabaseService } from "../../database/database.service";
 import { UpdateMerchantAdminDto } from "./dto/request/update-merchant-admin.dto";
 import { AdminStatsDto } from "./dto/response/admin-stats.dto";
 import {
@@ -17,7 +17,7 @@ import {
   MerchantListItemDto,
 } from "./dto/response/merchant-list.dto";
 import { UserListDto, UserListItemDto } from "./dto/response/user-list.dto";
-import { DropResponseDto } from "@/modules/drops/dto/response/drop-response.dto";
+import { DropResponseDto } from "../drops/dto/response/drop-response.dto";
 
 export interface PaginationQuery {
   page?: number;

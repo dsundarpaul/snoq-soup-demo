@@ -9,11 +9,11 @@ import { JwtService } from "@nestjs/jwt";
 import { randomUUID, createHash } from "crypto";
 import * as bcrypt from "bcryptjs";
 
-import { DatabaseService } from "@/database/database.service";
-import { Merchant, MerchantDocument } from "@/database/schemas/merchant.schema";
-import { Hunter, HunterDocument } from "@/database/schemas/hunter.schema";
-import { Admin, AdminDocument } from "@/database/schemas/admin.schema";
-import { UserType } from "@/database/schemas/refresh-token.schema";
+import { DatabaseService } from "../../database/database.service";
+import { Merchant, MerchantDocument } from "../../database/schemas/merchant.schema";
+import { Hunter, HunterDocument } from "../../database/schemas/hunter.schema";
+import { Admin, AdminDocument } from "../../database/schemas/admin.schema";
+import { UserType } from "../../database/schemas/refresh-token.schema";
 import { RegisterMerchantDto } from "./dto/request/register-merchant.dto";
 import { RegisterHunterDto } from "./dto/request/register-hunter.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";

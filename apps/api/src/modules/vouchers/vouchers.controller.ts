@@ -18,16 +18,16 @@ import {
 } from "@nestjs/swagger";
 import { Throttle, SkipThrottle } from "@nestjs/throttler";
 import { VouchersService } from "./vouchers.service";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { RolesGuard } from "@/common/guards/roles.guard";
-import { Roles } from "@/common/decorators/roles.decorator";
-import { Public } from "@/common/decorators/public.decorator";
-import { DeviceGuard } from "@/common/guards/device.guard";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { Public } from "../../common/decorators/public.decorator";
+import { DeviceGuard } from "../../common/guards/device.guard";
 import {
   CurrentUser,
   CurrentUserType,
-} from "@/common/decorators/current-user.decorator";
-import { DeviceId } from "@/common/decorators/device-id.decorator";
+} from "../../common/decorators/current-user.decorator";
+import { DeviceId } from "../../common/decorators/device-id.decorator";
 import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { SendEmailDto } from "./dto/request/send-email.dto";

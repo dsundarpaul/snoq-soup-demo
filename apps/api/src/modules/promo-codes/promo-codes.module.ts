@@ -5,8 +5,8 @@ import { PromoCodesController } from "./promo-codes.controller";
 import {
   PromoCode,
   PromoCodeSchema,
-} from "@/database/schemas/promo-code.schema";
-import { Drop, DropSchema } from "@/database/schemas/drop.schema";
+} from "../../database/schemas/promo-code.schema";
+import { Drop, DropSchema } from "../../database/schemas/drop.schema";
 
 @Module({
   imports: [

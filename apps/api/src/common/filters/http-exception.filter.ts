@@ -7,7 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { config } from "@/config/app.config";
+import { config } from "../../config/app.config";
 
 interface ErrorResponse {
   success: false;

@@ -5,11 +5,11 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { Types } from "mongoose";
-import { DatabaseService } from "@/database/database.service";
+import { DatabaseService } from "../../database/database.service";
 import {
   PromoCode,
   PromoCodeStatus,
-} from "@/database/schemas/promo-code.schema";
+} from "../../database/schemas/promo-code.schema";
 import { CreatePromoCodeDto } from "./dto/request/create-promo-code.dto";
 import { BulkCreatePromoCodesDto } from "./dto/request/bulk-create-promo-codes.dto";
 import { PromoCodeResponseDto } from "./dto/response/promo-code-response.dto";

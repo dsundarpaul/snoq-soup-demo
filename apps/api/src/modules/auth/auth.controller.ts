@@ -25,8 +25,8 @@ import { ResetPasswordDto } from "./dto/request/reset-password.dto";
 import { RefreshTokenDto } from "./dto/request/refresh-token.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";
 import { TokenResponseDto } from "./dto/response/token-response.dto";
-import { UserType } from "@/database/schemas/refresh-token.schema";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
+import { UserType } from "../../database/schemas/refresh-token.schema";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
 @ApiTags("Authentication")
 @Controller("auth")

@@ -30,9 +30,9 @@ import {
   MerchantListItemDto,
 } from "./dto/response/merchant-list.dto";
 import { UserListDto } from "./dto/response/user-list.dto";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { RolesGuard } from "@/common/guards/roles.guard";
-import { Roles } from "@/common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { Roles } from "../../common/decorators/roles.decorator";
 
 @ApiTags("Admin")
 @Controller("admin")

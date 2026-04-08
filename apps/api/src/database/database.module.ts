@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { config } from "@/config/app.config";
+import { config } from "../config/app.config";
 import { DatabaseService } from "./database.service";
 
 import { Merchant, MerchantSchema } from "./schemas/merchant.schema";

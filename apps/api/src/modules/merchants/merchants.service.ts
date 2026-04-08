@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PipelineStage, Types, FlattenMaps } from "mongoose";
 import { randomBytes } from "crypto";
-import { DatabaseService } from "@/database/database.service";
-import { MerchantDocument } from "@/database/schemas/merchant.schema";
+import { DatabaseService } from "../../database/database.service";
+import { MerchantDocument } from "../../database/schemas/merchant.schema";
 import { UpdateMerchantDto } from "./dto/request/update-merchant.dto";
 import { MerchantResponseDto } from "./dto/response/merchant-response.dto";
 import { MerchantPublicResponseDto } from "./dto/response/merchant-public-response.dto";

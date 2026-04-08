@@ -21,14 +21,14 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { DropsService } from "./drops.service";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { RolesGuard } from "@/common/guards/roles.guard";
-import { Roles } from "@/common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { Roles } from "../../common/decorators/roles.decorator";
 import {
   CurrentUser,
   CurrentUserType,
-} from "@/common/decorators/current-user.decorator";
-import { UserRole } from "@/common/enums/user-role.enum";
+} from "../../common/decorators/current-user.decorator";
+import { UserRole } from "../../common/enums/user-role.enum";
 import { CreateDropDto } from "./dto/request/create-drop.dto";
 import { UpdateDropDto } from "./dto/request/update-drop.dto";
 import { DropResponseDto } from "./dto/response/drop-response.dto";

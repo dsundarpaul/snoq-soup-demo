@@ -7,10 +7,10 @@ import {
 } from "@nestjs/common";
 import { Types, FlattenMaps } from "mongoose";
 import { randomBytes } from "crypto";
-import { DatabaseService } from "@/database/database.service";
-import { DropDocument } from "@/database/schemas/drop.schema";
-import { VoucherDocument } from "@/database/schemas/voucher.schema";
-import { PromoCodeStatus } from "@/database/schemas/promo-code.schema";
+import { DatabaseService } from "../../database/database.service";
+import { DropDocument } from "../../database/schemas/drop.schema";
+import { VoucherDocument } from "../../database/schemas/voucher.schema";
+import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { VoucherResponseDto } from "./dto/response/voucher-response.dto";

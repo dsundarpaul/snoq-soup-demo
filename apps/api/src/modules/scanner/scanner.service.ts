@@ -5,8 +5,8 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { Types } from "mongoose";
-import { DatabaseService } from "@/database/database.service";
-import { MerchantDocument } from "@/database/schemas/merchant.schema";
+import { DatabaseService } from "../../database/database.service";
+import { MerchantDocument } from "../../database/schemas/merchant.schema";
 import { VouchersService } from "../vouchers/vouchers.service";
 import {
   ScannerValidationDto,

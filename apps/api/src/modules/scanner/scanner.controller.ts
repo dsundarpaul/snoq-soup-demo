@@ -9,7 +9,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import { Public } from "@/common/decorators/public.decorator";
+import { Public } from "../../common/decorators/public.decorator";
 import { ScannerService } from "./scanner.service";
 import { ScannerValidationDto } from "./dto/response/scanner-validation.dto";
 import { RedeemByScannerDto } from "./dto/request/redeem-by-scanner.dto";

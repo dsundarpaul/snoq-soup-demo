@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { config } from "@/config/app.config";
+import { config } from "../../../config/app.config";
 import { AuthService } from "../auth.service";
-import { UserType } from "@/database/schemas/refresh-token.schema";
+import { UserType } from "../../../database/schemas/refresh-token.schema";
 
 export interface JwtPayload {
   sub: string;

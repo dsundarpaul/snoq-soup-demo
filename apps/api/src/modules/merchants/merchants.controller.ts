@@ -16,14 +16,14 @@ import {
   ApiBearerAuth,
 } from "@nestjs/swagger";
 import { MerchantsService } from "./merchants.service";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { RolesGuard } from "@/common/guards/roles.guard";
-import { Roles } from "@/common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { Roles } from "../../common/decorators/roles.decorator";
 import {
   CurrentUser,
   CurrentUserType,
-} from "@/common/decorators/current-user.decorator";
-import { UserRole } from "@/common/enums/user-role.enum";
+} from "../../common/decorators/current-user.decorator";
+import { UserRole } from "../../common/enums/user-role.enum";
 import { UpdateMerchantDto } from "./dto/request/update-merchant.dto";
 import { GenerateScannerTokenDto } from "./dto/request/generate-scanner-token.dto";
 import { MerchantResponseDto } from "./dto/response/merchant-response.dto";

@@ -18,11 +18,11 @@ import {
 } from "@nestjs/swagger";
 import { Response } from "express";
 import { UploadService } from "./upload.service";
-import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import {
   CurrentUser,
   CurrentUserType,
-} from "@/common/decorators/current-user.decorator";
+} from "../../common/decorators/current-user.decorator";
 import { PresignUploadDto } from "./dto/request/presign-upload.dto";
 import { PresignResponseDto } from "./dto/response/presign-response.dto";
 
