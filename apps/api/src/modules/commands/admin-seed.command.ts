@@ -1,6 +1,6 @@
 import { Command, CommandRunner, Option } from "nest-commander";
 import { DatabaseService } from "@/database/database.service";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 
 interface AdminSeedOptions {
   password: string;

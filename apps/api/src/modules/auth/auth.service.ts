@@ -5,10 +5,9 @@ import {
   ConflictException,
   ForbiddenException,
 } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { randomUUID, createHash } from "crypto";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 
 import { DatabaseService } from "@/database/database.service";
 import { Merchant, MerchantDocument } from "@/database/schemas/merchant.schema";
@@ -33,7 +32,6 @@ export class AuthService {
   constructor(
     private readonly database: DatabaseService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
   ) {}
 
   private hashToken(token: string): string {

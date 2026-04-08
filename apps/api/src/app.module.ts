@@ -1,8 +1,6 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
-import { appConfig, minioConfig, s3Config } from "./config/app.config";
 import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { MerchantsModule } from "./modules/merchants/merchants.module";
@@ -17,13 +15,6 @@ import { UploadModule } from "./modules/upload/upload.module";
 
 @Module({
   imports: [
-    // Configuration
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [appConfig, minioConfig, s3Config],
-      cache: true,
-    }),
-
     // Rate limiting
     ThrottlerModule.forRoot({
       throttlers: [

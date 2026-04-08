@@ -7,6 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
+import { config } from "@/config/app.config";
 
 interface ErrorResponse {
   success: false;
@@ -30,7 +31,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse();
 
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = config.NODE_ENV === "production";
 
     // Build error response
     const errorResponse: ErrorResponse = {

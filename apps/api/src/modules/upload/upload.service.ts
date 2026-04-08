@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { config } from "@/config/app.config";
 import {
   S3Client,
   PutObjectCommand,
@@ -23,42 +23,19 @@ export class UploadService {
   private publicBaseUrl!: string;
   private readonly PRESIGN_EXPIRY_SECONDS = 300; // 5 minutes
 
-  constructor(private configService: ConfigService) {
+  constructor() {
     this.configureMinIO();
   }
 
   configureMinIO(): void {
-    // Support both S3_* and MINIO_* environment variable naming
-    const endpoint =
-      this.configService.get<string>("S3_ENDPOINT") ||
-      this.configService.get<string>("MINIO_ENDPOINT") ||
-      "http://localhost:9000";
+    const { storage } = config;
+    const endpoint = storage.endpoint;
+    const region = storage.region;
+    const accessKeyId = storage.accessKey;
+    const secretAccessKey = storage.secretKey;
 
-    const region =
-      this.configService.get<string>("S3_REGION") ||
-      this.configService.get<string>("MINIO_REGION") ||
-      "us-east-1";
-
-    const accessKeyId =
-      this.configService.get<string>("S3_ACCESS_KEY") ||
-      this.configService.get<string>("MINIO_ACCESS_KEY") ||
-      "";
-
-    const secretAccessKey =
-      this.configService.get<string>("S3_SECRET_KEY") ||
-      this.configService.get<string>("MINIO_SECRET_KEY") ||
-      "";
-
-    this.bucketName =
-      this.configService.get<string>("S3_BUCKET_NAME") ||
-      this.configService.get<string>("MINIO_BUCKET_NAME") ||
-      this.configService.get<string>("MINIO_BUCKET") ||
-      "souqsnap-uploads";
-
-    this.publicBaseUrl =
-      this.configService.get<string>("S3_PUBLIC_URL") ||
-      this.configService.get<string>("MINIO_PUBLIC_URL") ||
-      endpoint;
+    this.bucketName = storage.bucket;
+    this.publicBaseUrl = storage.publicUrl;
 
     if (!endpoint || !accessKeyId || !secretAccessKey) {
       console.warn(

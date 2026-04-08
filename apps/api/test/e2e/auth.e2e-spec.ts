@@ -5,7 +5,7 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import * as request from "supertest";
 import { randomUUID } from "crypto";
 import { JwtService } from "@nestjs/jwt";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import { ThrottlerStorage } from "@nestjs/throttler";
 
 import { AppModule } from "../../src/app.module";

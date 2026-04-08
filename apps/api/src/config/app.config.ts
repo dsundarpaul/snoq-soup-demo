@@ -1,127 +1,94 @@
-import { registerAs } from "@nestjs/config";
-import { z } from "zod";
+import * as dotenv from "dotenv";
 
-const envSchema = z.object({
-  // Application
-  NODE_ENV: z
-    .enum(["development", "staging", "production", "test"])
-    .default("development"),
-  PORT: z.coerce.number().default(3001),
-  CORS_ORIGIN: z.string().optional(),
+dotenv.config();
 
-  // JWT
-  JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
-  JWT_EXPIRY: z.string().default("24h"),
-  REFRESH_TOKEN_EXPIRY: z.string().default("7d"),
-
-  // Database
-  MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
-
-  // MinIO/S3 Storage
-  MINIO_ENDPOINT: z.string().min(1, "MINIO_ENDPOINT is required"),
-  MINIO_ACCESS_KEY: z.string().min(1, "MINIO_ACCESS_KEY is required"),
-  MINIO_SECRET_KEY: z.string().min(1, "MINIO_SECRET_KEY is required"),
-  MINIO_BUCKET: z.string().default("souqsnap-uploads"),
-  MINIO_USE_SSL: z.coerce.boolean().default(false),
-  MINIO_PORT: z.coerce.number().default(9000),
-
-  // S3-compatible alternative config
-  S3_ENDPOINT: z.string().optional(),
-  S3_ACCESS_KEY: z.string().optional(),
-  S3_SECRET_KEY: z.string().optional(),
-  S3_BUCKET_NAME: z.string().default("souqsnap-uploads"),
-  S3_REGION: z.string().default("us-east-1"),
-  S3_PUBLIC_URL: z.string().optional(),
-
-  // SMTP Email
-  SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),
-  SMTP_PORT: z.coerce.number().default(587),
-  SMTP_USER: z.string().min(1, "SMTP_USER is required"),
-  SMTP_PASS: z.string().min(1, "SMTP_PASS is required"),
-  SMTP_FROM: z.string().email().default("noreply@souqsnap.com"),
-
-  // Twilio SMS
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_PHONE: z.string().optional(),
-
-  // Optional Features
-  ENABLE_EMAIL: z.coerce.boolean().default(true),
-  ENABLE_SMS: z.coerce.boolean().default(false),
-});
-
-export type AppConfig = z.infer<typeof envSchema>;
-
-export function validateEnv(config: Record<string, unknown>): AppConfig {
-  const result = envSchema.safeParse(config);
-
-  if (!result.success) {
-    const errors = result.error.issues.map(
-      (err) => `${err.path.join(".")}: ${err.message}`,
-    );
-    throw new Error(`Environment validation failed:\n${errors.join("\n")}`);
+function num(v: string | undefined, fallback: number): number {
+  if (v === undefined || v === "") {
+    return fallback;
   }
-
-  return result.data;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-export default registerAs("app", () => {
-  return validateEnv(process.env);
-});
+function bool(v: string | undefined, fallback: boolean): boolean {
+  if (v === undefined || v === "") {
+    return fallback;
+  }
+  return v === "true" || v === "1";
+}
 
-// Helper config exports for specific domains
-export const appConfig = registerAs("app", () => validateEnv(process.env));
+const e = process.env;
 
-export const jwtConfig = registerAs("jwt", () => ({
-  secret: process.env.JWT_SECRET!,
-  expiresIn: process.env.JWT_EXPIRY || "24h",
-  refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d",
-}));
-
-export const databaseConfig = registerAs("database", () => ({
-  uri: process.env.MONGODB_URI!,
-}));
-
-export const minioConfig = registerAs("minio", () => ({
-  endpoint: process.env.MINIO_ENDPOINT!,
-  port: parseInt(process.env.MINIO_PORT || "9000", 10),
-  useSSL: process.env.MINIO_USE_SSL === "true",
-  accessKey: process.env.MINIO_ACCESS_KEY!,
-  secretKey: process.env.MINIO_SECRET_KEY!,
-  bucket: process.env.MINIO_BUCKET || "souqsnap",
-}));
-
-export const smtpConfig = registerAs("smtp", () => ({
-  host: process.env.SMTP_HOST!,
-  port: parseInt(process.env.SMTP_PORT || "587", 10),
-  user: process.env.SMTP_USER!,
-  pass: process.env.SMTP_PASS!,
-  from: process.env.SMTP_FROM || "noreply@souqsnap.com",
-  secure: parseInt(process.env.SMTP_PORT || "587", 10) === 465,
-}));
-
-export const twilioConfig = registerAs("twilio", () => ({
-  accountSid: process.env.TWILIO_ACCOUNT_SID,
-  authToken: process.env.TWILIO_AUTH_TOKEN,
-  phoneNumber: process.env.TWILIO_PHONE,
-  enabled: !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN,
-}));
-
-export const s3Config = registerAs("s3", () => ({
-  endpoint:
-    process.env.S3_ENDPOINT ||
-    process.env.MINIO_ENDPOINT ||
-    "http://localhost:9000",
-  accessKey: process.env.S3_ACCESS_KEY || process.env.MINIO_ACCESS_KEY || "",
-  secretKey: process.env.S3_SECRET_KEY || process.env.MINIO_SECRET_KEY || "",
-  bucket:
-    process.env.S3_BUCKET_NAME ||
-    process.env.MINIO_BUCKET ||
-    "souqsnap-uploads",
-  region: process.env.S3_REGION || "us-east-1",
-  publicUrl:
-    process.env.S3_PUBLIC_URL ||
-    process.env.S3_ENDPOINT ||
-    process.env.MINIO_ENDPOINT ||
-    "http://localhost:9000",
-}));
+export const config = {
+  NODE_ENV: e.NODE_ENV ?? "development",
+  PORT: num(e.PORT, 3001),
+  CORS_ORIGIN: e.CORS_ORIGIN,
+  JWT_SECRET: e.JWT_SECRET ?? "",
+  JWT_EXPIRY: e.JWT_EXPIRY ?? "24h",
+  REFRESH_TOKEN_EXPIRY: e.REFRESH_TOKEN_EXPIRY ?? "7d",
+  MONGODB_URI: e.MONGODB_URI ?? "",
+  MINIO_ENDPOINT: e.MINIO_ENDPOINT ?? "",
+  MINIO_ACCESS_KEY: e.MINIO_ACCESS_KEY ?? "",
+  MINIO_SECRET_KEY: e.MINIO_SECRET_KEY ?? "",
+  MINIO_BUCKET: e.MINIO_BUCKET ?? "souqsnap-uploads",
+  MINIO_USE_SSL: bool(e.MINIO_USE_SSL, false),
+  MINIO_PORT: num(e.MINIO_PORT, 9000),
+  MINIO_REGION: e.MINIO_REGION,
+  MINIO_BUCKET_NAME: e.MINIO_BUCKET_NAME,
+  MINIO_PUBLIC_URL: e.MINIO_PUBLIC_URL,
+  S3_ENDPOINT: e.S3_ENDPOINT,
+  S3_ACCESS_KEY: e.S3_ACCESS_KEY,
+  S3_SECRET_KEY: e.S3_SECRET_KEY,
+  S3_BUCKET_NAME: e.S3_BUCKET_NAME ?? "souqsnap-uploads",
+  S3_REGION: e.S3_REGION ?? "us-east-1",
+  S3_PUBLIC_URL: e.S3_PUBLIC_URL,
+  SMTP_HOST: e.SMTP_HOST ?? "",
+  SMTP_PORT: num(e.SMTP_PORT, 587),
+  SMTP_USER: e.SMTP_USER ?? "",
+  SMTP_PASS: e.SMTP_PASS ?? "",
+  SMTP_FROM: e.SMTP_FROM ?? "noreply@souqsnap.com",
+  TWILIO_ACCOUNT_SID: e.TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN: e.TWILIO_AUTH_TOKEN,
+  TWILIO_PHONE: e.TWILIO_PHONE,
+  ENABLE_EMAIL: bool(e.ENABLE_EMAIL, true),
+  ENABLE_SMS: bool(e.ENABLE_SMS, false),
+  jwt: {
+    secret: e.JWT_SECRET ?? "",
+    expiresIn: e.JWT_EXPIRY ?? "24h",
+    refreshExpiresIn: e.REFRESH_TOKEN_EXPIRY ?? "7d",
+  },
+  database: {
+    uri: e.MONGODB_URI ?? "",
+  },
+  storage: {
+    endpoint: e.S3_ENDPOINT || e.MINIO_ENDPOINT || "http://localhost:9000",
+    region: e.S3_REGION || e.MINIO_REGION || "us-east-1",
+    accessKey: e.S3_ACCESS_KEY || e.MINIO_ACCESS_KEY || "",
+    secretKey: e.S3_SECRET_KEY || e.MINIO_SECRET_KEY || "",
+    bucket:
+      e.S3_BUCKET_NAME ||
+      e.MINIO_BUCKET_NAME ||
+      e.MINIO_BUCKET ||
+      "souqsnap-uploads",
+    publicUrl:
+      e.S3_PUBLIC_URL ||
+      e.MINIO_PUBLIC_URL ||
+      e.S3_ENDPOINT ||
+      e.MINIO_ENDPOINT ||
+      "http://localhost:9000",
+  },
+  smtp: {
+    host: e.SMTP_HOST ?? "",
+    port: num(e.SMTP_PORT, 587),
+    user: e.SMTP_USER ?? "",
+    pass: e.SMTP_PASS ?? "",
+    from: e.SMTP_FROM ?? "noreply@souqsnap.com",
+    secure: num(e.SMTP_PORT, 587) === 465,
+  },
+  twilio: {
+    accountSid: e.TWILIO_ACCOUNT_SID,
+    authToken: e.TWILIO_AUTH_TOKEN,
+    phoneNumber: e.TWILIO_PHONE,
+    enabled: Boolean(e.TWILIO_ACCOUNT_SID && e.TWILIO_AUTH_TOKEN),
+  },
+};

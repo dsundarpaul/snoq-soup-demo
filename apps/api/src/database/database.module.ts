@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { ConfigModule, ConfigService } from "@nestjs/config";
+import { config } from "@/config/app.config";
 import { DatabaseService } from "./database.service";
 
 import { Merchant, MerchantSchema } from "./schemas/merchant.schema";
@@ -17,13 +17,7 @@ import {
 @Global()
 @Module({
   imports: [
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>("MONGODB_URI"),
-      }),
-      inject: [ConfigService],
-    }),
+    MongooseModule.forRoot(config.database.uri),
     MongooseModule.forFeature([
       { name: Merchant.name, schema: MerchantSchema },
       { name: Drop.name, schema: DropSchema },

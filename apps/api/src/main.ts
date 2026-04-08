@@ -1,9 +1,9 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { CommandFactory } from "nest-commander";
 import helmet from "helmet";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import { config } from "./config/app.config";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 
@@ -30,9 +30,9 @@ async function bootstrapHttp() {
   );
 
   // CORS configuration
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = config.NODE_ENV === "production";
   app.enableCors({
-    origin: isProduction ? process.env.CORS_ORIGIN?.split(",") || false : true,
+    origin: isProduction ? config.CORS_ORIGIN?.split(",") || false : true,
     credentials: true,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     allowedHeaders: "Content-Type,Authorization,X-Requested-With,Accept",
@@ -55,8 +55,8 @@ async function bootstrapHttp() {
   app.setGlobalPrefix("api/v1");
 
   // Swagger setup - only in non-production environments
-  if (process.env.NODE_ENV !== "production") {
-    const config = new DocumentBuilder()
+  if (config.NODE_ENV !== "production") {
+    const swaggerConfig = new DocumentBuilder()
       .setTitle("SouqSnap API")
       .setDescription("SouqSnap - Gamified Drops & Voucher Platform API")
       .setVersion("1.0.0")
@@ -75,7 +75,7 @@ async function bootstrapHttp() {
       .addTag("Upload", "File upload operations")
       .build();
 
-    const document = SwaggerModule.createDocument(app, config);
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup("api/docs", app, document, {
       swaggerOptions: {
         persistAuthorization: true,
@@ -87,17 +87,15 @@ async function bootstrapHttp() {
   app.enableShutdownHooks();
 
   // Start server
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>("PORT") || 3001;
-  const nodeEnv = configService.get<string>("NODE_ENV") || "development";
+  await app.listen(config.PORT);
 
-  await app.listen(port);
-
-  logger.log(`🚀 Application running on: http://localhost:${port}/api/v1`);
-  if (process.env.NODE_ENV !== "production") {
-    logger.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+  logger.log(
+    `🚀 Application running on: http://localhost:${config.PORT}/api/v1`,
+  );
+  if (config.NODE_ENV !== "production") {
+    logger.log(`📚 Swagger docs: http://localhost:${config.PORT}/api/docs`);
   }
-  logger.log(`🔧 Environment: ${nodeEnv}`);
+  logger.log(`🔧 Environment: ${config.NODE_ENV}`);
 }
 
 async function bootstrapCli() {
