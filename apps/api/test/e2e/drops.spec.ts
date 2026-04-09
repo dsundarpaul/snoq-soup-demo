@@ -81,26 +81,6 @@ const generateFutureDate = (hoursFromNow: number) => {
   return new Date(Date.now() + hoursFromNow * 60 * 60 * 1000);
 };
 
-// Haversine distance calculation for verification
-const calculateDistance = (
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number => {
-  const R = 6371000; // Earth's radius in meters
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
 describe("Drops E2E Tests", () => {
   let app: INestApplication;
   let mongoServer: MongoMemoryServer;
@@ -243,9 +223,8 @@ describe("Drops E2E Tests", () => {
     });
   });
 
-  describe("2. Geospatial Query - Active Drops Nearby", () => {
-    it("GET /api/v1/drops/active - should find drops within search radius", async () => {
-      // Create a drop at a known location
+  describe("2. Active drops list", () => {
+    it("GET /api/v1/drops/active - should include created active drop", async () => {
       const centerCoords = { lat: 24.71, lng: 46.675 };
       const dropRadius = 100;
 
@@ -254,105 +233,53 @@ describe("Drops E2E Tests", () => {
         .set("Authorization", `Bearer ${merchantToken}`)
         .send({
           name: "Center Location Drop",
-          description: "Drop at center for radius testing",
+          description: "Drop at center",
           lat: centerCoords.lat,
           lng: centerCoords.lng,
           radius: dropRadius,
           rewardValue: "25% OFF",
-          redemption: { type: "unlimited" },
-          availability: {
-            startTime: generateFutureDate(-2),
-            endTime: generateFutureDate(24),
-          },
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: generateFutureDate(-2).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
           active: true,
         })
         .expect(201);
 
       createdDropIds.push(createResponse.body.id);
 
-      // Search from a location 50m away (should be within drop radius)
-      const searchCoords = { lat: 24.71045, lng: 46.675 }; // ~50m north
-
       const response = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=${dropRadius * 2}`,
-        )
+        .get("/api/v1/drops/active")
         .expect(200);
 
       expect(response.body).toHaveProperty("drops");
       expect(response.body).toHaveProperty("total");
       expect(Array.isArray(response.body.drops)).toBe(true);
 
-      // Should find at least our created drop
       const foundDrop = response.body.drops.find(
         (d: any) => d.id === createResponse.body.id,
       );
       expect(foundDrop).toBeDefined();
-      expect(foundDrop).toHaveProperty("distance");
-      expect(foundDrop.distance).toBeLessThanOrEqual(dropRadius * 2);
+      expect(foundDrop.merchantName).toBeDefined();
     });
 
-    it("GET /api/v1/drops/active - should exclude drops outside radius", async () => {
-      // Create a drop far from search location
-      const farCoords = { lat: 24.65, lng: 46.6 }; // Outside Riyadh center
-      const searchCoords = { lat: 24.71, lng: 46.675 };
-      const searchRadius = 500; // 500m radius
+    it("GET /api/v1/drops/active - should include geographically distant active drops", async () => {
+      const farCoords = { lat: 24.65, lng: 46.6 };
 
       const createResponse = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
         .set("Authorization", `Bearer ${merchantToken}`)
         .send({
           name: "Far Away Drop",
-          description: "This drop should not be found",
+          description: "Distant but still listed",
           lat: farCoords.lat,
           lng: farCoords.lng,
           radius: 50,
           rewardValue: "10% OFF",
-          redemption: { type: "unlimited" },
-          availability: {
-            startTime: generateFutureDate(-1),
-            endTime: generateFutureDate(24),
-          },
-          active: true,
-        })
-        .expect(201);
-
-      createdDropIds.push(createResponse.body.id);
-
-      // Search near center location
-      const response = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=${searchRadius}`,
-        )
-        .expect(200);
-
-      // Should not find the far away drop
-      const foundDrop = response.body.drops.find(
-        (d: any) => d.id === createResponse.body.id,
-      );
-      expect(foundDrop).toBeUndefined();
-    });
-
-    it("GET /api/v1/drops/active - should return accurate distance calculations", async () => {
-      // Create drop at known location
-      const dropCoords = { lat: 24.7136, lng: 46.6753 };
-      const searchCoords = { lat: 24.714, lng: 46.6758 }; // ~65m away
-
-      const createResponse = await request(app.getHttpServer())
-        .post("/api/v1/merchants/me/drops")
-        .set("Authorization", `Bearer ${merchantToken}`)
-        .send({
-          name: "Distance Test Drop",
-          description: "For distance accuracy test",
-          lat: dropCoords.lat,
-          lng: dropCoords.lng,
-          radius: 100,
-          rewardValue: "30% OFF",
-          redemption: { type: "unlimited" },
-          availability: {
-            startTime: generateFutureDate(-1),
-            endTime: generateFutureDate(24),
-          },
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: generateFutureDate(-1).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
           active: true,
         })
         .expect(201);
@@ -360,143 +287,60 @@ describe("Drops E2E Tests", () => {
       createdDropIds.push(createResponse.body.id);
 
       const response = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=200`,
-        )
+        .get("/api/v1/drops/active")
         .expect(200);
 
       const foundDrop = response.body.drops.find(
         (d: any) => d.id === createResponse.body.id,
       );
       expect(foundDrop).toBeDefined();
-      expect(foundDrop).toHaveProperty("distance");
-
-      // Calculate expected distance using haversine formula
-      const expectedDistance = calculateDistance(
-        searchCoords.lat,
-        searchCoords.lng,
-        dropCoords.lat,
-        dropCoords.lng,
-      );
-
-      // MongoDB distance should be close to calculated distance (within 10% tolerance)
-      const distanceDiff = Math.abs(foundDrop.distance - expectedDistance);
-      expect(distanceDiff).toBeLessThan(expectedDistance * 0.1);
     });
 
-    it("GET /api/v1/drops/active - should use 2dsphere index for geospatial queries", async () => {
-      // Create multiple drops for index testing
-      const drops = [];
-      for (let i = 0; i < 10; i++) {
-        const coords = randomCoords();
-        const response = await request(app.getHttpServer())
-          .post("/api/v1/merchants/me/drops")
-          .set("Authorization", `Bearer ${merchantToken}`)
-          .send({
-            name: `Index Test Drop ${i}`,
-            description: "Testing 2dsphere index",
-            lat: coords.lat,
-            lng: coords.lng,
-            radius: randomRadius(),
-            rewardValue: randomRewardValue(),
-            redemption: { type: "unlimited" },
-            availability: {
-              startTime: generateFutureDate(-1),
-              endTime: generateFutureDate(24),
-            },
-            active: true,
-          })
-          .expect(201);
-
-        drops.push(response.body);
-        createdDropIds.push(response.body.id);
-      }
-
-      // Verify index exists on the collection
+    it("GET /api/v1/drops/active - collection should retain 2dsphere index on location", async () => {
       const indexes = await dropModel.collection.indexes();
       const has2dsphereIndex = indexes.some(
         (idx) => idx.key && idx.key.location === "2dsphere",
       );
       expect(has2dsphereIndex).toBe(true);
 
-      // Perform query and verify it returns results efficiently
-      const searchCoords = randomCoords();
       const response = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=1000`,
-        )
+        .get("/api/v1/drops/active")
         .expect(200);
 
       expect(Array.isArray(response.body.drops)).toBe(true);
     });
   });
 
-  describe("3. Radius Filtering", () => {
-    it("GET /api/v1/drops/active - should filter by varying radius sizes", async () => {
-      // Create drop at fixed location
+  describe("3. Active drops without geo query", () => {
+    it("GET /api/v1/drops/active - should return drops without query string", async () => {
       const dropCoords = { lat: 24.72, lng: 46.68 };
 
       const createResponse = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
         .set("Authorization", `Bearer ${merchantToken}`)
         .send({
-          name: "Radius Filter Test",
-          description: "Testing radius filters",
+          name: "No Geo Query Test",
+          description: "Listed without lat/lng/radius",
           lat: dropCoords.lat,
           lng: dropCoords.lng,
           radius: 50,
           rewardValue: "40% OFF",
-          redemption: { type: "unlimited" },
-          availability: {
-            startTime: generateFutureDate(-1),
-            endTime: generateFutureDate(24),
-          },
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: generateFutureDate(-1).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
           active: true,
         })
         .expect(201);
 
       createdDropIds.push(createResponse.body.id);
 
-      // Search location 100m away
-      const searchCoords = { lat: 24.7209, lng: 46.68 };
-
-      // Small radius (50m) - should not find
-      const smallRadiusResponse = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=50`,
-        )
+      const response = await request(app.getHttpServer())
+        .get("/api/v1/drops/active")
         .expect(200);
 
       expect(
-        smallRadiusResponse.body.drops.some(
-          (d: any) => d.id === createResponse.body.id,
-        ),
-      ).toBe(false);
-
-      // Medium radius (150m) - should find
-      const mediumRadiusResponse = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=150`,
-        )
-        .expect(200);
-
-      expect(
-        mediumRadiusResponse.body.drops.some(
-          (d: any) => d.id === createResponse.body.id,
-        ),
-      ).toBe(true);
-
-      // Large radius (500m) - should find
-      const largeRadiusResponse = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${searchCoords.lat}&lng=${searchCoords.lng}&radius=500`,
-        )
-        .expect(200);
-
-      expect(
-        largeRadiusResponse.body.drops.some(
-          (d: any) => d.id === createResponse.body.id,
-        ),
+        response.body.drops.some((d: any) => d.id === createResponse.body.id),
       ).toBe(true);
     });
   });
@@ -504,8 +348,8 @@ describe("Drops E2E Tests", () => {
   describe("4. Drop Scheduling (Start/End Times)", () => {
     it("POST /api/v1/merchants/me/drops - should create scheduled drop", async () => {
       const coords = randomCoords();
-      const startTime = generateFutureDate(1); // Starts in 1 hour
-      const endTime = generateFutureDate(5); // Ends in 5 hours
+      const startTime = generateFutureDate(1);
+      const endTime = generateFutureDate(5);
 
       const response = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -517,32 +361,26 @@ describe("Drops E2E Tests", () => {
           lng: coords.lng,
           radius: randomRadius(),
           rewardValue: "50% OFF",
-          redemption: { type: "limited", limit: 100 },
-          availability: {
-            startTime: startTime,
-            endTime: endTime,
-          },
-          schedule: {
-            daysOfWeek: [0, 1, 2, 3, 4, 5, 6], // All days
-            startHour: 9,
-            endHour: 21,
-          },
+          redemptionType: "anytime",
+          availabilityType: "limited",
+          availabilityLimit: 100,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
           active: true,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty("id");
-      expect(response.body.availability.startTime).toBeDefined();
-      expect(response.body.availability.endTime).toBeDefined();
+      expect(response.body.schedule?.start).toBeDefined();
+      expect(response.body.schedule?.end).toBeDefined();
 
       createdDropIds.push(response.body.id);
     });
 
     it("GET /api/v1/drops/active - should only return active drops within schedule", async () => {
-      // Create drop that hasn't started yet
       const coords = randomCoords();
-      const futureStart = generateFutureDate(2); // Starts in 2 hours
-      const futureEnd = generateFutureDate(10); // Ends in 10 hours
+      const futureStart = generateFutureDate(2);
+      const futureEnd = generateFutureDate(10);
 
       const futureDropResponse = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -554,18 +392,16 @@ describe("Drops E2E Tests", () => {
           lng: coords.lng,
           radius: 100,
           rewardValue: "35% OFF",
-          redemption: { type: "unlimited" },
-          availability: {
-            startTime: futureStart,
-            endTime: futureEnd,
-          },
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: futureStart.toISOString(),
+          endTime: futureEnd.toISOString(),
           active: true,
         })
         .expect(201);
 
       createdDropIds.push(futureDropResponse.body.id);
 
-      // Create active drop
       const activeCoords = {
         lat: coords.lat + 0.001,
         lng: coords.lng + 0.001,
@@ -581,22 +417,18 @@ describe("Drops E2E Tests", () => {
           lng: activeCoords.lng,
           radius: 100,
           rewardValue: "25% OFF",
-          redemption: { type: "unlimited" },
-          availability: {
-            startTime: generateFutureDate(-1), // Started 1 hour ago
-            endTime: generateFutureDate(24), // Ends in 24 hours
-          },
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: generateFutureDate(-1).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
           active: true,
         })
         .expect(201);
 
       createdDropIds.push(activeDropResponse.body.id);
 
-      // Search should only return the currently active drop
       const searchResponse = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${activeCoords.lat}&lng=${activeCoords.lng}&radius=200`,
-        )
+        .get("/api/v1/drops/active")
         .expect(200);
 
       expect(
@@ -769,9 +601,7 @@ describe("Drops E2E Tests", () => {
 
       // Verify drop is soft deleted (not in active results)
       const searchResponse = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${coords.lat}&lng=${coords.lng}&radius=1000`,
-        )
+        .get("/api/v1/drops/active")
         .expect(200);
 
       expect(searchResponse.body.drops.some((d: any) => d.id === dropId)).toBe(

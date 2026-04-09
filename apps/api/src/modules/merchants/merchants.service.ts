@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
 import { PipelineStage, Types, FlattenMaps } from "mongoose";
 import { randomBytes } from "crypto";
 import { DatabaseService } from "../../database/database.service";
@@ -6,6 +11,8 @@ import { MerchantDocument } from "../../database/schemas/merchant.schema";
 import { UpdateMerchantDto } from "./dto/request/update-merchant.dto";
 import { MerchantResponseDto } from "./dto/response/merchant-response.dto";
 import { MerchantPublicResponseDto } from "./dto/response/merchant-public-response.dto";
+import { DropsService } from "../drops/drops.service";
+import { DropResponseDto } from "../drops/dto/response/drop-response.dto";
 import { ScannerTokenResponseDto } from "./dto/response/scanner-token-response.dto";
 import { MerchantStatsResponseDto } from "./dto/response/merchant-stats-response.dto";
 import { MerchantAnalyticsResponseDto } from "./dto/response/merchant-analytics-response.dto";
@@ -22,7 +29,10 @@ interface DropPerformanceItem {
 
 @Injectable()
 export class MerchantsService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly dropsService: DropsService,
+  ) {}
 
   async findById(id: string): Promise<MerchantResponseDto> {
     const merchant = await this.database.merchants
@@ -74,6 +84,60 @@ export class MerchantsService {
     }
 
     return this.toResponseDto(merchant);
+  }
+
+  async linkRedeemerHunter(
+    merchantId: string,
+    hunterId: string,
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(hunterId)) {
+      throw new BadRequestException("Invalid hunter id");
+    }
+    const hunter = await this.database.hunters.findOne({
+      _id: new Types.ObjectId(hunterId),
+      deletedAt: null,
+    });
+    if (!hunter) {
+      throw new NotFoundException("Hunter not found");
+    }
+    const existing = hunter.redeemerMerchantId?.toString();
+    if (existing && existing !== merchantId) {
+      throw new ConflictException("Hunter is linked to another merchant");
+    }
+    await this.database.hunters.findOneAndUpdate(
+      { _id: new Types.ObjectId(hunterId), deletedAt: null },
+      {
+        $set: {
+          redeemerMerchantId: new Types.ObjectId(merchantId),
+          updatedAt: new Date(),
+        },
+      },
+    );
+  }
+
+  async unlinkRedeemerHunter(
+    merchantId: string,
+    hunterId: string,
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(hunterId)) {
+      throw new BadRequestException("Invalid hunter id");
+    }
+    const result = await this.database.hunters.updateOne(
+      {
+        _id: new Types.ObjectId(hunterId),
+        redeemerMerchantId: new Types.ObjectId(merchantId),
+        deletedAt: null,
+      },
+      {
+        $set: {
+          redeemerMerchantId: null,
+          updatedAt: new Date(),
+        },
+      },
+    );
+    if (!result.modifiedCount) {
+      throw new NotFoundException("Hunter not found or not linked to you");
+    }
   }
 
   async generateScannerToken(
@@ -136,7 +200,6 @@ export class MerchantsService {
     const merchant = await this.database.merchants
       .findOne({
         username,
-        isActive: true,
         deletedAt: null,
       })
       .lean();
@@ -145,7 +208,34 @@ export class MerchantsService {
       throw new NotFoundException("Merchant not found");
     }
 
-    return this.toPublicResponseDto(merchant);
+    const drops = await this.dropsService.findForPublicMerchantStore(
+      merchant._id.toString(),
+    );
+    const now = new Date();
+    const activeDrops = drops.filter((d) =>
+      this.isDropInPublicScheduleWindow(d, now),
+    ).length;
+
+    return {
+      ...this.toPublicResponseDto(merchant),
+      drops,
+      totalDrops: drops.length,
+      activeDrops,
+    };
+  }
+
+  private isDropInPublicScheduleWindow(d: DropResponseDto, now: Date): boolean {
+    const s = d.schedule;
+    if (!s?.start && !s?.end) {
+      return true;
+    }
+    if (s.start && now < new Date(s.start)) {
+      return false;
+    }
+    if (s.end && now > new Date(s.end)) {
+      return false;
+    }
+    return true;
   }
 
   async findByScannerToken(token: string): Promise<MerchantResponseDto | null> {
@@ -211,7 +301,7 @@ export class MerchantsService {
           createdAt: Date;
           updatedAt: Date;
         },
-  ): MerchantPublicResponseDto {
+  ): Omit<MerchantPublicResponseDto, "drops" | "totalDrops" | "activeDrops"> {
     return {
       name: merchant.businessName,
       description: "",
@@ -222,8 +312,6 @@ export class MerchantsService {
       socialLinks: undefined,
       username: merchant.username,
       isVerified: merchant.emailVerified,
-      totalDrops: 0,
-      activeDrops: 0,
     };
   }
 

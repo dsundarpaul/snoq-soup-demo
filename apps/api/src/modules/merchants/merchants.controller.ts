@@ -3,6 +3,8 @@ import {
   Get,
   Patch,
   Post,
+  Put,
+  Delete,
   Body,
   UseGuards,
   Param,
@@ -102,6 +104,38 @@ export class MerchantsController {
     @CurrentUser() user: CurrentUserType,
   ): Promise<ScannerTokenResponseDto | null> {
     return this.merchantsService.getScannerToken(user.userId);
+  }
+
+  @Put("me/redeemer-hunters/:hunterId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Link a hunter so they may redeem vouchers for your store",
+  })
+  @ApiResponse({ status: 200, description: "Hunter linked" })
+  @HttpCode(HttpStatus.OK)
+  async linkRedeemerHunter(
+    @CurrentUser() user: CurrentUserType,
+    @Param("hunterId") hunterId: string,
+  ): Promise<{ success: boolean }> {
+    await this.merchantsService.linkRedeemerHunter(user.userId, hunterId);
+    return { success: true };
+  }
+
+  @Delete("me/redeemer-hunters/:hunterId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Remove redeemer link for a hunter" })
+  @ApiResponse({ status: 200, description: "Link removed" })
+  @HttpCode(HttpStatus.OK)
+  async unlinkRedeemerHunter(
+    @CurrentUser() user: CurrentUserType,
+    @Param("hunterId") hunterId: string,
+  ): Promise<{ success: boolean }> {
+    await this.merchantsService.unlinkRedeemerHunter(user.userId, hunterId);
+    return { success: true };
   }
 
   @Get(":username/public")

@@ -5,6 +5,9 @@
   "author": "SouqSnap Team",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.18.0"
+  },
   "scripts": {
     "build": "nest build",
     "clean": "rm -rf dist",

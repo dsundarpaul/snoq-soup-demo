@@ -29,6 +29,8 @@ export class DropResponseDto {
   availability!: AvailabilityDto;
   schedule?: ScheduleDto;
   active!: boolean;
+  voucherAbsoluteExpiresAt?: Date | null;
+  voucherTtlHoursAfterClaim?: number | null;
   merchantId!: string;
   createdAt!: Date;
   updatedAt!: Date;

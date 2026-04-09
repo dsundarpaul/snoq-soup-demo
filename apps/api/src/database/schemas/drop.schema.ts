@@ -149,6 +149,26 @@ export class Drop {
   @Prop({ type: Boolean, default: true })
   active!: boolean;
 
+  @ApiProperty({
+    nullable: true,
+    description:
+      "Absolute expiry for vouchers from this drop (snapshot at claim)",
+  })
+  @IsDate()
+  @IsOptional()
+  @Prop({ type: Date, default: null })
+  voucherAbsoluteExpiresAt!: Date | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Hours after claim until the voucher expires",
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Prop({ type: Number, default: null })
+  voucherTtlHoursAfterClaim!: number | null;
+
   @ApiProperty({ nullable: true, description: "Soft delete timestamp" })
   @IsDate()
   @IsOptional()

@@ -93,24 +93,41 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
 
   const hasTimer = drop.redemptionType === "timer" && drop.redemptionMinutes;
   const hasWindow = drop.redemptionType === "window" && (drop as any).redemptionDeadline;
-  const hasTimeLimit = hasTimer || hasWindow;
+  const hasVoucherExpiresAt = Boolean(voucher.expiresAt);
+  const hasTimeLimit = hasVoucherExpiresAt || hasTimer || hasWindow;
   const isExpired = hasTimeLimit && timeRemaining !== null && timeRemaining <= 0;
 
   useEffect(() => {
-    if (!hasTimeLimit) return;
+    const voucherExpiryMs = voucher.expiresAt
+      ? new Date(voucher.expiresAt).getTime()
+      : NaN;
+    if (!Number.isNaN(voucherExpiryMs)) {
+      const calculateTimeRemaining = () => {
+        const remaining = Math.max(
+          0,
+          Math.floor((voucherExpiryMs - Date.now()) / 1000)
+        );
+        setTimeRemaining(remaining);
+      };
+      calculateTimeRemaining();
+      const interval = setInterval(calculateTimeRemaining, 1000);
+      return () => clearInterval(interval);
+    }
+
+    if (!hasTimer && !hasWindow) return;
 
     const calculateTimeRemaining = () => {
       let expiryTime: number;
-      
+
       if (hasTimer && voucher.claimedAt) {
         const claimedTime = new Date(voucher.claimedAt).getTime();
-        expiryTime = claimedTime + (drop.redemptionMinutes! * 60 * 1000);
+        expiryTime = claimedTime + drop.redemptionMinutes! * 60 * 1000;
       } else if (hasWindow) {
         expiryTime = new Date((drop as any).redemptionDeadline).getTime();
       } else {
         return;
       }
-      
+
       const now = Date.now();
       const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
       setTimeRemaining(remaining);
@@ -120,7 +137,14 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
     const intervalMs = hasTimer ? 1000 : 60000;
     const interval = setInterval(calculateTimeRemaining, intervalMs);
     return () => clearInterval(interval);
-  }, [hasTimeLimit, hasTimer, hasWindow, voucher.claimedAt, drop.redemptionMinutes, (drop as any).redemptionDeadline]);
+  }, [
+    hasTimer,
+    hasWindow,
+    voucher.claimedAt,
+    voucher.expiresAt,
+    drop.redemptionMinutes,
+    (drop as any).redemptionDeadline,
+  ]);
 
   useEffect(() => {
     const generateQR = async () => {

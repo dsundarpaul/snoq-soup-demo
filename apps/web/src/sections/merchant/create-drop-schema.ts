@@ -35,6 +35,14 @@ export const createDropSchema = z.object({
     ),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
+  voucherAbsoluteExpiresAt: z.string().optional(),
+  voucherTtlHoursAfterClaim: z
+    .union([z.coerce.number().min(1), z.literal(""), z.undefined(), z.null()])
+    .optional()
+    .nullable()
+    .transform((v) =>
+      typeof v === "number" && !Number.isNaN(v) ? v : undefined
+    ),
 });
 
 export type CreateDropForm = z.infer<typeof createDropSchema>;

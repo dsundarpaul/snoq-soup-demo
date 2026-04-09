@@ -82,6 +82,8 @@ export class VouchersService {
 
     // Generate magic token
     const magicToken = randomBytes(16).toString("hex");
+    const claimedAt = new Date();
+    const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
 
     // Create voucher
     const voucher = await this.database.vouchers.create({
@@ -92,7 +94,8 @@ export class VouchersService {
         deviceId,
         hunterId: hunterId ? new Types.ObjectId(hunterId) : undefined,
       },
-      claimedAt: new Date(),
+      claimedAt,
+      expiresAt,
       redeemed: false,
       redeemedAt: null,
       redeemedBy: {},
@@ -116,7 +119,7 @@ export class VouchersService {
 
   async redeem(
     dto: RedeemVoucherDto,
-    redeemerType: "merchant" | "scanner",
+    redeemerType: "merchant" | "scanner" | "hunter",
     redeemerId: string,
   ): Promise<RedeemResultDto> {
     const { voucherId, magicToken } = dto;
@@ -147,10 +150,16 @@ export class VouchersService {
       throw new NotFoundException("Associated drop not found");
     }
 
-    // Check redemption constraints
     const now = new Date();
 
-    if (drop.redemption?.type === "timer") {
+    if (voucher.expiresAt && now > voucher.expiresAt) {
+      throw new ForbiddenException("Voucher has expired");
+    }
+
+    const voucherMerchantId = voucher.merchantId?.toString() ?? "";
+
+    // Check redemption constraints
+    if (voucher.expiresAt == null && drop.redemption?.type === "timer") {
       // Check timer constraint (must redeem within X minutes of claim)
       const claimTime = voucher.claimedAt.getTime();
       const minutesElapsed = (now.getTime() - claimTime) / (1000 * 60);
@@ -160,16 +169,30 @@ export class VouchersService {
           `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`,
         );
       }
-    } else if (drop.redemption?.type === "window") {
-      // Check window constraint (must redeem before deadline)
+    } else if (
+      voucher.expiresAt == null &&
+      drop.redemption?.type === "window"
+    ) {
       if (drop.redemption.deadline && now > drop.redemption.deadline) {
         throw new ForbiddenException("Redemption window has expired");
       }
     }
 
-    // Validate ownership - only the owning merchant can redeem their vouchers
-    // Type-safe refactor: safely convert ObjectId to string
-    const voucherMerchantId = voucher.merchantId?.toString() ?? "";
+    if (redeemerType === "hunter") {
+      const hunter = await this.database.hunters
+        .findOne({ _id: redeemerId, deletedAt: null })
+        .lean();
+      if (!hunter) {
+        throw new ForbiddenException("Hunter not found");
+      }
+      const link = hunter.redeemerMerchantId?.toString() ?? "";
+      if (!link || link !== voucherMerchantId) {
+        throw new ForbiddenException(
+          "Hunter is not authorized to redeem for this merchant",
+        );
+      }
+    }
+
     if (redeemerType === "merchant" && redeemerId !== voucherMerchantId) {
       throw new ForbiddenException(
         "You can only redeem vouchers for your own drops",
@@ -295,8 +318,30 @@ export class VouchersService {
       }),
     ]);
 
+    const dropIds = [
+      ...new Set(vouchers.map((v) => (v.dropId ? v.dropId.toString() : ""))),
+    ].filter(Boolean);
+    const drops =
+      dropIds.length > 0
+        ? await this.database.drops
+            .find({
+              _id: {
+                $in: dropIds.map((id) => new Types.ObjectId(id)),
+              },
+            })
+            .lean()
+        : [];
+    const dropMap = new Map(
+      drops.map((d) => [d._id.toString(), d as DropDocument]),
+    );
+
     return {
-      vouchers: vouchers.map((v) => this.toResponseDto(v as VoucherDocument)),
+      vouchers: vouchers.map((v) =>
+        this.toResponseDto(
+          v as VoucherDocument,
+          dropMap.get(v.dropId?.toString() ?? "") ?? null,
+        ),
+      ),
       total,
     };
   }
@@ -424,6 +469,35 @@ export class VouchersService {
     }
   }
 
+  private computeVoucherExpiresAt(
+    drop: DropDocument | FlattenMaps<DropDocument>,
+    claimedAt: Date,
+  ): Date | null {
+    const candidates: number[] = [];
+    const abs = drop.voucherAbsoluteExpiresAt;
+    if (abs) {
+      candidates.push(new Date(abs).getTime());
+    }
+    const ttl = drop.voucherTtlHoursAfterClaim;
+    if (ttl != null && ttl >= 1) {
+      const t = new Date(claimedAt);
+      t.setHours(t.getHours() + ttl);
+      candidates.push(t.getTime());
+    }
+    if (drop.redemption?.type === "window" && drop.redemption.deadline) {
+      candidates.push(new Date(drop.redemption.deadline).getTime());
+    }
+    if (drop.redemption?.type === "timer" && drop.redemption.minutes) {
+      const t = new Date(claimedAt);
+      t.setMinutes(t.getMinutes() + drop.redemption.minutes);
+      candidates.push(t.getTime());
+    }
+    if (candidates.length === 0) {
+      return null;
+    }
+    return new Date(Math.min(...candidates));
+  }
+
   private toResponseDto(
     voucher: VoucherDocument | FlattenMaps<VoucherDocument>,
     drop?: DropDocument | FlattenMaps<DropDocument> | null,
@@ -476,6 +550,7 @@ export class VouchersService {
         phone: voucher.claimedBy?.phone,
       },
       claimedAt: voucher.claimedAt,
+      expiresAt: voucher.expiresAt ?? null,
       redeemed: voucher.redeemed,
       redeemedAt: voucher.redeemedAt,
       redeemedBy: voucher.redeemedBy || {},

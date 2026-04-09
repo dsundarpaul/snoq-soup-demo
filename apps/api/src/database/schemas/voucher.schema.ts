@@ -12,6 +12,7 @@ import { HydratedDocument, Types } from "mongoose";
 export enum RedeemedByType {
   MERCHANT = "merchant",
   SCANNER = "scanner",
+  HUNTER = "hunter",
 }
 
 @Schema({ _id: false })
@@ -66,8 +67,8 @@ class RedeemedBy {
   })
   @IsEnum(RedeemedByType)
   @IsOptional()
-  @Prop({ type: String, enum: ["merchant", "scanner"] })
-  type?: "merchant" | "scanner";
+  @Prop({ type: String, enum: ["merchant", "scanner", "hunter"] })
+  type?: "merchant" | "scanner" | "hunter";
 
   @ApiProperty({
     example: "merchant123",
@@ -108,6 +109,15 @@ export class Voucher {
   @IsDate()
   @Prop({ type: Date, default: Date.now })
   claimedAt!: Date;
+
+  @ApiProperty({
+    nullable: true,
+    description: "When the voucher expires (set at claim from drop rules)",
+  })
+  @IsDate()
+  @IsOptional()
+  @Prop({ type: Date, default: null })
+  expiresAt!: Date | null;
 
   @ApiProperty({
     nullable: true,
@@ -155,6 +165,7 @@ VoucherSchema.index({ "claimedBy.deviceId": 1 });
 VoucherSchema.index({ "claimedBy.hunterId": 1 });
 VoucherSchema.index({ claimedAt: -1 });
 VoucherSchema.index({ deletedAt: 1 });
+VoucherSchema.index({ expiresAt: 1 }, { sparse: true });
 VoucherSchema.index(
   { dropId: 1, "claimedBy.deviceId": 1 },
   {

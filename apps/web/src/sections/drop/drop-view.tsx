@@ -55,7 +55,7 @@ export default function DropViewPage() {
   const params = useParams<{ id: string }>();
   const dropId = params.id;
 
-  const { data: drops = [], isLoading } = useActiveDropsQuery(null, null);
+  const { data: drops = [], isLoading } = useActiveDropsQuery();
 
   const drop = drops.find((d) => d.id === dropId);
   const timeWindowInfo = drop ? getTimeWindowInfo(drop, t) : null;

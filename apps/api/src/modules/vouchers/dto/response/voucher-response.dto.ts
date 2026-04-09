@@ -58,9 +58,9 @@ export class RedeemedByDto {
   @ApiProperty({
     example: "merchant",
     description: "Type of redeemer",
-    enum: ["merchant", "scanner"],
+    enum: ["merchant", "scanner", "hunter"],
   })
-  type?: "merchant" | "scanner";
+  type?: "merchant" | "scanner" | "hunter";
 
   @ApiProperty({
     example: "507f1f77bcf86cd799439011",
@@ -106,6 +106,13 @@ export class VoucherResponseDto {
     description: "When voucher was claimed",
   })
   claimedAt!: Date;
+
+  @ApiProperty({
+    example: "2024-01-20T23:59:59Z",
+    description: "Voucher expiry (null if no cap beyond drop rules)",
+    nullable: true,
+  })
+  expiresAt!: Date | null;
 
   @ApiProperty({
     example: false,

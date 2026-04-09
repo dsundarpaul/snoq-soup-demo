@@ -8,7 +8,7 @@ import {
   IsNumber,
   IsEnum,
 } from "class-validator";
-import { HydratedDocument } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 
 export enum Gender {
   MALE = "male",
@@ -133,6 +133,14 @@ export class Hunter {
   @Prop({ type: Stats, default: { totalClaims: 0, totalRedemptions: 0 } })
   stats!: Stats;
 
+  @ApiProperty({
+    nullable: true,
+    description: "Merchant this hunter may redeem vouchers for (staff)",
+  })
+  @IsOptional()
+  @Prop({ type: Types.ObjectId, ref: "Merchant", default: null })
+  redeemerMerchantId!: Types.ObjectId | null;
+
   @ApiProperty({ nullable: true, description: "Soft delete timestamp" })
   @IsDate()
   @IsOptional()
@@ -158,3 +166,4 @@ HunterSchema.index(
 );
 HunterSchema.index({ "stats.totalClaims": -1 });
 HunterSchema.index({ deletedAt: 1 });
+HunterSchema.index({ redeemerMerchantId: 1 }, { sparse: true });

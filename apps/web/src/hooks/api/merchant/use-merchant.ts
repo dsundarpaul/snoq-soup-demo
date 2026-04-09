@@ -275,6 +275,26 @@ export function useMerchantDropsListQuery() {
   });
 }
 
+export function useMerchantLinkRedeemerHunterMutation(
+  options?: Omit<
+    UseMutationOptions<{ success: boolean }, Error, string>,
+    "mutationFn"
+  >
+) {
+  return useMutation({
+    ...options,
+    mutationFn: async (hunterId: string) => {
+      const res = await apiRequest(
+        "PUT",
+        `/api/v1/merchants/me/redeemer-hunters/${encodeURIComponent(hunterId)}`,
+        {},
+        { auth: "merchant" }
+      );
+      return res.json() as Promise<{ success: boolean }>;
+    },
+  });
+}
+
 export function useMerchantScannerTokenQuery() {
   return useQuery({
     queryKey: merchantQueryKeys.scannerToken,

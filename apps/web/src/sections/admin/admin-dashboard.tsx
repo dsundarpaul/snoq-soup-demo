@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DatetimePicker } from "@/components/datetime-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -973,35 +974,23 @@ export default function AdminDashboardPage() {
                     </div>
                   )}
                   {dropForm.availabilityType === "timeWindow" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Start Time</Label>
-                        <Input
-                          type="datetime-local"
-                          value={dropForm.startTime}
-                          onChange={(e) =>
-                            setDropForm((f) => ({
-                              ...f,
-                              startTime: e.target.value,
-                            }))
-                          }
-                          data-testid="input-start-time"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>End Time</Label>
-                        <Input
-                          type="datetime-local"
-                          value={dropForm.endTime}
-                          onChange={(e) =>
-                            setDropForm((f) => ({
-                              ...f,
-                              endTime: e.target.value,
-                            }))
-                          }
-                          data-testid="input-end-time"
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <DatetimePicker
+                        label="Start Time"
+                        value={dropForm.startTime}
+                        onChange={(v) =>
+                          setDropForm((f) => ({ ...f, startTime: v }))
+                        }
+                        data-testid="input-start-time"
+                      />
+                      <DatetimePicker
+                        label="End Time"
+                        value={dropForm.endTime}
+                        onChange={(v) =>
+                          setDropForm((f) => ({ ...f, endTime: v }))
+                        }
+                        data-testid="input-end-time"
+                      />
                     </div>
                   )}
                 </div>

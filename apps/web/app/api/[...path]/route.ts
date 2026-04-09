@@ -25,9 +25,8 @@ const FORWARD_REQUEST_HEADERS = [
   "x-device-id",
 ] as const;
 
-// const DEFAULT_DEV_BACKEND = "http://localhost:3001";
 const DEFAULT_DEV_BACKEND =
-  "snoq-soup-demo-ipsjhyprt-dsundarpauls-projects.vercel.app";
+  "https://snoq-soup-demo-ipsjhyprt-dsundarpauls-projects.vercel.app";
 
 function getBackendBase(): string | null {
   const raw = process.env.BACKEND_URL?.trim();

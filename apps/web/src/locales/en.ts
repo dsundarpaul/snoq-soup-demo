@@ -205,6 +205,37 @@ const en = {
   "scanner.invalidVoucher": "Invalid voucher",
   "scanner.invalidScannerLink": "Invalid scanner link",
 
+  "hunterScan.notLinkedTitle": "Not linked to a store",
+  "hunterScan.notLinkedBody":
+    "Ask your merchant to link your hunter account using your Hunter ID from your profile. Then you can scan customer vouchers for that store.",
+
+  "merchantVouchers.subtitle": "All vouchers issued from your drops.",
+  "merchantVouchers.empty": "No vouchers yet.",
+  "merchantVouchers.drop": "Drop",
+  "merchantVouchers.claimed": "Claimed",
+  "merchantVouchers.expires": "Expires",
+  "merchantVouchers.status": "Status",
+  "merchantVouchers.redeemed": "Redeemed",
+  "merchantVouchers.active": "Active",
+  "merchantVouchers.prev": "Previous",
+  "merchantVouchers.next": "Next",
+
+  "staffHunter.linkTitle": "Staff hunter (JWT scan)",
+  "staffHunter.linkDesc":
+    "Paste a signed-in hunter’s ID so they can redeem vouchers for your store from the app.",
+  "staffHunter.hunterIdPlaceholder": "Hunter ID",
+  "staffHunter.linkButton": "Link hunter",
+  "staffHunter.linkedToast": "Hunter linked",
+  "staffHunter.linkFailed": "Could not link hunter",
+
+  "profile.hunterId": "Hunter ID",
+  "profile.copyHunterId": "Copy ID",
+  "profile.hunterIdHint": "Share this with your merchant to enable staff scanning.",
+  "profile.scanToRedeem": "Scan vouchers (staff)",
+  "profile.scanToRedeemDesc": "Redeem customer QR codes when linked to a store",
+
+  "voucher.expiresAt": "Expires",
+
   // AR Game
   "ar.cameraRequired": "Camera Required",
   "ar.cameraDenied": "Camera access denied. Please enable camera permissions.",

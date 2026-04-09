@@ -73,6 +73,8 @@ export const drops = pgTable("drops", {
   active: boolean("active").notNull().default(true),
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
+  voucherAbsoluteExpiresAt: timestamp("voucher_absolute_expires_at"),
+  voucherTtlHoursAfterClaim: integer("voucher_ttl_hours_after_claim"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -98,6 +100,7 @@ export const vouchers = pgTable("vouchers", {
   magicToken: text("magic_token").notNull(),
   deviceId: text("device_id"),
   hunterId: varchar("hunter_id"),
+  expiresAt: timestamp("expires_at"),
 });
 
 export const insertVoucherSchema = createInsertSchema(vouchers).omit({

@@ -285,6 +285,9 @@ export class HuntersService {
         totalClaims: hunter.stats?.totalClaims || 0,
         totalRedemptions: hunter.stats?.totalRedemptions || 0,
       },
+      redeemerMerchantId: hunter.redeemerMerchantId
+        ? hunter.redeemerMerchantId.toString()
+        : null,
       createdAt: hunter.createdAt,
       updatedAt: hunter.updatedAt,
     };

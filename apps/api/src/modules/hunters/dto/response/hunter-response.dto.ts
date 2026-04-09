@@ -70,6 +70,13 @@ export class HunterResponseDto {
   stats!: HunterStatsDto;
 
   @ApiProperty({
+    example: "507f1f77bcf86cd799439011",
+    description: "Merchant id this hunter may redeem vouchers for",
+    nullable: true,
+  })
+  redeemerMerchantId!: string | null;
+
+  @ApiProperty({
     example: "2024-01-15T10:30:00Z",
     description: "Creation timestamp",
   })

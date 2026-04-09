@@ -76,6 +76,16 @@ export class DropsService {
       );
     }
 
+    const voucherAbsoluteExpiresAt =
+      dto.voucherAbsoluteExpiresAt?.trim() &&
+      dto.voucherAbsoluteExpiresAt.trim().length > 0
+        ? new Date(dto.voucherAbsoluteExpiresAt)
+        : null;
+    const voucherTtlHoursAfterClaim =
+      dto.voucherTtlHoursAfterClaim != null
+        ? dto.voucherTtlHoursAfterClaim
+        : null;
+
     const drop = await this.database.drops.create({
       name: dto.name,
       description: dto.description || "",
@@ -91,6 +101,8 @@ export class DropsService {
       availability,
       schedule: Object.keys(schedule).length > 0 ? schedule : {},
       active: dto.active !== false,
+      voucherAbsoluteExpiresAt,
+      voucherTtlHoursAfterClaim,
     });
     return this.toResponseDto(drop);
   }
@@ -138,31 +150,45 @@ export class DropsService {
     };
   }
 
-  async findActiveNearby(
-    lat: number,
-    lng: number,
-    maxRadius: number,
-  ): Promise<ActiveDropsResponseDto> {
-    const now = new Date();
+  async findForPublicMerchantStore(
+    merchantId: string,
+  ): Promise<DropResponseDto[]> {
+    const drops = await this.database.drops
+      .find({
+        merchantId: new Types.ObjectId(merchantId),
+        deletedAt: null,
+        active: true,
+      })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+    return drops.map((d) => this.toResponseDto(d as Drop));
+  }
 
+  async findAllActive(): Promise<ActiveDropsResponseDto> {
     const pipeline: PipelineStage[] = [
       {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [lng, lat],
-          },
-          distanceField: "distance",
-          maxDistance: maxRadius,
-          spherical: true,
-          query: {
-            active: true,
-            deletedAt: null,
-            "availability.startTime": { $lte: now },
-            "availability.endTime": { $gte: now },
-          },
+        $match: {
+          active: true,
+          // $and: [
+          //   {
+          //     $or: [
+          //       { "schedule.start": { $exists: false } },
+          //       { "schedule.start": null },
+          //       { "schedule.start": { $lte: now } },
+          //     ],
+          //   },
+          //   {
+          //     $or: [
+          //       { "schedule.end": { $exists: false } },
+          //       { "schedule.end": null },
+          //       { "schedule.end": { $gte: now } },
+          //     ],
+          //   },
+          // ],
         },
       },
+      { $sort: { createdAt: -1 } },
       {
         $lookup: {
           from: "merchants",
@@ -173,11 +199,6 @@ export class DropsService {
       },
       {
         $unwind: "$merchant",
-      },
-      {
-        $match: {
-          "merchant.isActive": true,
-        },
       },
       {
         $project: {
@@ -191,7 +212,6 @@ export class DropsService {
           radius: 1,
           rewardValue: 1,
           logoUrl: 1,
-          distance: 1,
           merchantId: 1,
           merchantName: "$merchant.name",
           merchantLogoUrl: "$merchant.logoUrl",
@@ -234,6 +254,15 @@ export class DropsService {
     if (dto.logoUrl !== undefined) updateData.logoUrl = dto.logoUrl;
     if (dto.radius !== undefined) updateData.radius = dto.radius;
     if (dto.active !== undefined) updateData.active = dto.active;
+
+    if (dto.voucherAbsoluteExpiresAt !== undefined) {
+      const raw = dto.voucherAbsoluteExpiresAt?.trim() ?? "";
+      updateData.voucherAbsoluteExpiresAt =
+        raw.length > 0 ? new Date(raw) : null;
+    }
+    if (dto.voucherTtlHoursAfterClaim !== undefined) {
+      updateData.voucherTtlHoursAfterClaim = dto.voucherTtlHoursAfterClaim;
+    }
 
     // Redemption updates
     if (dto.redemptionType !== undefined) {
@@ -466,6 +495,8 @@ export class DropsService {
       availability: drop.availability,
       schedule: drop.schedule,
       active: drop.active,
+      voucherAbsoluteExpiresAt: drop.voucherAbsoluteExpiresAt ?? null,
+      voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? null,
       merchantId: merchantIdStr,
       createdAt: drop.createdAt,
       updatedAt: drop.updatedAt,

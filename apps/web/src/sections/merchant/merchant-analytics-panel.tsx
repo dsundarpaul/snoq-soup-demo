@@ -373,7 +373,7 @@ export function MerchantAnalyticsPanel({
         </CardContent>
       </Card>
 
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <ScanLine className="w-4 h-4 text-primary" />
@@ -459,7 +459,7 @@ export function MerchantAnalyticsPanel({
             </table>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }

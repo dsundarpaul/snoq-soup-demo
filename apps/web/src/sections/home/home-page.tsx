@@ -356,9 +356,7 @@ export default function HomePage() {
   const geo = useGeolocation();
   const { hasClaimedDrop, vouchers } = useVoucherStorage();
 
-  const { data: hunterProfile } = useTreasureHunterProfileQuery(
-    deviceId ?? ""
-  );
+  const { data: hunterProfile } = useTreasureHunterProfileQuery(deviceId ?? "");
 
   const hunterSignedIn = Boolean(hunterProfile?.email);
   const [selectedVoucher, setSelectedVoucher] = useState<StoredVoucher | null>(
@@ -371,10 +369,7 @@ export default function HomePage() {
     >
   >({});
 
-  const { data: drops = [], isLoading } = useActiveDropsQuery(
-    geo.latitude,
-    geo.longitude
-  );
+  const { data: drops = [], isLoading } = useActiveDropsQuery();
 
   useEffect(() => {
     const updateStatuses = () => {

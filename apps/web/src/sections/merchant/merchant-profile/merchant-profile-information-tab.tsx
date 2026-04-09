@@ -9,6 +9,7 @@ import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
 import { publicUrls } from "@/lib/app-config";
 import { useToast } from "@/hooks/use-toast";
 import { StaffScannerLink } from "@/sections/merchant/staff-scanner-link";
+import { StaffHunterLink } from "@/sections/merchant/staff-hunter-link";
 import {
   Card,
   CardContent,
@@ -149,7 +150,7 @@ export function MerchantProfileInformationTab({
         </CardContent>
       </Card>
 
-      {/* <Card>
+      <Card>
         <CardHeader>
           <CardTitle>Shared staff scanner link</CardTitle>
           <CardDescription>
@@ -160,7 +161,20 @@ export function MerchantProfileInformationTab({
         <CardContent>
           <StaffScannerLink />
         </CardContent>
-      </Card> */}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff hunter (signed-in app)</CardTitle>
+          <CardDescription>
+            Link a hunter who uses the mobile app with their account. They can
+            then open Scan vouchers (staff) after signing in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StaffHunterLink />
+        </CardContent>
+      </Card>
 
       {merchant?.username && (
         <Card>

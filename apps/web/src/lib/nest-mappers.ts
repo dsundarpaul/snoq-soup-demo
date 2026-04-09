@@ -62,6 +62,16 @@ export function mapNestDropToLegacy(
     active: raw.active !== false,
     startTime: startTime as unknown as Date,
     endTime: endTime as unknown as Date,
+    voucherAbsoluteExpiresAt: raw.voucherAbsoluteExpiresAt
+      ? ((toIso(raw.voucherAbsoluteExpiresAt as Date | string) ??
+          null) as unknown as Date)
+      : null,
+    voucherTtlHoursAfterClaim:
+      typeof raw.voucherTtlHoursAfterClaim === "number"
+        ? raw.voucherTtlHoursAfterClaim
+        : raw.voucherTtlHoursAfterClaim != null
+          ? Number(raw.voucherTtlHoursAfterClaim)
+          : null,
     createdAt: (raw.createdAt as Date) ?? new Date(),
   };
   if (captureCount !== undefined) out.captureCount = captureCount;
@@ -181,6 +191,9 @@ export function mapNestVoucherToLegacy(
     magicToken: String(raw.magicToken ?? ""),
     deviceId: (claimedBy?.deviceId as string) ?? null,
     hunterId: (claimedBy?.hunterId as string) ?? null,
+    expiresAt: raw.expiresAt
+      ? ((toIso(raw.expiresAt as Date | string) ?? null) as unknown as Date)
+      : null,
   } as Voucher;
 }
 
@@ -212,13 +225,17 @@ export function mapMerchantPublicToStoreData(raw: Record<string, unknown>): {
   };
   drops: DropWithCount[];
 } {
+  const dropsRaw = raw.drops;
+  const drops = Array.isArray(dropsRaw)
+    ? dropsRaw.map((d) => mapNestDropToLegacy(d as Record<string, unknown>))
+    : [];
   return {
     merchant: {
       businessName: String(raw.name ?? ""),
       username: String(raw.username ?? ""),
       logoUrl: (raw.logoUrl as string | null) ?? null,
     },
-    drops: [],
+    drops,
   };
 }
 
@@ -245,6 +262,9 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
     magicToken: String(raw.magicToken ?? ""),
     deviceId: (claimedBy?.deviceId as string) ?? null,
     hunterId: (claimedBy?.hunterId as string) ?? null,
+    expiresAt: raw.expiresAt
+      ? ((toIso(raw.expiresAt as Date | string) ?? null) as unknown as Date)
+      : null,
   } as Voucher;
   const drop = mapNestDropToLegacy({
     id: String(dropInfo?.id ?? ""),
@@ -307,6 +327,7 @@ export function mapHunterProfileToLegacy(raw: Record<string, unknown>): {
     id: raw.id,
     email: (raw.email as string) ?? null,
     nickname: (raw.nickname as string) ?? null,
+    redeemerMerchantId: (raw.redeemerMerchantId as string) ?? null,
     totalClaims: Number(stats?.totalClaims ?? 0),
     totalRedemptions: Number(stats?.totalRedemptions ?? 0),
     dateOfBirth: profile?.dateOfBirth
@@ -337,6 +358,7 @@ export function mapHunterHistoryToVoucherRows(
       magicToken: String(row.magicToken ?? ""),
       deviceId: null,
       hunterId: null,
+      expiresAt: null,
     } as Voucher;
     const drop: Drop | null = {
       id: String(row.dropId ?? ""),
@@ -356,6 +378,8 @@ export function mapHunterHistoryToVoucherRows(
       active: true,
       startTime: null,
       endTime: null,
+      voucherAbsoluteExpiresAt: null,
+      voucherTtlHoursAfterClaim: null,
       createdAt: new Date(),
     } as Drop;
     return { ...voucher, drop };
@@ -560,6 +584,8 @@ export function createDropFormToNestDto(data: {
   captureLimit?: number;
   startTime?: string;
   endTime?: string;
+  voucherAbsoluteExpiresAt?: string;
+  voucherTtlHoursAfterClaim?: number;
 }): Record<string, unknown> {
   const availabilityType =
     data.availabilityType === "captureLimit" ? "limited" : "unlimited";
@@ -596,6 +622,12 @@ export function createDropFormToNestDto(data: {
         : data.endTime
           ? new Date(data.endTime).toISOString()
           : undefined,
+    voucherAbsoluteExpiresAt:
+      data.voucherAbsoluteExpiresAt?.trim() &&
+      data.voucherAbsoluteExpiresAt.trim().length > 0
+        ? new Date(data.voucherAbsoluteExpiresAt).toISOString()
+        : undefined,
+    voucherTtlHoursAfterClaim: data.voucherTtlHoursAfterClaim,
     active: true,
   };
 }

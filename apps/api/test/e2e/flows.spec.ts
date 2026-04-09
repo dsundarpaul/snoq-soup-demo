@@ -41,9 +41,7 @@ describe("SouqSnap E2E Flows", () => {
   describe("1. Public Endpoints", () => {
     it("GET /api/v1/drops/active - should return active drops", async () => {
       const response = await request(app.getHttpServer())
-        .get(
-          `/api/v1/drops/active?lat=${faker.location.latitude()}&lng=${faker.location.longitude()}&radius=${faker.number.int({ min: 1000, max: 10000 })}`,
-        )
+        .get("/api/v1/drops/active")
         .expect(200);
 
       expect(response.body).toHaveProperty("drops");

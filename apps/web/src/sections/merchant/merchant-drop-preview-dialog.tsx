@@ -142,6 +142,26 @@ export function MerchantDropPreviewDialog({
                 {form.watch("redemptionType") === "window" && "Fixed deadline"}
               </span>
             </div>
+            {(form.watch("voucherAbsoluteExpiresAt") ||
+              form.watch("voucherTtlHoursAfterClaim")) && (
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground shrink-0">
+                  Voucher expiry:
+                </span>
+                <span className="font-medium text-right text-xs">
+                  {[
+                    form.watch("voucherTtlHoursAfterClaim")
+                      ? `${form.watch("voucherTtlHoursAfterClaim")}h after claim`
+                      : null,
+                    form.watch("voucherAbsoluteExpiresAt")
+                      ? `Absolute ${form.watch("voucherAbsoluteExpiresAt")}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Availability:</span>
               <span className="font-medium">

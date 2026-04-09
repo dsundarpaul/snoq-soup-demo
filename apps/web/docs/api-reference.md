@@ -76,6 +76,8 @@ Validation errors may include **`details`** in non-production.
 | PATCH | `/merchants/me/logo` | Set logo URL (after upload). | Merchant JWT | `{ "logoUrl": string }` | **200** `MerchantResponseDto` |
 | POST | `/merchants/me/scanner-token` | Create scanner token for staff QR flow. | Merchant JWT | `GenerateScannerTokenDto` (e.g. `expiresIn`) | **201** `ScannerTokenResponseDto` |
 | GET | `/merchants/me/scanner-token` | Get active scanner token. | Merchant JWT | — | **200** `ScannerTokenResponseDto` or null shape per service |
+| PUT | `/merchants/me/redeemer-hunters/:hunterId` | Link hunter JWT user so they can redeem your vouchers. | Merchant JWT | — | **200** `{ success: true }` |
+| DELETE | `/merchants/me/redeemer-hunters/:hunterId` | Remove redeemer link for a hunter. | Merchant JWT | — | **200** `{ success: true }` |
 | GET | `/merchants/me/stats` | Aggregate drop stats. | Merchant JWT | — | **200** `MerchantStatsResponseDto` |
 | GET | `/merchants/me/analytics` | Time-series analytics. | Merchant JWT | Query: date range per service | **200** `MerchantAnalyticsResponseDto` |
 | GET | `/merchants/:username/public` | Public store page (drops, branding). | None | — | **200** `MerchantPublicResponseDto` |
@@ -108,7 +110,7 @@ Validation errors may include **`details`** in non-production.
 | Method | Path | Intent | Auth | Body / query | Success |
 |--------|------|--------|------|--------------|---------|
 | POST | `/vouchers/claim` | Claim voucher for a drop. | `X-Device-Id` + throttling | `ClaimVoucherDto` | **201** `VoucherResponseDto` |
-| POST | `/vouchers/redeem` | Redeem (merchant or scanner role). | Bearer (merchant or scanner) | `RedeemVoucherDto` | **200** `RedeemResultDto` |
+| POST | `/vouchers/redeem` | Redeem (merchant, scanner, or linked hunter). | Bearer (merchant, scanner, or hunter with `redeemerMerchantId`) | `RedeemVoucherDto` | **200** `RedeemResultDto` |
 | GET | `/vouchers/magic/:token` | Voucher detail via magic link token. | None | — | **200** `VoucherDetailResponseDto` |
 | POST | `/vouchers/send-email` | Email voucher to user. | Bearer | `SendEmailDto` (`voucherId`, `email`, `magicLink`) | **200** `{ success: true }` |
 | POST | `/vouchers/send-whatsapp` | WhatsApp voucher. | Bearer | `SendWhatsAppDto` | **200** `{ success: true }` |

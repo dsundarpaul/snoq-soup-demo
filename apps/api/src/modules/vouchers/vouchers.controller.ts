@@ -65,7 +65,7 @@ export class VouchersController {
 
   @Post("vouchers/redeem")
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("merchant", "scanner")
+  @Roles("merchant", "scanner", "hunter")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Redeem a voucher (merchant or scanner only)" })
   @ApiResponse({ status: 200, type: RedeemResultDto })
@@ -84,7 +84,7 @@ export class VouchersController {
   ): Promise<RedeemResultDto> {
     return this.vouchersService.redeem(
       dto,
-      user.type as "merchant" | "scanner",
+      user.type as "merchant" | "scanner" | "hunter",
       user.userId,
     );
   }

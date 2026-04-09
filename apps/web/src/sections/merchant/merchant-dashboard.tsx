@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, BarChart3, Loader2 } from "lucide-react";
+import { MapPin, BarChart3, Loader2, Ticket } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { publicUrls } from "@/lib/app-config";
 import {
@@ -55,6 +55,7 @@ import { filterAnalyticsByRange } from "@/sections/merchant/filter-analytics-by-
 import { MerchantDropForm } from "@/sections/merchant/merchant-drop-form";
 import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-preview-dialog";
 import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
+import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
 const FIELD_LABELS: Record<string, string> = {
   name: "Drop Name",
   description: "Description",
@@ -93,6 +94,8 @@ export default function MerchantDashboardPage() {
       captureLimit: undefined,
       startTime: "",
       endTime: "",
+      voucherAbsoluteExpiresAt: "",
+      voucherTtlHoursAfterClaim: undefined,
     },
   });
 
@@ -152,7 +155,9 @@ export default function MerchantDashboardPage() {
       const formData = {
         ...data,
         redemptionMinutes:
-          data.redemptionType === "timer" ? data.redemptionMinutes || 30 : data.redemptionMinutes,
+          data.redemptionType === "timer"
+            ? data.redemptionMinutes || 30
+            : data.redemptionMinutes,
       };
       const payload = createDropFormToNestDto(formData);
       const response = await apiRequest(
@@ -227,7 +232,9 @@ export default function MerchantDashboardPage() {
       const formData = {
         ...data,
         redemptionMinutes:
-          data.redemptionType === "timer" ? data.redemptionMinutes || 30 : data.redemptionMinutes,
+          data.redemptionType === "timer"
+            ? data.redemptionMinutes || 30
+            : data.redemptionMinutes,
       };
       const payload = createDropFormToNestDto(formData);
       const response = await apiRequest(
@@ -348,6 +355,10 @@ export default function MerchantDashboardPage() {
       captureLimit: drop.captureLimit ?? undefined,
       startTime: formatIsoForDatetimeLocalInput(drop.startTime),
       endTime: formatIsoForDatetimeLocalInput(drop.endTime),
+      voucherAbsoluteExpiresAt: formatIsoForDatetimeLocalInput(
+        drop.voucherAbsoluteExpiresAt
+      ),
+      voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? undefined,
     });
     setEditingDrop(drop);
   };
@@ -381,9 +392,7 @@ export default function MerchantDashboardPage() {
     });
     try {
       const contentType =
-        file.type && file.type.length > 0
-          ? file.type
-          : "image/png";
+        file.type && file.type.length > 0 ? file.type : "image/png";
       const presignRes = await apiFetch("POST", "/api/v1/upload/presign", {
         auth: "merchant",
         body: {
@@ -404,10 +413,7 @@ export default function MerchantDashboardPage() {
         headers: { "Content-Type": contentType },
       });
       if (!uploadResponse.ok) throw new Error("Failed to upload file");
-      form.setValue(
-        "logoUrl",
-        presignJson.publicUrl || presignJson.key || ""
-      );
+      form.setValue("logoUrl", presignJson.publicUrl || presignJson.key || "");
       toast({
         title: "Logo uploaded!",
         description: "Your logo has been uploaded successfully.",
@@ -546,6 +552,14 @@ export default function MerchantDashboardPage() {
                 <BarChart3 className="w-4 h-4" />
                 Analytics
               </TabsTrigger>
+              <TabsTrigger
+                value="vouchers"
+                className="gap-2"
+                data-testid="tab-vouchers"
+              >
+                <Ticket className="w-4 h-4" />
+                Vouchers
+              </TabsTrigger>
             </TabsList>
             {activeTab === "analytics" && (
               <div
@@ -609,6 +623,10 @@ export default function MerchantDashboardPage() {
               dateFrom={analyticsDateFrom}
               dateTo={analyticsDateTo}
             />
+          </TabsContent>
+
+          <TabsContent value="vouchers" className="mt-0">
+            <MerchantVouchersPanel />
           </TabsContent>
         </Tabs>
       </main>

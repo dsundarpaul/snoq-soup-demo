@@ -165,4 +165,24 @@ export class UpdateDropDto {
   @IsBoolean()
   @IsOptional()
   active?: boolean;
+
+  @ApiProperty({
+    example: "2025-12-31T23:59:59Z",
+    description:
+      "Absolute expiry for vouchers from this drop (ISO date), optional",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  voucherAbsoluteExpiresAt?: string;
+
+  @ApiProperty({
+    example: 72,
+    description: "Hours after claim until voucher expires, optional",
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  voucherTtlHoursAfterClaim?: number;
 }

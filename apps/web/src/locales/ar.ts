@@ -205,6 +205,36 @@ const ar = {
   "scanner.invalidVoucher": "قسيمة غير صالحة",
   "scanner.invalidScannerLink": "رابط ماسح غير صالح",
 
+  "hunterScan.notLinkedTitle": "غير مرتبط بمتجر",
+  "hunterScan.notLinkedBody":
+    "اطلب من التاجر ربط حسابك باستخدام معرّف الصيّاد من ملفك الشخصي.",
+
+  "merchantVouchers.subtitle": "جميع القسائم الصادرة عن كنوزك.",
+  "merchantVouchers.empty": "لا توجد قسائم بعد.",
+  "merchantVouchers.drop": "الكنز",
+  "merchantVouchers.claimed": "تاريخ الاقتناص",
+  "merchantVouchers.expires": "ينتهي",
+  "merchantVouchers.status": "الحالة",
+  "merchantVouchers.redeemed": "مسترد",
+  "merchantVouchers.active": "نشط",
+  "merchantVouchers.prev": "السابق",
+  "merchantVouchers.next": "التالي",
+
+  "staffHunter.linkTitle": "صيّاد طاقم (مسح JWT)",
+  "staffHunter.linkDesc": "ألصق معرّف صيّاد مسجّل ليستطيع استرداد قسائم متجرك.",
+  "staffHunter.hunterIdPlaceholder": "معرّف الصيّاد",
+  "staffHunter.linkButton": "ربط الصيّاد",
+  "staffHunter.linkedToast": "تم ربط الصيّاد",
+  "staffHunter.linkFailed": "تعذر ربط الصيّاد",
+
+  "profile.hunterId": "معرّف الصيّاد",
+  "profile.copyHunterId": "نسخ المعرّف",
+  "profile.hunterIdHint": "شارك هذا مع التاجر لتفعيل مسح الطاقم.",
+  "profile.scanToRedeem": "مسح القسائم (طاقم)",
+  "profile.scanToRedeemDesc": "استرداد رموز العملاء عند الربط بالمتجر",
+
+  "voucher.expiresAt": "ينتهي",
+
   // AR Game
   "ar.cameraRequired": "الكاميرا مطلوبة",
   "ar.cameraDenied": "تم رفض الوصول للكاميرا. يرجى تفعيل الإذن.",

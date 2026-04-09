@@ -1,3 +1,6 @@
+import { ApiProperty } from "@nestjs/swagger";
+import { DropResponseDto } from "../../../drops/dto/response/drop-response.dto";
+
 export class MerchantPublicResponseDto {
   name!: string;
   description?: string;
@@ -10,4 +13,7 @@ export class MerchantPublicResponseDto {
   isVerified!: boolean;
   totalDrops!: number;
   activeDrops!: number;
+
+  @ApiProperty({ type: [DropResponseDto] })
+  drops!: DropResponseDto[];
 }

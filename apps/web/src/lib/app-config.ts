@@ -9,9 +9,13 @@ const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
 export const API_ORIGIN = rawApiUrl ? trimTrailingSlash(rawApiUrl) : "";
 
 export function getPublicSiteUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (fromEnv) {
-    return trimTrailingSlash(fromEnv);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  if (baseUrl) {
+    return trimTrailingSlash(baseUrl);
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) {
+    return trimTrailingSlash(appUrl);
   }
   return DEFAULT_PUBLIC_SITE_URL;
 }

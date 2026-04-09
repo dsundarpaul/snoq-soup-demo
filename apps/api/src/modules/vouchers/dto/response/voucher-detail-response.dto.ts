@@ -112,6 +112,13 @@ export class VoucherDetailResponseDto {
   claimedAt!: Date;
 
   @ApiProperty({
+    example: "2024-01-20T23:59:59Z",
+    description: "Voucher expiry",
+    nullable: true,
+  })
+  expiresAt!: Date | null;
+
+  @ApiProperty({
     example: false,
     description: "Whether voucher has been redeemed",
   })

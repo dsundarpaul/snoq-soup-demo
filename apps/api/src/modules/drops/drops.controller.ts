@@ -42,26 +42,10 @@ export class DropsController {
 
   // Public endpoints
   @Get("drops/active")
-  @ApiOperation({ summary: "Find active drops nearby" })
-  @ApiQuery({ name: "lat", type: Number, required: true })
-  @ApiQuery({ name: "lng", type: Number, required: true })
-  @ApiQuery({
-    name: "radius",
-    type: Number,
-    required: true,
-    description: "Radius in meters",
-  })
+  @ApiOperation({ summary: "List all active drops" })
   @ApiResponse({ status: 200, type: ActiveDropsResponseDto })
-  async findActiveNearby(
-    @Query("lat") lat: number,
-    @Query("lng") lng: number,
-    @Query("radius") radius: number,
-  ): Promise<ActiveDropsResponseDto> {
-    return this.dropsService.findActiveNearby(
-      parseFloat(String(lat)),
-      parseFloat(String(lng)),
-      parseFloat(String(radius)),
-    );
+  async findActive(): Promise<ActiveDropsResponseDto> {
+    return this.dropsService.findAllActive();
   }
 
   @Get("drops/:id")

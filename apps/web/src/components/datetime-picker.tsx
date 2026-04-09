@@ -36,6 +36,7 @@ export interface DatetimePickerProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  showLabel?: boolean;
   "data-testid"?: string;
 }
 
@@ -46,10 +47,13 @@ export function DatetimePicker({
   onChange,
   disabled,
   className,
+  showLabel = true,
   "data-testid": testId,
 }: DatetimePickerProps) {
   const parsed = parseDatetimeLocalString(value);
   const [open, setOpen] = React.useState(false);
+  const display = parsed ? format(parsed, "PPp") : "Pick date & time";
+  const ariaLabel = `${label}: ${display}`;
 
   const timeStr = React.useMemo(() => {
     if (!parsed) return "12:00";
@@ -73,37 +77,34 @@ export function DatetimePicker({
     onChange(toDatetimeLocalString(base));
   };
 
-  return (
-    <div className={cn("space-y-2", className)}>
-      <Label htmlFor={id}>{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            id={id}
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !value && "text-muted-foreground"
-            )}
-            disabled={disabled}
-            type="button"
-            data-testid={testId}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-            <span className="truncate">
-              {parsed ? format(parsed, "PPp") : "Pick date & time"}
-            </span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={parsed}
-            onSelect={(d) => {
-              applyDate(d);
-            }}
-            initialFocus
-          />
+  const body = (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          variant="outline"
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !value && "text-muted-foreground"
+          )}
+          disabled={disabled}
+          type="button"
+          data-testid={testId}
+          aria-label={showLabel ? undefined : ariaLabel}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+          <span className="truncate">{display}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={parsed}
+          onSelect={(d) => {
+            applyDate(d);
+          }}
+          autoFocus
+        />
           <div className="border-t p-3 flex items-center gap-2">
             <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
@@ -115,6 +116,16 @@ export function DatetimePicker({
           </div>
         </PopoverContent>
       </Popover>
+  );
+
+  if (!showLabel) {
+    return <div className={cn(className)}>{body}</div>;
+  }
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      <Label htmlFor={id}>{label}</Label>
+      {body}
     </div>
   );
 }

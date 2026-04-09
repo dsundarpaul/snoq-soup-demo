@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePickerField } from "@/components/date-picker-field";
 import {
   Select,
   SelectContent,
@@ -174,11 +175,13 @@ function TreasureHunterSignUpForm({
               <FormItem>
                 <FormLabel>{t("profile.dateOfBirth")}</FormLabel>
                 <FormControl>
-                  <Input
-                    type="date"
-                    required
+                  <DatePickerField
+                    id="signup-date-of-birth"
+                    label={t("profile.dateOfBirth")}
+                    showLabel={false}
+                    value={field.value}
+                    onChange={field.onChange}
                     data-testid="input-date-of-birth"
-                    {...field}
                   />
                 </FormControl>
                 <FormMessage />

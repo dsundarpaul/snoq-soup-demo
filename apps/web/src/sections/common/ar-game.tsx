@@ -522,10 +522,7 @@ export default function ARGamePage() {
   } | null>(null);
   const [showMenu, setShowMenu] = useState(false);
 
-  const { data: drops = [], isLoading: dropsLoading } = useActiveDropsQuery(
-    geo.latitude,
-    geo.longitude
-  );
+  const { data: drops = [], isLoading: dropsLoading } = useActiveDropsQuery();
 
   const dropsWithDistance = useMemo(() => {
     if (!geo.latitude || !geo.longitude) return [];

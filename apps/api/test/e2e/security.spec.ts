@@ -260,7 +260,7 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
       expect([400, 404, 422]).toContain(response.status);
     });
 
-    it("should reject operator injection in query parameters", async () => {
+    it("should tolerate unused query parameters on active drops", async () => {
       const response = await request(app.getHttpServer())
         .get("/api/v1/drops/active")
         .query({
@@ -268,7 +268,7 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
           lng: '{ "$lt": 100 }',
         });
 
-      expect([400, 422]).toContain(response.status);
+      expect([200, 400, 422]).toContain(response.status);
     });
   });
 
@@ -617,7 +617,7 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
     it("should return 429 with proper headers when rate limited", async () => {
       const response = await request(app.getHttpServer())
-        .get("/api/v1/drops/active?lat=24.7136&lng=46.6753")
+        .get("/api/v1/drops/active")
         .set("X-Forwarded-For", "1.2.3.4");
 
       expect([200, 429]).toContain(response.status);
@@ -933,69 +933,21 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
     });
   });
 
-  describe("10. Invalid Coordinate Bounds", () => {
-    it("should reject latitude > 90", async () => {
+  describe("10. Active drops public endpoint", () => {
+    it("should return 200 without query parameters", async () => {
+      const response = await request(app.getHttpServer()).get(
+        "/api/v1/drops/active",
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it("should return 200 when legacy geo query parameters are present", async () => {
       const response = await request(app.getHttpServer()).get(
         "/api/v1/drops/active?lat=100&lng=46.6753&radius=5000",
       );
 
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject latitude < -90", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=-100&lng=46.6753&radius=5000",
-      );
-
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject longitude > 180", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=24.7136&lng=200&radius=5000",
-      );
-
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject longitude < -180", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=24.7136&lng=-200&radius=5000",
-      );
-
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject non-numeric coordinates", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=abc&lng=def&radius=5000",
-      );
-
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject invalid radius values", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=24.7136&lng=46.6753&radius=-1",
-      );
-
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject oversized radius values", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=24.7136&lng=46.6753&radius=100000000",
-      );
-
-      expect([400, 422]).toContain(response.status);
-    });
-
-    it("should reject zero radius", async () => {
-      const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=24.7136&lng=46.6753&radius=0",
-      );
-
-      expect([400, 422]).toContain(response.status);
+      expect(response.status).toBe(200);
     });
   });
 
@@ -1327,7 +1279,7 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
     it("should not expose internal paths in error messages", async () => {
       const response = await request(app.getHttpServer()).get(
-        "/api/v1/drops/active?lat=invalid&lng=invalid",
+        "/api/v1/drops/active",
       );
 
       if (response.body && response.body.message) {

@@ -36,9 +36,9 @@ export class RedeemResultDto {
   @ApiProperty({
     example: "merchant",
     description: "Type of redeemer",
-    enum: ["merchant", "scanner"],
+    enum: ["merchant", "scanner", "hunter"],
   })
-  redeemedByType!: "merchant" | "scanner";
+  redeemedByType!: "merchant" | "scanner" | "hunter";
 
   @ApiProperty({
     example: "507f1f77bcf86cd799439011",
