@@ -35,7 +35,8 @@ async function bootstrapHttp() {
     origin: isProduction ? config.CORS_ORIGIN?.split(",") || false : true,
     credentials: true,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization,X-Requested-With,Accept",
+    allowedHeaders:
+      "Content-Type,Authorization,X-Requested-With,Accept,X-Device-Id",
   });
 
   // Global pipes
