@@ -66,9 +66,8 @@ export class DropsService {
       throw new BadRequestException("End time must be after start time");
     }
 
-    // Support both lat/lng and latitude/longitude naming conventions
-    const lng = dto.lng ?? dto.longitude;
-    const lat = dto.lat ?? dto.latitude;
+    const lng = dto.longitude;
+    const lat = dto.latitude;
 
     if (lng == null || lat == null) {
       throw new BadRequestException(
@@ -307,12 +306,12 @@ export class DropsService {
     }
 
     // Update location if lat/lng changed
-    if (dto.lat !== undefined || dto.lng !== undefined) {
+    if (dto.latitude !== undefined || dto.longitude !== undefined) {
       updateData.location = {
         type: "Point" as const,
         coordinates: [
-          dto.lng ?? drop.location.coordinates[0],
-          dto.lat ?? drop.location.coordinates[1],
+          dto.longitude ?? drop.location.coordinates[0],
+          dto.latitude ?? drop.location.coordinates[1],
         ],
       };
     }

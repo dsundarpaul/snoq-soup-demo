@@ -36,28 +36,6 @@ export class CreateDropDto {
 
   @ApiProperty({
     example: 24.7136,
-    description: "Latitude",
-    required: false,
-  })
-  @IsNumber()
-  @IsOptional()
-  @Min(-90)
-  @Max(90)
-  lat?: number;
-
-  @ApiProperty({
-    example: 46.6753,
-    description: "Longitude",
-    required: false,
-  })
-  @IsNumber()
-  @IsOptional()
-  @Min(-180)
-  @Max(180)
-  lng?: number;
-
-  @ApiProperty({
-    example: 24.7136,
     description: "Latitude (alternative field)",
     required: false,
   })

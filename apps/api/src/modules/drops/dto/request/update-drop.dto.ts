@@ -48,7 +48,7 @@ export class UpdateDropDto {
   @IsOptional()
   @Min(-90)
   @Max(90)
-  lat?: number;
+  latitude?: number;
 
   @ApiProperty({
     example: 46.6753,
@@ -59,7 +59,7 @@ export class UpdateDropDto {
   @IsOptional()
   @Min(-180)
   @Max(180)
-  lng?: number;
+  longitude?: number;
 
   @ApiProperty({
     example: 50,
