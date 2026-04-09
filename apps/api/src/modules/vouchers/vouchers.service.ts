@@ -82,8 +82,10 @@ export class VouchersService {
 
     // Generate magic token
     const magicToken = randomBytes(16).toString("hex");
-    const claimedAt = new Date();
-    const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
+    // const claimedAt = new Date();
+    // const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
+
+    console.log('before voucher create', magicToken)
 
     // Create voucher
     const voucher = await this.database.vouchers.create({
@@ -94,17 +96,18 @@ export class VouchersService {
         deviceId,
         hunterId: hunterId ? new Types.ObjectId(hunterId) : undefined,
       },
-      claimedAt,
-      expiresAt,
+      // claimedAt,
+      // expiresAt,
       redeemed: false,
       redeemedAt: null,
       redeemedBy: {},
     });
+    console.log("after voucher create", voucher);
 
     // Assign promo code if available
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
-      drop._id as Types.ObjectId,
+      drop._id as Types.ObjectId
     );
 
     // Increment hunter stats if hunterId provided
@@ -114,6 +117,7 @@ export class VouchersService {
       });
     }
 
+    console.log("end of service of vouchers");
     return this.toResponseDto(voucher, drop);
   }
 
