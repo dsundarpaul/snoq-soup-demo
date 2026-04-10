@@ -5,10 +5,13 @@ import {
   useQuery,
   type UseMutationOptions,
 } from "@tanstack/react-query";
-import { API_ORIGIN } from "@/lib/app-config";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { getAccessToken } from "@/lib/auth-tokens";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import {
+  clearSessionsExcept,
+  hadAuthCredentials,
+  invalidateAuthSession,
+} from "@/lib/auth-session";
+import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   setTokenBundle,
   clearTokenBundle,
@@ -35,12 +38,18 @@ export function useTreasureHunterProfileQuery(deviceId: string) {
     queryKey: [...treasureHunterQueryKeys.profile, deviceId],
     queryFn: async () => {
       const q = new URLSearchParams({ deviceId });
-      const res = await apiFetch("GET", `/api/v1/hunters/me?${q}`, {
+      const path = `/api/v1/hunters/me?${q.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, {
         auth: "hunter",
         deviceId,
       });
-      if (res.status === 401) return null;
-      await throwIfResNotOk(res);
+      if (res.status === 401) {
+        if (hadAuthCredentials("hunter")) {
+          invalidateAuthSession("hunter");
+        }
+        return null;
+      }
+      await throwIfResNotOk(res, path, "hunter");
       const json = (await res.json()) as Record<string, unknown>;
       return mapHunterProfileToLegacy(json);
     },
@@ -75,6 +84,7 @@ export function useTreasureHunterLoginMutation(
       return body;
     },
     onSuccess: (...args) => {
+      clearSessionsExcept("hunter");
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
       });
@@ -115,7 +125,8 @@ export function useTreasureHunterSignupMutation(
         accessToken: body.accessToken,
         refreshToken: body.refreshToken,
       });
-      const patch = await apiFetch("PATCH", "/api/v1/hunters/me/profile", {
+      const patchPath = "/api/v1/hunters/me/profile";
+      const patch = await apiFetchMaybeRetry("PATCH", patchPath, {
         auth: "hunter",
         deviceId: data.deviceId,
         body: {
@@ -125,12 +136,15 @@ export function useTreasureHunterSignupMutation(
           mobileNumber: data.mobileNumber,
         },
       });
-      if (patch.ok) {
+      if (!patch.ok) {
+        await throwIfResNotOk(patch, patchPath, "hunter");
+      } else {
         await patch.json().catch(() => null);
       }
       return body;
     },
     onSuccess: (...args) => {
+      clearSessionsExcept("hunter");
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
       });
@@ -235,11 +249,12 @@ export function useTreasureHunterHistoryQuery(deviceId: string) {
     queryKey: [...treasureHunterQueryKeys.history, deviceId],
     queryFn: async () => {
       const q = new URLSearchParams({ deviceId });
-      const res = await apiFetch("GET", `/api/v1/hunters/me/history?${q}`, {
+      const path = `/api/v1/hunters/me/history?${q.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, {
         auth: "hunter",
         deviceId,
       });
-      await throwIfResNotOk(res);
+      await throwIfResNotOk(res, path, "hunter");
       const json = (await res.json()) as Record<string, unknown>;
       return mapHunterHistoryToVoucherRows(json);
     },
@@ -271,14 +286,18 @@ export function useLeaderboardQuery(limit = 50) {
 }
 
 export async function fetchTreasureHunterProfile(deviceId: string) {
-  const token = getAccessToken("hunter");
-  const headers: Record<string, string> = { "X-Device-Id": deviceId };
-  if (token) headers.Authorization = `Bearer ${token}`;
   const q = new URLSearchParams({ deviceId });
-  const res = await fetch(`${API_ORIGIN}/api/v1/hunters/me?${q}`, {
-    headers,
-    credentials: "omit",
+  const path = `/api/v1/hunters/me?${q.toString()}`;
+  const res = await apiFetchMaybeRetry("GET", path, {
+    auth: "hunter",
+    deviceId,
   });
+  if (res.status === 401) {
+    if (hadAuthCredentials("hunter")) {
+      invalidateAuthSession("hunter");
+    }
+    return null;
+  }
   if (!res.ok) return null;
   const json = (await res.json()) as Record<string, unknown>;
   return mapHunterProfileToLegacy(json);

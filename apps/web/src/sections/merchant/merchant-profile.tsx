@@ -52,10 +52,10 @@ export default function MerchantProfilePage() {
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="profile">Profile information</TabsTrigger>
-            {/* <TabsTrigger value="scanner">Staff Voucher</TabsTrigger> */}
-          </TabsList>
+          {/* <TabsList className="mb-6"> */}
+          {/* <TabsTrigger value="profile">Profile information</TabsTrigger> */}
+          {/* <TabsTrigger value="scanner">Staff Voucher</TabsTrigger> */}
+          {/* </TabsList> */}
           <TabsContent value="profile" className="mt-0">
             <MerchantProfileInformationTab merchant={merchant} />
           </TabsContent>

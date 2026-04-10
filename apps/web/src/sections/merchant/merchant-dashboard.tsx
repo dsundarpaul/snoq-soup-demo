@@ -1,20 +1,32 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useDeferredValue, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useForm, type SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, BarChart3, Loader2, Ticket } from "lucide-react";
+import {
+  MapPin,
+  BarChart3,
+  Loader2,
+  Ticket,
+  Plus,
+  Pencil,
+  Eye,
+  X,
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { publicUrls } from "@/lib/app-config";
 import {
@@ -24,9 +36,11 @@ import {
   useMerchantDropsListQuery,
   useMerchantAnalyticsQuery,
   useMerchantDropCodesQuery,
+  useMerchantDropActiveMutation,
+  type MerchantDropsListStatus,
 } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   mapMerchantStatsToLegacy,
   mapNestDropToLegacy,
@@ -52,7 +66,10 @@ import { MerchantScannerFab } from "@/sections/merchant/merchant-scanner-fab";
 import { MerchantDropsPanel } from "@/sections/merchant/merchant-drops-panel";
 import { MerchantAnalyticsPanel } from "@/sections/merchant/merchant-analytics-panel";
 import { filterAnalyticsByRange } from "@/sections/merchant/filter-analytics-by-range";
-import { MerchantDropForm } from "@/sections/merchant/merchant-drop-form";
+import {
+  MerchantDropForm,
+  MERCHANT_DROP_FORM_ID,
+} from "@/sections/merchant/merchant-drop-form";
 import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-preview-dialog";
 import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
 import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
@@ -68,6 +85,8 @@ const FIELD_LABELS: Record<string, string> = {
   startTime: "Start Time",
   endTime: "End Time",
 };
+
+const DROPS_PAGE_SIZE = 10;
 
 export default function MerchantDashboardPage() {
   const router = useRouter();
@@ -113,16 +132,43 @@ export default function MerchantDashboardPage() {
 
   const { data: merchant, isLoading: merchantLoading } = useMerchantMeQuery();
 
-  const { data: drops = [], isLoading: dropsLoading } =
-    useMerchantDropsListQuery();
+  const [dropsPage, setDropsPage] = useState(1);
+  const [dropsSearch, setDropsSearch] = useState("");
+  const [dropsStatus, setDropsStatus] =
+    useState<MerchantDropsListStatus>("all");
+  const deferredDropsSearch = useDeferredValue(dropsSearch);
+
+  useEffect(() => {
+    setDropsPage(1);
+  }, [deferredDropsSearch, dropsStatus]);
+
+  const { data: dropsListData, isLoading: dropsLoading } =
+    useMerchantDropsListQuery({
+      page: dropsPage,
+      limit: DROPS_PAGE_SIZE,
+      search: deferredDropsSearch,
+      status: dropsStatus,
+    });
+
+  const drops = dropsListData?.drops ?? [];
+  const dropsTotal = dropsListData?.total ?? 0;
+  const dropsTotalPages = Math.max(
+    1,
+    Math.ceil(dropsTotal / DROPS_PAGE_SIZE)
+  );
+
+  useEffect(() => {
+    if (dropsPage > dropsTotalPages) {
+      setDropsPage(dropsTotalPages);
+    }
+  }, [dropsPage, dropsTotalPages]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: merchantQueryKeys.stats,
     queryFn: async () => {
-      const res = await apiFetch("GET", "/api/v1/merchants/me/stats", {
-        auth: "merchant",
-      });
-      await throwIfResNotOk(res);
+      const path = "/api/v1/merchants/me/stats";
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "merchant" });
+      await throwIfResNotOk(res, path, "merchant");
       return mapMerchantStatsToLegacy(
         (await res.json()) as Record<string, unknown>
       );
@@ -215,6 +261,16 @@ export default function MerchantDashboardPage() {
     onError: (error: Error) => {
       toast({
         title: "Failed to Delete",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const dropActiveMutation = useMerchantDropActiveMutation({
+    onError: (error: Error) => {
+      toast({
+        title: "Update failed",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
@@ -393,7 +449,8 @@ export default function MerchantDashboardPage() {
     try {
       const contentType =
         file.type && file.type.length > 0 ? file.type : "image/png";
-      const presignRes = await apiFetch("POST", "/api/v1/upload/presign", {
+      const presignPath = "/api/v1/upload/presign";
+      const presignRes = await apiFetchMaybeRetry("POST", presignPath, {
         auth: "merchant",
         body: {
           filename: file.name,
@@ -401,7 +458,7 @@ export default function MerchantDashboardPage() {
           size: file.size,
         },
       });
-      await throwIfResNotOk(presignRes);
+      await throwIfResNotOk(presignRes, presignPath, "merchant");
       const presignJson = (await presignRes.json()) as {
         presignedUrl: string;
         publicUrl: string;
@@ -570,6 +627,7 @@ export default function MerchantDashboardPage() {
                   id="analytics-from"
                   label="From"
                   variant="compact"
+                  showMonthYearDropdowns
                   value={analyticsDateFrom}
                   onChange={setAnalyticsDateFrom}
                   placeholder="Start"
@@ -585,6 +643,7 @@ export default function MerchantDashboardPage() {
                   id="analytics-to"
                   label="To"
                   variant="compact"
+                  showMonthYearDropdowns
                   value={analyticsDateTo}
                   onChange={setAnalyticsDateTo}
                   placeholder="End"
@@ -600,6 +659,14 @@ export default function MerchantDashboardPage() {
               statsLoading={statsLoading}
               drops={drops}
               dropsLoading={dropsLoading}
+              dropsTotal={dropsTotal}
+              dropsPage={dropsPage}
+              dropsPageSize={DROPS_PAGE_SIZE}
+              dropsSearch={dropsSearch}
+              dropsStatus={dropsStatus}
+              onDropsSearchChange={setDropsSearch}
+              onDropsStatusChange={setDropsStatus}
+              onDropsPageChange={setDropsPage}
               deletePending={deleteDropMutation.isPending}
               onCreateClick={openCreateDropDialog}
               onShareDrop={(dropId) => {
@@ -613,6 +680,13 @@ export default function MerchantDashboardPage() {
               onCodesClick={setCodesDropId}
               onEditDrop={handleEditDrop}
               onDeleteDrop={(id) => deleteDropMutation.mutate(id)}
+              onDropActiveChange={(dropId, active) =>
+                dropActiveMutation.mutate({ dropId, active })
+              }
+              dropActiveTogglePending={dropActiveMutation.isPending}
+              dropActiveTogglingId={
+                dropActiveMutation.variables?.dropId ?? null
+              }
             />
           </TabsContent>
 
@@ -631,42 +705,97 @@ export default function MerchantDashboardPage() {
         </Tabs>
       </main>
 
-      <Dialog
+      <Sheet
         open={showCreateDialog || !!editingDrop}
         onOpenChange={(open) => {
           if (!open) closeDropDialog();
         }}
       >
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              {editingDrop ? "Edit Drop" : "Create New Drop"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingDrop
-                ? "Update the details of your reward drop."
-                : "Set up a new reward drop location for customers to discover."}
-            </DialogDescription>
-          </DialogHeader>
-          <MerchantDropForm
-            form={form}
-            editingDrop={editingDrop}
-            mapPickerRemountKey={mapPickerEpoch}
-            isUploadingLogo={isUploadingLogo}
-            isGettingLocation={isGettingLocation}
-            isSubmitting={isSubmitting}
-            googleMapsApiKey={googleMapsApiKey}
-            onLogoFile={handleFileUpload}
-            onUseCurrentLocation={handleUseCurrentLocation}
-            onOpenArPlacer={() => setArPlacerOpen(true)}
-            onCancel={closeDropDialog}
-            onPreview={() => setShowPreview(true)}
-            onSubmitValid={onSubmit}
-            onSubmitInvalid={handleValidationError}
-          />
-        </DialogContent>
-      </Dialog>
+        <SheetContent
+          showClose={false}
+          side="right"
+          className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
+        >
+          <SheetHeader className="sticky top-0 z-10 shrink-0 space-y-1 border-b bg-background px-6 pb-4 pt-6 text-left">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <SheetTitle className="flex items-center gap-2 text-left">
+                  <MapPin className="h-5 w-5 shrink-0 text-primary" />
+                  {editingDrop ? "Edit Drop" : "Create New Drop"}
+                </SheetTitle>
+                <SheetDescription>
+                  {editingDrop
+                    ? "Update the details of your reward drop."
+                    : "Set up a new reward drop location for customers to discover."}
+                </SheetDescription>
+              </div>
+              <SheetClose asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </SheetClose>
+            </div>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <MerchantDropForm
+              form={form}
+              mapPickerRemountKey={mapPickerEpoch}
+              isUploadingLogo={isUploadingLogo}
+              isGettingLocation={isGettingLocation}
+              googleMapsApiKey={googleMapsApiKey}
+              onLogoFile={handleFileUpload}
+              onUseCurrentLocation={handleUseCurrentLocation}
+              onOpenArPlacer={() => setArPlacerOpen(true)}
+              onSubmitValid={onSubmit}
+              onSubmitInvalid={handleValidationError}
+            />
+          </div>
+          <SheetFooter className="sticky bottom-0 z-10 shrink-0 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:flex-wrap sm:justify-start sm:space-x-0">
+            <Button type="button" variant="outline" onClick={closeDropDialog}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowPreview(true)}
+              disabled={!form.watch("name") || !form.watch("rewardValue")}
+              data-testid="button-preview-drop"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Preview
+            </Button>
+            <Button
+              type="submit"
+              form={MERCHANT_DROP_FORM_ID}
+              className="sm:flex-1"
+              disabled={isSubmitting}
+              data-testid="button-submit-drop"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {editingDrop ? "Updating..." : "Creating..."}
+                </>
+              ) : (
+                <>
+                  {editingDrop ? (
+                    <Pencil className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  {editingDrop ? "Update Drop" : "Create Drop"}
+                </>
+              )}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <MerchantDropPreviewDialog
         open={showPreview}

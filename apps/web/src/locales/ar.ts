@@ -94,6 +94,8 @@ const ar = {
   "merchant.yourBusinessName": "اسم نشاطك التجاري",
   "merchant.youAtBusiness": "you@business.com",
   "merchant.atLeast6Chars": "6 أحرف على الأقل",
+  "merchant.passwordRequirements":
+    "8 أحرف على الأقل، حرف كبير ورقم واحد على الأقل",
   "merchant.becomeMerchant": "انضم كتاجر",
   "merchant.createMerchantAccount": "إنشاء حساب تاجر",
   "merchant.startRewarding": "ابدأ بمكافأة عملائك",
@@ -117,6 +119,12 @@ const ar = {
   "profile.nickname": "الاسم المستعار",
   "profile.yourHunterName": "اسم الصياد",
   "profile.dateOfBirth": "تاريخ الميلاد",
+  "profile.mobileLengthHint": "الطول المتوقع: {range}",
+  "profile.dobMinAgeHint":
+    "يجب أن يكون عمرك 5 سنوات على الأقل. لا يمكن اختيار تواريخ مستقبلية.",
+  "profile.dobInvalidMinAge": "تاريخ ميلاد غير صالح",
+  "profile.dobInvalidMinAgeDesc":
+    "اختر تاريخاً ليس في المستقبل ويكون قبل 5 سنوات على الأقل.",
   "profile.gender": "الجنس",
   "profile.selectGender": "اختر الجنس",
   "profile.male": "ذكر",

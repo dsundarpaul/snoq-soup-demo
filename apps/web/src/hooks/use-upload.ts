@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import type { UppyFile } from "@uppy/core";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import type { AuthRole } from "@/lib/auth-tokens";
 
 interface UploadMetadata {
@@ -63,15 +63,17 @@ export function useUpload(options: UseUploadOptions = {}) {
     async (file: File): Promise<UploadResponse> => {
       const contentType =
         file.type && file.type.length > 0 ? file.type : "image/png";
-      const response = await apiFetch("POST", "/api/v1/upload/presign", {
-        auth: options.auth ?? "merchant",
+      const path = "/api/v1/upload/presign";
+      const authRole = options.auth ?? "merchant";
+      const response = await apiFetchMaybeRetry("POST", path, {
+        auth: authRole,
         body: {
           filename: file.name,
           contentType,
           size: file.size,
         },
       });
-      await throwIfResNotOk(response);
+      await throwIfResNotOk(response, path, authRole);
       const data = (await response.json()) as {
         presignedUrl: string;
         publicUrl: string;
@@ -170,15 +172,17 @@ export function useUpload(options: UseUploadOptions = {}) {
       const f = file.data as File;
       const contentType =
         f.type && f.type.length > 0 ? f.type : "image/png";
-      const response = await apiFetch("POST", "/api/v1/upload/presign", {
-        auth: options.auth ?? "merchant",
+      const path = "/api/v1/upload/presign";
+      const authRole = options.auth ?? "merchant";
+      const response = await apiFetchMaybeRetry("POST", path, {
+        auth: authRole,
         body: {
           filename: f.name,
           contentType,
           size: f.size,
         },
       });
-      await throwIfResNotOk(response);
+      await throwIfResNotOk(response, path, authRole);
       const data = (await response.json()) as { presignedUrl: string };
       return {
         method: "PUT",

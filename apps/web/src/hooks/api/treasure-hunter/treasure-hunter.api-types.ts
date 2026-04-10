@@ -2,8 +2,10 @@ import { z } from "zod";
 
 export {
   hunterSignupSchema,
+  hunterSignupFormSchema,
   hunterLoginSchema,
   type HunterSignupInput,
+  type HunterSignupFormInput,
   type HunterLoginInput,
 } from "@shared/schema";
 

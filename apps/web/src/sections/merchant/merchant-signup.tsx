@@ -15,11 +15,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Store, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { Loader2, Store, ArrowLeft, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/contexts/language-context";
-import { merchantSignupSchema, type MerchantSignupInput } from "@shared/schema";
+import {
+  merchantSignupFormSchema,
+  type MerchantSignupFormInput,
+} from "@shared/schema";
 import { useMerchantSignupMutation } from "@/hooks/api/merchant/use-merchant";
 
 export default function MerchantSignupPage() {
@@ -27,12 +30,13 @@ export default function MerchantSignupPage() {
   const [sentEmail, setSentEmail] = useState("");
   const { t } = useLanguage();
 
-  const form = useForm<MerchantSignupInput>({
-    resolver: zodResolver(merchantSignupSchema),
+  const form = useForm<MerchantSignupFormInput>({
+    resolver: zodResolver(merchantSignupFormSchema),
     defaultValues: {
       businessName: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -43,8 +47,12 @@ export default function MerchantSignupPage() {
     },
   });
 
-  const onSubmit = (data: MerchantSignupInput) => {
-    signupMutation.mutate(data);
+  const onSubmit = (data: MerchantSignupFormInput) => {
+    signupMutation.mutate({
+      businessName: data.businessName,
+      email: data.email,
+      password: data.password,
+    });
   };
 
   if (emailSent) {
@@ -175,8 +183,31 @@ export default function MerchantSignupPage() {
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder={t("merchant.atLeast6Chars")}
+                        placeholder={t("merchant.passwordRequirements")}
+                        minLength={8}
+                        autoComplete="new-password"
                         data-testid="input-password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("auth.confirmPassword")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder={t("auth.confirmPassword")}
+                        minLength={8}
+                        autoComplete="new-password"
+                        data-testid="input-confirm-password"
                         {...field}
                       />
                     </FormControl>

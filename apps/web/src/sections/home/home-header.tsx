@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   User,
   Store,
@@ -34,6 +35,10 @@ import {
   useTreasureHunterProfileQuery,
   useTreasureHunterLogoutMutation,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import {
+  clearSessionsExcept,
+  hadAuthCredentials,
+} from "@/lib/auth-session";
 
 const appLogoSrc = "/images/clean_trophy_logo_no_text.png";
 
@@ -47,6 +52,7 @@ export interface HomeHeaderProps {
 }
 
 export function HomeHeader({ geo }: HomeHeaderProps) {
+  const router = useRouter();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
   const deviceId = useDeviceId();
@@ -148,6 +154,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
                       : `/login?next=${encodeURIComponent("/profile")}`
                   }
                   data-testid="menu-profile"
+                  onClick={() => clearSessionsExcept("hunter")}
                 >
                   <User className="mr-2 h-4 w-4" />
                   {t("nav.profile")}
@@ -193,18 +200,30 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/merchant" data-testid="menu-login-merchant">
-                  <Store className="mr-2 h-4 w-4" />
-                  {t("nav.loginAsMerchant")}
-                </Link>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (hadAuthCredentials("merchant")) {
+                    router.replace("/merchant/dashboard");
+                  } else {
+                    clearSessionsExcept("merchant");
+                    router.push("/merchant");
+                  }
+                }}
+                data-testid="menu-login-merchant"
+              >
+                <Store className="mr-2 h-4 w-4" />
+                {t("nav.loginAsMerchant")}
               </DropdownMenuItem>
               {!isSignedIn && (
-                <DropdownMenuItem asChild>
-                  <Link href="/login" data-testid="menu-login-user">
-                    <User className="mr-2 h-4 w-4" />
-                    {t("nav.loginAsUser")}
-                  </Link>
+                <DropdownMenuItem
+                  onClick={() => {
+                    clearSessionsExcept("hunter");
+                    router.push("/login");
+                  }}
+                  data-testid="menu-login-user"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  {t("nav.loginAsUser")}
                 </DropdownMenuItem>
               )}
               {isSignedIn && (

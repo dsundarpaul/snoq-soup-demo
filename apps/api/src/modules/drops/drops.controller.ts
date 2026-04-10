@@ -71,13 +71,33 @@ export class DropsController {
   @ApiOperation({ summary: "Get merchant drops" })
   @ApiQuery({ name: "page", type: Number, required: false })
   @ApiQuery({ name: "limit", type: Number, required: false })
+  @ApiQuery({
+    name: "search",
+    type: String,
+    required: false,
+    description: "Filter by drop name or reward (case-insensitive)",
+  })
+  @ApiQuery({
+    name: "status",
+    type: String,
+    required: false,
+    description: "all | active | inactive | scheduled | expired",
+  })
   @ApiResponse({ status: 200, type: [DropResponseDto] })
   async getMyDrops(
     @CurrentUser() user: CurrentUserType,
     @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query("search") search?: string,
+    @Query("status") status?: string,
   ) {
-    return this.dropsService.findByMerchant(user.userId, page, limit);
+    return this.dropsService.findByMerchant(
+      user.userId,
+      page,
+      limit,
+      search,
+      status,
+    );
   }
 
   @Post("merchants/me/drops")
@@ -120,63 +140,5 @@ export class DropsController {
     @Param("id") id: string,
   ): Promise<void> {
     return this.dropsService.delete(id, user.userId);
-  }
-
-  // Admin-scoped endpoints
-  @Get("admin/drops")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Admin: Get all drops" })
-  @ApiQuery({ name: "page", type: Number, required: false })
-  @ApiQuery({ name: "limit", type: Number, required: false })
-  @ApiResponse({ status: 200, type: [DropResponseDto] })
-  async getAllDrops(
-    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
-  ) {
-    // Admin can see all drops - extend service if needed
-    return { message: "Admin drops list", page, limit };
-  }
-
-  @Post("admin/drops")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Admin: Create drop for any merchant" })
-  @ApiResponse({ status: 201, type: DropResponseDto })
-  @HttpCode(HttpStatus.CREATED)
-  async adminCreateDrop(
-    @Body() dto: CreateDropDto & { merchantId: string },
-  ): Promise<DropResponseDto> {
-    return this.dropsService.create(dto.merchantId, dto);
-  }
-
-  @Patch("admin/drops/:id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Admin: Update any drop" })
-  @ApiResponse({ status: 200, type: DropResponseDto })
-  async adminUpdateDrop(
-    @Param("id") id: string,
-    @Body() dto: UpdateDropDto,
-  ): Promise<DropResponseDto> {
-    // Admin can update any drop - extend service if needed
-    void dto; // Placeholder usage
-    return this.dropsService.findById(id) as Promise<DropResponseDto>;
-  }
-
-  @Delete("admin/drops/:id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Admin: Delete any drop" })
-  @ApiResponse({ status: 204 })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async adminDeleteDrop(@Param("id") id: string): Promise<void> {
-    // Admin can hard delete - extend service if needed
-    void id; // Placeholder usage
-    return Promise.resolve();
   }
 }

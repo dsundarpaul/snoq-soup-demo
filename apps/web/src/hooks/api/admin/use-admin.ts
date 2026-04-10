@@ -5,6 +5,7 @@ import {
   useQuery,
   type UseMutationOptions,
 } from "@tanstack/react-query";
+import { clearSessionsExcept } from "@/lib/auth-session";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { AdminLoginInput } from "./admin.api-types";
 import {
@@ -15,7 +16,7 @@ import {
   getStoredUser,
   getAccessToken,
 } from "@/lib/auth-tokens";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   mapAdminAnalyticsToLegacy,
   mapAdminDropItem,
@@ -26,6 +27,18 @@ import {
 } from "@/lib/nest-mappers";
 
 const ADMIN_LIST_LIMIT = 500;
+
+export const ADMIN_DROPS_PAGE_SIZE = 20;
+
+export type AdminDropsListData = {
+  items: ReturnType<typeof mapAdminDropItem>[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
 
 export const adminQueryKeys = {
   session: ["/api/v1/admin/session"] as const,
@@ -68,6 +81,10 @@ export function useAdminLoginMutation(
         name: body.user.name ?? body.user.email,
       });
       return body;
+    },
+    onSuccess: (...args) => {
+      clearSessionsExcept("admin");
+      options?.onSuccess?.(...args);
     },
   });
 }
@@ -235,18 +252,15 @@ export function useAdminDropCodesQuery(dropId: string | null) {
       ? adminQueryKeys.dropCodes(dropId)
       : ["admin-drop-codes-off"],
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/admin/drops/${dropId}/codes`,
-        { auth: "admin" }
-      );
+      const path = `/api/v1/admin/drops/${dropId}/codes`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
       if (res.status === 404) {
         return {
           codes: [] as { code: string; status: string }[],
           stats: { total: 0, available: 0, assigned: 0 },
         };
       }
-      await throwIfResNotOk(res);
+      await throwIfResNotOk(res, path, "admin");
       const json = (await res.json()) as Record<string, unknown>;
       return mapPromoListToLegacy(json);
     },
@@ -288,10 +302,9 @@ export function useAdminStatsQuery(enabled: boolean) {
     queryKey: adminQueryKeys.stats,
     enabled,
     queryFn: async () => {
-      const res = await apiFetch("GET", "/api/v1/admin/stats", {
-        auth: "admin",
-      });
-      await throwIfResNotOk(res);
+      const path = "/api/v1/admin/stats";
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+      await throwIfResNotOk(res, path, "admin");
       return mapAdminStatsToPlatform(
         (await res.json()) as Record<string, unknown>
       );
@@ -312,12 +325,9 @@ export function useAdminAnalyticsQuery(
         days: String(days),
         granularity,
       });
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/admin/analytics?${qs.toString()}`,
-        { auth: "admin" }
-      );
-      await throwIfResNotOk(res);
+      const path = `/api/v1/admin/analytics?${qs.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+      await throwIfResNotOk(res, path, "admin");
       return mapAdminAnalyticsToLegacy(
         (await res.json()) as Record<string, unknown>
       );
@@ -330,12 +340,9 @@ export function useAdminMerchantsListQuery(enabled: boolean) {
     queryKey: [...adminQueryKeys.merchants, ADMIN_LIST_LIMIT] as const,
     enabled,
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/admin/merchants?page=1&limit=${ADMIN_LIST_LIMIT}`,
-        { auth: "admin" }
-      );
-      await throwIfResNotOk(res);
+      const path = `/api/v1/admin/merchants?page=1&limit=${ADMIN_LIST_LIMIT}`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+      await throwIfResNotOk(res, path, "admin");
       const json = (await res.json()) as {
         items?: Record<string, unknown>[];
       };
@@ -344,21 +351,43 @@ export function useAdminMerchantsListQuery(enabled: boolean) {
   });
 }
 
-export function useAdminDropsListQuery(enabled: boolean) {
+export function useAdminDropsListQuery(
+  enabled: boolean,
+  listParams: { page: number; limit: number },
+) {
+  const { page, limit } = listParams;
   return useQuery({
-    queryKey: [...adminQueryKeys.drops, ADMIN_LIST_LIMIT] as const,
+    queryKey: [...adminQueryKeys.drops, "paged", page, limit] as const,
     enabled,
-    queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/admin/drops?page=1&limit=${ADMIN_LIST_LIMIT}`,
-        { auth: "admin" }
-      );
-      await throwIfResNotOk(res);
+    queryFn: async (): Promise<AdminDropsListData> => {
+      const sp = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const path = `/api/v1/admin/drops?${sp.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+      await throwIfResNotOk(res, path, "admin");
       const json = (await res.json()) as {
         items?: Record<string, unknown>[];
+        total?: number;
+        page?: number;
+        limit?: number;
+        totalPages?: number;
+        hasNextPage?: boolean;
+        hasPrevPage?: boolean;
       };
-      return (json.items ?? []).map((row) => mapAdminDropItem(row));
+      const items = (json.items ?? []).map((row) => mapAdminDropItem(row));
+      const total = json.total ?? 0;
+      const totalPages = Math.max(1, json.totalPages ?? 1);
+      return {
+        items,
+        total,
+        page: json.page ?? page,
+        limit: json.limit ?? limit,
+        totalPages,
+        hasNextPage: json.hasNextPage ?? false,
+        hasPrevPage: json.hasPrevPage ?? false,
+      };
     },
   });
 }
@@ -368,12 +397,9 @@ export function useAdminUsersListQuery(enabled: boolean) {
     queryKey: [...adminQueryKeys.users, ADMIN_LIST_LIMIT] as const,
     enabled,
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/admin/users?page=1&limit=${ADMIN_LIST_LIMIT}`,
-        { auth: "admin" }
-      );
-      await throwIfResNotOk(res);
+      const path = `/api/v1/admin/users?page=1&limit=${ADMIN_LIST_LIMIT}`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+      await throwIfResNotOk(res, path, "admin");
       const json = (await res.json()) as {
         items?: Record<string, unknown>[];
       };

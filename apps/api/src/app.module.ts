@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ScheduleModule } from "@nestjs/schedule";
 import { APP_GUARD } from "@nestjs/core";
 import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -15,6 +16,7 @@ import { UploadModule } from "./modules/upload/upload.module";
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     // Rate limiting
     ThrottlerModule.forRoot({
       throttlers: [

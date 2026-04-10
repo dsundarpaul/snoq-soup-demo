@@ -41,6 +41,7 @@ import {
   useTreasureHunterPatchProfileMutation,
   useTreasureHunterLogoutMutation,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import { isValidHunterDobYmdString } from "@/lib/hunter-dob";
 
 export default function ProfilePage() {
   const deviceId = useDeviceId();
@@ -99,6 +100,14 @@ export default function ProfilePage() {
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!deviceId) return;
+    if (editDateOfBirth && !isValidHunterDobYmdString(editDateOfBirth)) {
+      toast({
+        title: t("profile.dobInvalidMinAge"),
+        description: t("profile.dobInvalidMinAgeDesc"),
+        variant: "destructive",
+      });
+      return;
+    }
     const codeOnly = editMobileCountryCode.split("_")[0];
     updateProfileMutation.mutate({
       nickname: editNickname || undefined,
@@ -266,10 +275,14 @@ export default function ProfilePage() {
                       id="editDateOfBirth"
                       label={t("profile.dateOfBirth")}
                       showLabel={false}
+                      preset="birth-date"
                       value={editDateOfBirth}
                       onChange={setEditDateOfBirth}
                       data-testid="input-edit-date-of-birth"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {t("profile.dobMinAgeHint")}
+                    </p>
                   </div>
 
                   <div className="space-y-2">

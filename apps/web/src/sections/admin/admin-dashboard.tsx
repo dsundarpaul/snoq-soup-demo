@@ -46,6 +46,7 @@ import {
   useAdminAnalyticsQuery,
   useAdminMerchantsListQuery,
   useAdminDropsListQuery,
+  ADMIN_DROPS_PAGE_SIZE,
   useAdminUsersListQuery,
   useAdminLogoutMutation,
   useAdminUpdateMerchantMutation,
@@ -75,6 +76,8 @@ import {
   Upload,
   Loader2,
   FileText,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 type Merchant = {
@@ -128,8 +131,30 @@ export default function AdminDashboardPage() {
   const statsQuery = useAdminStatsQuery(hasSession);
   const analyticsQuery = useAdminAnalyticsQuery(hasSession);
   const merchantsQuery = useAdminMerchantsListQuery(hasSession);
-  const dropsQuery = useAdminDropsListQuery(hasSession);
+  const [adminDropsPage, setAdminDropsPage] = useState(1);
+  const dropsQuery = useAdminDropsListQuery(hasSession, {
+    page: adminDropsPage,
+    limit: ADMIN_DROPS_PAGE_SIZE,
+  });
   const usersQuery = useAdminUsersListQuery(hasSession);
+
+  const adminDropsList = dropsQuery.data?.items ?? [];
+  const adminDropsTotal = dropsQuery.data?.total ?? 0;
+  const adminDropsTotalPages = dropsQuery.data?.totalPages ?? 1;
+  const adminDropsRangeStart =
+    adminDropsTotal === 0
+      ? 0
+      : (adminDropsPage - 1) * ADMIN_DROPS_PAGE_SIZE + 1;
+  const adminDropsRangeEnd = Math.min(
+    adminDropsPage * ADMIN_DROPS_PAGE_SIZE,
+    adminDropsTotal,
+  );
+
+  useEffect(() => {
+    if (adminDropsPage > adminDropsTotalPages) {
+      setAdminDropsPage(adminDropsTotalPages);
+    }
+  }, [adminDropsPage, adminDropsTotalPages]);
 
   const logoutMutation = useAdminLogoutMutation({
     onSuccess: () => router.push("/admin"),
@@ -151,6 +176,7 @@ export default function AdminDashboardPage() {
     onSuccess: () => {
       toast({ title: "Drop created" });
       setDropDialogOpen(false);
+      setAdminDropsPage(1);
     },
   });
 
@@ -644,100 +670,151 @@ export default function AdminDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dropsQuery.data?.map((drop) => (
-                      <TableRow key={drop.id}>
-                        <TableCell className="font-medium">
-                          {drop.name}
-                        </TableCell>
-                        <TableCell>{drop.merchantName}</TableCell>
-                        <TableCell>{drop.rewardValue}</TableCell>
-                        <TableCell>
-                          {drop.active ? (
-                            <Badge variant="default" className="bg-green-500">
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(drop.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(drop)}
-                              data-testid={`button-edit-${drop.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {drop.active ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  updateDropMutation.mutate({
-                                    id: drop.id,
-                                    active: false,
-                                  })
-                                }
-                                data-testid={`button-deactivate-${drop.id}`}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Pause
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() =>
-                                  updateDropMutation.mutate({
-                                    id: drop.id,
-                                    active: true,
-                                  })
-                                }
-                                data-testid={`button-activate-${drop.id}`}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Activate
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setAdminCodesDropId(drop.id)}
-                              title="Promo Codes"
-                              data-testid={`button-codes-${drop.id}`}
-                            >
-                              <Tag className="h-4 w-4 text-teal-500" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeleteConfirmId(drop.id)}
-                              data-testid={`button-delete-${drop.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!dropsQuery.data || dropsQuery.data.length === 0) && (
+                    {dropsQuery.isLoading && !dropsQuery.data ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
-                          className="text-center text-muted-foreground"
+                          className="h-24 text-center text-muted-foreground"
                         >
-                          No drops yet
+                          <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                         </TableCell>
                       </TableRow>
+                    ) : (
+                      <>
+                        {adminDropsList.map((drop) => (
+                          <TableRow key={drop.id}>
+                            <TableCell className="font-medium">
+                              {drop.name}
+                            </TableCell>
+                            <TableCell>{drop.merchantName}</TableCell>
+                            <TableCell>{drop.rewardValue}</TableCell>
+                            <TableCell>
+                              {drop.active ? (
+                                <Badge
+                                  variant="default"
+                                  className="bg-green-500"
+                                >
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {new Date(drop.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditDialog(drop)}
+                                  data-testid={`button-edit-${drop.id}`}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                {drop.active ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      updateDropMutation.mutate({
+                                        id: drop.id,
+                                        active: false,
+                                      })
+                                    }
+                                    data-testid={`button-deactivate-${drop.id}`}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Pause
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() =>
+                                      updateDropMutation.mutate({
+                                        id: drop.id,
+                                        active: true,
+                                      })
+                                    }
+                                    data-testid={`button-activate-${drop.id}`}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Activate
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setAdminCodesDropId(drop.id)}
+                                  title="Promo Codes"
+                                  data-testid={`button-codes-${drop.id}`}
+                                >
+                                  <Tag className="h-4 w-4 text-teal-500" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteConfirmId(drop.id)}
+                                  data-testid={`button-delete-${drop.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {adminDropsList.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={6}
+                              className="text-center text-muted-foreground"
+                            >
+                              No drops yet
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
                     )}
                   </TableBody>
                 </Table>
+                {adminDropsTotal > 0 ? (
+                  <div className="flex flex-col gap-3 border-t pt-4 mt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground tabular-nums">
+                      {adminDropsRangeStart}–{adminDropsRangeEnd} of{" "}
+                      {adminDropsTotal}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        disabled={adminDropsPage <= 1}
+                        onClick={() => setAdminDropsPage((p) => p - 1)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground tabular-nums px-1">
+                        Page {adminDropsPage} / {adminDropsTotalPages}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        disabled={adminDropsPage >= adminDropsTotalPages}
+                        onClick={() => setAdminDropsPage((p) => p + 1)}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 

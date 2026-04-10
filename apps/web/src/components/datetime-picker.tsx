@@ -2,10 +2,20 @@
 
 import * as React from "react";
 import { format } from "date-fns";
+import type { Matcher } from "react-day-picker";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar, type CalendarProps } from "@/components/ui/calendar";
+
+type SingleCalendarExtras = {
+  captionLayout: NonNullable<CalendarProps["captionLayout"]>;
+  startMonth?: Date;
+  endMonth?: Date;
+  reverseYears?: boolean;
+  disabled?: Matcher | Matcher[];
+  defaultMonth?: Date;
+};
 import {
   Popover,
   PopoverContent,
@@ -37,7 +47,24 @@ export interface DatetimePickerProps {
   disabled?: boolean;
   className?: string;
   showLabel?: boolean;
+  showMonthYearDropdowns?: boolean;
+  captionLayout?: CalendarProps["captionLayout"];
+  startMonth?: Date;
+  endMonth?: Date;
+  reverseYears?: boolean;
+  disabledDays?: Matcher | Matcher[];
+  defaultMonth?: Date;
   "data-testid"?: string;
+}
+
+function captionUsesDropdowns(
+  layout: CalendarProps["captionLayout"]
+): boolean {
+  return (
+    layout === "dropdown" ||
+    layout === "dropdown-months" ||
+    layout === "dropdown-years"
+  );
 }
 
 export function DatetimePicker({
@@ -48,12 +75,58 @@ export function DatetimePicker({
   disabled,
   className,
   showLabel = true,
+  showMonthYearDropdowns = true,
+  captionLayout: captionLayoutProp,
+  startMonth: startMonthProp,
+  endMonth: endMonthProp,
+  reverseYears,
+  disabledDays,
+  defaultMonth,
   "data-testid": testId,
 }: DatetimePickerProps) {
   const parsed = parseDatetimeLocalString(value);
   const [open, setOpen] = React.useState(false);
   const display = parsed ? format(parsed, "PPp") : "Pick date & time";
   const ariaLabel = `${label}: ${display}`;
+
+  const calendarYear = new Date().getFullYear();
+  const scheduleBounds = React.useMemo(
+    () => ({
+      startMonth: new Date(calendarYear - 2, 0, 1),
+      endMonth: new Date(calendarYear + 10, 11, 1),
+    }),
+    [calendarYear]
+  );
+
+  const captionLayout =
+    captionLayoutProp ??
+    (showMonthYearDropdowns ? "dropdown" : "label");
+
+  const calendarNav = React.useMemo((): SingleCalendarExtras => {
+    const out: SingleCalendarExtras = { captionLayout };
+    if (captionUsesDropdowns(captionLayout)) {
+      out.startMonth = startMonthProp ?? scheduleBounds.startMonth;
+      out.endMonth = endMonthProp ?? scheduleBounds.endMonth;
+    } else {
+      if (startMonthProp != null) out.startMonth = startMonthProp;
+      if (endMonthProp != null) out.endMonth = endMonthProp;
+    }
+    if (reverseYears != null) out.reverseYears = reverseYears;
+    if (disabledDays != null) out.disabled = disabledDays;
+    if (defaultMonth != null) out.defaultMonth = defaultMonth;
+    return out;
+  }, [
+    captionLayout,
+    startMonthProp,
+    endMonthProp,
+    scheduleBounds.startMonth,
+    scheduleBounds.endMonth,
+    reverseYears,
+    disabledDays,
+    defaultMonth,
+  ]);
+
+  const popoverWiden = captionUsesDropdowns(calendarNav.captionLayout);
 
   const timeStr = React.useMemo(() => {
     if (!parsed) return "12:00";
@@ -96,7 +169,13 @@ export function DatetimePicker({
           <span className="truncate">{display}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className={cn(
+          "w-auto overflow-hidden rounded-xl border-border/80 p-0 shadow-lg",
+          popoverWiden && "min-w-[19rem] sm:min-w-[21rem]"
+        )}
+        align="start"
+      >
         <Calendar
           mode="single"
           selected={parsed}
@@ -104,17 +183,23 @@ export function DatetimePicker({
             applyDate(d);
           }}
           autoFocus
+          captionLayout={calendarNav.captionLayout}
+          startMonth={calendarNav.startMonth}
+          endMonth={calendarNav.endMonth}
+          reverseYears={calendarNav.reverseYears}
+          disabled={calendarNav.disabled}
+          defaultMonth={calendarNav.defaultMonth}
         />
-          <div className="border-t p-3 flex items-center gap-2">
-            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <Input
-              type="time"
-              value={timeStr}
-              onChange={applyTime}
-              className="flex-1"
-            />
-          </div>
-        </PopoverContent>
+        <div className="border-t p-3 flex items-center gap-2">
+          <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Input
+            type="time"
+            value={timeStr}
+            onChange={applyTime}
+            className="flex-1"
+          />
+        </div>
+      </PopoverContent>
       </Popover>
   );
 

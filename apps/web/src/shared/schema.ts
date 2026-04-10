@@ -10,6 +10,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import {
+  HUNTER_DOB_ZOD_MESSAGE,
+  isValidHunterDobYmdString,
+} from "@/lib/hunter-dob";
+import { getHunterNationalNumberBounds } from "@/lib/hunter-phone-bounds";
 
 export const merchants = pgTable("merchants", {
   id: varchar("id")
@@ -52,6 +57,16 @@ export const merchantSignupSchema = z.object({
   password: nestPassword,
 });
 export type MerchantSignupInput = z.infer<typeof merchantSignupSchema>;
+
+export const merchantSignupFormSchema = merchantSignupSchema
+  .extend({
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+export type MerchantSignupFormInput = z.infer<typeof merchantSignupFormSchema>;
 
 export const drops = pgTable("drops", {
   id: varchar("id")
@@ -177,19 +192,66 @@ export const insertTreasureHunterSchema = createInsertSchema(
 export type InsertTreasureHunter = z.infer<typeof insertTreasureHunterSchema>;
 export type TreasureHunter = typeof treasureHunters.$inferSelect;
 
-export const hunterSignupSchema = z.object({
+const hunterSignupFieldsSchema = z.object({
   email: z.string().email(),
   password: nestPassword,
   nickname: z.string().min(2).max(20).optional(),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
-  gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
+  dateOfBirth: z
+    .string()
+    .min(1, "Date of birth is required")
+    .refine((s) => isValidHunterDobYmdString(s), {
+      message: HUNTER_DOB_ZOD_MESSAGE,
+    }),
+  gender: z.enum(["male", "female"], {
+    required_error: "Gender is required",
+  }),
   mobileCountryCode: z.string().min(1, "Country code is required"),
   mobileNumber: z
     .string()
-    .min(7, "Mobile number must be at least 7 digits")
-    .max(15),
+    .min(1, "Mobile number is required")
+    .max(15, "Mobile number is too long"),
 });
+
+function refineHunterSignupMobile(
+  data: {
+    mobileCountryCode: string;
+    mobileNumber: string;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const digits = data.mobileNumber.replace(/\D/g, "");
+  const { min, max } = getHunterNationalNumberBounds(data.mobileCountryCode);
+  if (digits.length < min || digits.length > max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["mobileNumber"],
+      message:
+        min === max
+          ? `Enter exactly ${min} digits for the selected country`
+          : `Enter between ${min} and ${max} digits for the selected country`,
+    });
+  }
+}
+
+export const hunterSignupSchema = hunterSignupFieldsSchema.superRefine(
+  refineHunterSignupMobile,
+);
+
 export type HunterSignupInput = z.infer<typeof hunterSignupSchema>;
+
+export const hunterSignupFormSchema = hunterSignupFieldsSchema
+  .extend({
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .superRefine((data, ctx) => {
+    refineHunterSignupMobile(data, ctx);
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type HunterSignupFormInput = z.infer<typeof hunterSignupFormSchema>;
 
 export const hunterLoginSchema = z.object({
   email: z.string().email(),

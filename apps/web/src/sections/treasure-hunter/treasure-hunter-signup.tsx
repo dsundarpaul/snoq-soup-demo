@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDeviceId } from "@/hooks/use-device-id";
 import { useRedirectIfTreasureHunterLoggedIn } from "@/hooks/use-redirect-if-logged-in";
@@ -21,6 +21,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,9 +37,13 @@ import {
 } from "@/lib/safe-next-path";
 import { TreasureHunterAuthShell } from "@/sections/treasure-hunter/treasure-hunter-auth-shell";
 import {
-  hunterSignupSchema,
-  type HunterSignupInput,
+  hunterSignupFormSchema,
+  type HunterSignupFormInput,
 } from "@/hooks/api/treasure-hunter/treasure-hunter.api-types";
+import {
+  getHunterNationalNumberBounds,
+  hunterMobileLengthHint,
+} from "@/lib/hunter-phone-bounds";
 import { useTreasureHunterSignupMutation } from "@/hooks/api/treasure-hunter";
 
 function TreasureHunterSignUpForm({
@@ -53,11 +58,12 @@ function TreasureHunterSignUpForm({
   const { t } = useLanguage();
   const router = useRouter();
 
-  const form = useForm<HunterSignupInput>({
-    resolver: zodResolver(hunterSignupSchema),
+  const form = useForm<HunterSignupFormInput>({
+    resolver: zodResolver(hunterSignupFormSchema),
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
       nickname: "",
       dateOfBirth: "",
       gender: undefined,
@@ -65,6 +71,14 @@ function TreasureHunterSignUpForm({
       mobileNumber: "",
     },
   });
+
+  const mobileCountryCode = useWatch({
+    control: form.control,
+    name: "mobileCountryCode",
+  });
+  const phoneBounds = getHunterNationalNumberBounds(
+    mobileCountryCode ?? "+966"
+  );
 
   const signupMutation = useTreasureHunterSignupMutation({
     onSuccess: () => {
@@ -75,6 +89,7 @@ function TreasureHunterSignUpForm({
       form.reset({
         email: "",
         password: "",
+        confirmPassword: "",
         nickname: "",
         dateOfBirth: "",
         gender: undefined,
@@ -92,9 +107,18 @@ function TreasureHunterSignUpForm({
     },
   });
 
-  const onSubmit = (data: HunterSignupInput) => {
+  const onSubmit = (data: HunterSignupFormInput) => {
     if (!deviceId) return;
-    signupMutation.mutate({ ...data, deviceId });
+    signupMutation.mutate({
+      email: data.email,
+      password: data.password,
+      nickname: data.nickname,
+      dateOfBirth: data.dateOfBirth,
+      gender: data.gender,
+      mobileCountryCode: data.mobileCountryCode,
+      mobileNumber: data.mobileNumber,
+      deviceId,
+    });
   };
 
   return (
@@ -157,9 +181,30 @@ function TreasureHunterSignUpForm({
                   <Input
                     type="password"
                     placeholder={t("auth.enterPassword")}
-                    minLength={6}
-                    required
+                    minLength={8}
+                    autoComplete="new-password"
                     data-testid="input-password"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("auth.confirmPassword")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder={t("auth.confirmPassword")}
+                    minLength={8}
+                    autoComplete="new-password"
+                    data-testid="input-confirm-password"
                     {...field}
                   />
                 </FormControl>
@@ -179,11 +224,13 @@ function TreasureHunterSignUpForm({
                     id="signup-date-of-birth"
                     label={t("profile.dateOfBirth")}
                     showLabel={false}
+                    preset="birth-date"
                     value={field.value}
                     onChange={field.onChange}
                     data-testid="input-date-of-birth"
                   />
                 </FormControl>
+                <FormDescription>{t("profile.dobMinAgeHint")}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -221,7 +268,20 @@ function TreasureHunterSignUpForm({
                 name="mobileCountryCode"
                 render={({ field }) => (
                   <FormItem className="w-[140px] shrink-0">
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        const b = getHunterNationalNumberBounds(v);
+                        const raw = form
+                          .getValues("mobileNumber")
+                          .replace(/\D/g, "");
+                        if (raw.length > b.max) {
+                          form.setValue("mobileNumber", raw.slice(0, b.max));
+                        }
+                        void form.trigger("mobileNumber");
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger data-testid="select-country-code">
                           <SelectValue />
@@ -247,15 +307,24 @@ function TreasureHunterSignUpForm({
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder="5XXXXXXXX"
-                        required
+                        inputMode="numeric"
+                        placeholder={hunterMobileLengthHint(phoneBounds)}
+                        maxLength={phoneBounds.max}
                         data-testid="input-mobile-number"
                         {...field}
-                        onChange={(e) =>
-                          field.onChange(e.target.value.replace(/\D/g, ""))
-                        }
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          field.onChange(
+                            digits.slice(0, phoneBounds.max)
+                          );
+                        }}
                       />
                     </FormControl>
+                    <FormDescription>
+                      {t("profile.mobileLengthHint", {
+                        range: hunterMobileLengthHint(phoneBounds),
+                      })}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -86,60 +86,6 @@ export class MerchantsService {
     return this.toResponseDto(merchant);
   }
 
-  async linkRedeemerHunter(
-    merchantId: string,
-    hunterId: string,
-  ): Promise<void> {
-    if (!Types.ObjectId.isValid(hunterId)) {
-      throw new BadRequestException("Invalid hunter id");
-    }
-    const hunter = await this.database.hunters.findOne({
-      _id: new Types.ObjectId(hunterId),
-      deletedAt: null,
-    });
-    if (!hunter) {
-      throw new NotFoundException("Hunter not found");
-    }
-    const existing = hunter.redeemerMerchantId?.toString();
-    if (existing && existing !== merchantId) {
-      throw new ConflictException("Hunter is linked to another merchant");
-    }
-    await this.database.hunters.findOneAndUpdate(
-      { _id: new Types.ObjectId(hunterId), deletedAt: null },
-      {
-        $set: {
-          redeemerMerchantId: new Types.ObjectId(merchantId),
-          updatedAt: new Date(),
-        },
-      },
-    );
-  }
-
-  async unlinkRedeemerHunter(
-    merchantId: string,
-    hunterId: string,
-  ): Promise<void> {
-    if (!Types.ObjectId.isValid(hunterId)) {
-      throw new BadRequestException("Invalid hunter id");
-    }
-    const result = await this.database.hunters.updateOne(
-      {
-        _id: new Types.ObjectId(hunterId),
-        redeemerMerchantId: new Types.ObjectId(merchantId),
-        deletedAt: null,
-      },
-      {
-        $set: {
-          redeemerMerchantId: null,
-          updatedAt: new Date(),
-        },
-      },
-    );
-    if (!result.modifiedCount) {
-      throw new NotFoundException("Hunter not found or not linked to you");
-    }
-  }
-
   async generateScannerToken(
     id: string,
     expiresInHours = 24,
@@ -393,7 +339,7 @@ export class MerchantsService {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const pipeline: PipelineStage[] = [
-      { $match: { merchantId: merchantObjectId, deletedAt: null } },
+      { $match: { merchantId: merchantObjectId } },
       {
         $facet: {
           overview: [

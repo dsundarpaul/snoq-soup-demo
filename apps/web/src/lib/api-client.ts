@@ -1,5 +1,9 @@
 import { API_ORIGIN } from "@/lib/app-config";
 import {
+  hadAuthCredentials,
+  invalidateAuthSession,
+} from "@/lib/auth-session";
+import {
   type AuthRole,
   getAccessToken,
   getRefreshToken,
@@ -23,8 +27,22 @@ function formatApiErrorPayload(text: string): string {
   return text;
 }
 
-export async function throwIfResNotOk(res: Response): Promise<void> {
+export async function throwIfResNotOk(
+  res: Response,
+  requestPathFor401?: string,
+  explicitRoleFor401?: AuthRole
+): Promise<void> {
   if (!res.ok) {
+    if (res.status === 401) {
+      const role =
+        explicitRoleFor401 ??
+        (requestPathFor401
+          ? inferAuthRoleFromPath(requestPathFor401)
+          : undefined);
+      if (role && hadAuthCredentials(role)) {
+        invalidateAuthSession(role);
+      }
+    }
     const text = (await res.text()) || res.statusText;
     const detail = formatApiErrorPayload(text);
     throw new Error(`${res.status}: ${detail}`);

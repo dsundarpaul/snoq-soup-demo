@@ -102,6 +102,15 @@ export class Merchant {
   emailVerified!: boolean;
 
   @ApiProperty({
+    nullable: true,
+    description: "When a verification email was last sent",
+  })
+  @IsDate()
+  @IsOptional()
+  @Prop({ type: Date, default: null })
+  lastVerificationSentAt!: Date | null;
+
+  @ApiProperty({
     type: EmailVerification,
     description: "Email verification details",
   })

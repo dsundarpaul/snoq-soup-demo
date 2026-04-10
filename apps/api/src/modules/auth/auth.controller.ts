@@ -23,8 +23,10 @@ import { RegisterHunterDto } from "./dto/request/register-hunter.dto";
 import { ForgotPasswordDto } from "./dto/request/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/request/reset-password.dto";
 import { RefreshTokenDto } from "./dto/request/refresh-token.dto";
+import { VerifyEmailDto } from "./dto/request/verify-email.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";
 import { TokenResponseDto } from "./dto/response/token-response.dto";
+import { ResendVerificationResponseDto } from "./dto/response/resend-verification-response.dto";
 import { UserType } from "../../database/schemas/refresh-token.schema";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 
@@ -32,6 +34,36 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  private static readonly resendVerificationMessage =
+    "If the email exists, a verification link has been sent.";
+
+  @Post("verify-email")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Verify email with token from email link" })
+  @ApiResponse({ status: 200, description: "Email verified successfully" })
+  @ApiResponse({ status: 400, description: "Invalid or expired token" })
+  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
+    return this.authService.verifyEmail(dto.token);
+  }
+
+  @Post("resend-verification")
+  @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Resend email verification link" })
+  @ApiResponse({
+    status: 200,
+    description: "Generic acknowledgment",
+    type: ResendVerificationResponseDto,
+  })
+  async resendVerification(
+    @Body() dto: ForgotPasswordDto,
+  ): Promise<ResendVerificationResponseDto> {
+    await this.authService.resendVerification(dto.email);
+    return {
+      message: AuthController.resendVerificationMessage,
+    };
+  }
 
   @Post("merchant/register")
   @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } }) // 3 requests per hour
@@ -59,14 +91,17 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: "Invalid credentials" })
-  @ApiResponse({ status: 403, description: "Account locked" })
+  @ApiResponse({
+    status: 403,
+    description: "Account locked or email not verified",
+  })
   async loginMerchant(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.loginMerchant(dto.email, dto.password);
   }
 
   @Post("merchant/verify-email/:token")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Verify merchant email" })
+  @ApiOperation({ summary: "Verify merchant email (token in URL)" })
   @ApiParam({ name: "token", description: "Verification token from email" })
   @ApiResponse({ status: 200, description: "Email verified successfully" })
   @ApiResponse({ status: 400, description: "Invalid or expired token" })
@@ -80,12 +115,16 @@ export class AuthController {
   @ApiOperation({ summary: "Resend merchant verification email" })
   @ApiResponse({
     status: 200,
-    description: "Verification email sent if account exists",
+    description: "Generic acknowledgment",
+    type: ResendVerificationResponseDto,
   })
   async resendMerchantVerification(
     @Body() dto: ForgotPasswordDto,
-  ): Promise<void> {
-    return this.authService.resendVerification(dto.email);
+  ): Promise<ResendVerificationResponseDto> {
+    await this.authService.resendVerification(dto.email);
+    return {
+      message: AuthController.resendVerificationMessage,
+    };
   }
 
   @Post("merchant/forgot-password")

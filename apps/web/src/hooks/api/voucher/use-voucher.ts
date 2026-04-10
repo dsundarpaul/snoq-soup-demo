@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   mapClaimResponseToLegacy,
   mapNestVoucherToLegacy,
@@ -111,12 +111,9 @@ export function useMerchantVouchersQuery(page = 1, limit = 20) {
         page: String(page),
         limit: String(limit),
       });
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/merchants/me/vouchers?${qs.toString()}`,
-        { auth: "merchant" }
-      );
-      await throwIfResNotOk(res);
+      const path = `/api/v1/merchants/me/vouchers?${qs.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "merchant" });
+      await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as {
         vouchers?: Record<string, unknown>[];
         total?: number;

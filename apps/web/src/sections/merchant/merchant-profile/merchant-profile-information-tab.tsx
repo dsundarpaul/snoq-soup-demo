@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Upload, Camera, Copy } from "lucide-react";
 import type { Merchant } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
 import { publicUrls } from "@/lib/app-config";
 import { useToast } from "@/hooks/use-toast";
 import { StaffScannerLink } from "@/sections/merchant/staff-scanner-link";
-import { StaffHunterLink } from "@/sections/merchant/staff-hunter-link";
 import {
   Card,
   CardContent,
@@ -95,9 +94,10 @@ export function MerchantProfileInformationTab({
                         file.type && file.type.length > 0
                           ? file.type
                           : "image/png";
-                      const presignRes = await apiFetch(
+                      const presignPath = "/api/v1/upload/presign";
+                      const presignRes = await apiFetchMaybeRetry(
                         "POST",
-                        "/api/v1/upload/presign",
+                        presignPath,
                         {
                           auth: "merchant",
                           body: {
@@ -107,7 +107,7 @@ export function MerchantProfileInformationTab({
                           },
                         }
                       );
-                      await throwIfResNotOk(presignRes);
+                      await throwIfResNotOk(presignRes, presignPath, "merchant");
                       const presignJson = (await presignRes.json()) as {
                         presignedUrl: string;
                         publicUrl: string;
@@ -121,15 +121,16 @@ export function MerchantProfileInformationTab({
                       if (!uploadRes.ok) throw new Error("Failed to upload");
                       const logoUrl =
                         presignJson.publicUrl || presignJson.key || "";
-                      const saveRes = await apiFetch(
+                      const logoPath = "/api/v1/merchants/me/logo";
+                      const saveRes = await apiFetchMaybeRetry(
                         "PATCH",
-                        "/api/v1/merchants/me/logo",
+                        logoPath,
                         {
                           auth: "merchant",
                           body: { logoUrl },
                         }
                       );
-                      await throwIfResNotOk(saveRes);
+                      await throwIfResNotOk(saveRes, logoPath, "merchant");
                       queryClient.invalidateQueries({
                         queryKey: merchantQueryKeys.me,
                       });
@@ -160,19 +161,6 @@ export function MerchantProfileInformationTab({
         </CardHeader>
         <CardContent>
           <StaffScannerLink />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Staff hunter (signed-in app)</CardTitle>
-          <CardDescription>
-            Link a hunter who uses the mobile app with their account. They can
-            then open Scan vouchers (staff) after signing in.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StaffHunterLink />
         </CardContent>
       </Card>
 

@@ -13,6 +13,10 @@ import {
   RefreshToken,
   RefreshTokenSchema,
 } from "./schemas/refresh-token.schema";
+import {
+  EmailVerificationToken,
+  EmailVerificationTokenSchema,
+} from "./schemas/email-verification-token.schema";
 
 @Global()
 @Module({
@@ -26,6 +30,10 @@ import {
       { name: Admin.name, schema: AdminSchema },
       { name: PromoCode.name, schema: PromoCodeSchema },
       { name: RefreshToken.name, schema: RefreshTokenSchema },
+      {
+        name: EmailVerificationToken.name,
+        schema: EmailVerificationTokenSchema,
+      },
     ]),
   ],
   providers: [DatabaseService],

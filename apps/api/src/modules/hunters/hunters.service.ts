@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
 import { Hunter } from "../../database/schemas/hunter.schema";
@@ -9,6 +13,7 @@ import {
   VoucherHistoryItemDto,
 } from "./dto/response/hunter-history-response.dto";
 import { LeaderboardEntryDto } from "./dto/response/leaderboard-entry.dto";
+import { isValidHunterDobYmdString } from "../../common/validation/hunter-dob.util";
 
 // Type-safe refactor: Define update data interface
 interface HunterUpdateData {
@@ -95,6 +100,11 @@ export class HuntersService {
       updateData.profile = {};
 
       if (dto.dateOfBirth) {
+        if (!isValidHunterDobYmdString(dto.dateOfBirth)) {
+          throw new BadRequestException(
+            "Date of birth must be a valid date, not in the future, and at least 5 years ago",
+          );
+        }
         updateData.profile.dateOfBirth = new Date(dto.dateOfBirth);
       }
 

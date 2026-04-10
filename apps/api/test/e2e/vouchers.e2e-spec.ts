@@ -1,15 +1,15 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { MongooseModule, getModelToken } from "@nestjs/mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import { startE2eMongo } from "./mongo-test-server";
 import { Model } from "mongoose";
 import * as request from "supertest";
 import { ThrottlerStorage } from "@nestjs/throttler";
+import { Types } from "mongoose";
 import { AppModule } from "../../src/app.module";
-import {
-  Merchant,
-  MerchantDocument,
-} from "../../src/database/schemas/merchant.schema";
+import { DatabaseService } from "../../src/database/database.service";
+import { EmailVerificationTokenService } from "../../src/modules/auth/email-verification-token.service";
 import {
   Voucher,
   VoucherDocument,
@@ -24,9 +24,36 @@ class MockThrottlerStorage implements ThrottlerStorage {
 
 describe("Voucher Lifecycle E2E Tests", () => {
   let app: INestApplication;
-  let mongoServer: MongoMemoryServer;
-  let merchantModel: Model<MerchantDocument>;
+  let mongoServer: MongoMemoryReplSet;
   let voucherModel: Model<VoucherDocument>;
+  let database: DatabaseService;
+  let lastIssuedMerchantVerificationToken = "";
+
+  const predictableVerificationToken = (seq: number): string =>
+    Buffer.alloc(32, seq & 0xff).toString("hex");
+
+  function mockMerchantVerificationTokenIssuance(db: DatabaseService): void {
+    let seq = 0;
+    jest
+      .spyOn(EmailVerificationTokenService.prototype, "issueToken")
+      .mockImplementation(async function (
+        this: EmailVerificationTokenService,
+        merchantId: string,
+      ) {
+        seq += 1;
+        const plain = predictableVerificationToken(seq);
+        lastIssuedMerchantVerificationToken = plain;
+        const tokenHash = this.hashPlainToken(plain);
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        await db.emailVerificationTokens.create({
+          merchantId: new Types.ObjectId(merchantId),
+          tokenHash,
+          expiresAt,
+          used: false,
+        });
+        return plain;
+      });
+  }
 
   // Helper to generate random device ID
   const generateDeviceId = () =>
@@ -99,17 +126,10 @@ describe("Voucher Lifecycle E2E Tests", () => {
       })
       .expect(201);
 
-    // Verify email using token from database
-    const merchant = await merchantModel
-      .findById(registerRes.body.user.id)
-      .lean();
-    if (merchant?.emailVerification?.token) {
-      await request(app.getHttpServer())
-        .post(
-          `/api/v1/auth/merchant/verify-email/${merchant.emailVerification.token}`,
-        )
-        .expect(200);
-    }
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/verify-email")
+      .send({ token: lastIssuedMerchantVerificationToken })
+      .expect(200);
 
     const loginRes = await request(app.getHttpServer())
       .post("/api/v1/auth/merchant/login")
@@ -137,6 +157,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
         longitude: 46.6753,
         radius: 50,
         rewardValue: "20% OFF",
+        redemptionType: "anytime",
         availabilityType: "unlimited",
         active: true,
         ...dropData,
@@ -157,7 +178,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
   };
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await startE2eMongo();
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -172,12 +193,10 @@ describe("Voucher Lifecycle E2E Tests", () => {
     app.setGlobalPrefix("api/v1");
     await app.init();
 
-    merchantModel = moduleFixture.get<Model<MerchantDocument>>(
-      getModelToken(Merchant.name),
-    );
     voucherModel = moduleFixture.get<Model<VoucherDocument>>(
       getModelToken(Voucher.name),
     );
+    database = moduleFixture.get<DatabaseService>(DatabaseService);
   });
 
   afterAll(async () => {
@@ -185,8 +204,16 @@ describe("Voucher Lifecycle E2E Tests", () => {
     await mongoServer.stop();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.restoreAllMocks();
+    lastIssuedMerchantVerificationToken = "";
+    await database.merchants.deleteMany({});
+    await database.drops.deleteMany({});
+    await database.vouchers.deleteMany({});
+    await database.hunters.deleteMany({});
+    await database.refreshTokens.deleteMany({});
+    await database.emailVerificationTokens.deleteMany({});
+    mockMerchantVerificationTokenIssuance(database);
   });
 
   describe("Full Voucher Lifecycle", () => {

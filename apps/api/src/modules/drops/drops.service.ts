@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from "@nestjs/common";
-import { PipelineStage, Types } from "mongoose";
+import { FilterQuery, now, PipelineStage, Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
 import { Drop, DropDocument } from "../../database/schemas/drop.schema";
 import { CreateDropDto } from "./dto/request/create-drop.dto";
@@ -21,7 +21,7 @@ export class DropsService {
 
   async create(
     merchantId: string,
-    dto: CreateDropDto,
+    dto: CreateDropDto
   ): Promise<DropResponseDto> {
     // Build redemption object from flat fields
     const redemption: Drop["redemption"] = {
@@ -57,7 +57,7 @@ export class DropsService {
       (!dto.availabilityLimit || dto.availabilityLimit < 1)
     ) {
       throw new BadRequestException(
-        "Limited availability requires a valid limit",
+        "Limited availability requires a valid limit"
       );
     }
 
@@ -71,7 +71,7 @@ export class DropsService {
 
     if (lng == null || lat == null) {
       throw new BadRequestException(
-        "Longitude (lng/longitude) and Latitude (lat/latitude) are required",
+        "Longitude (lng/longitude) and Latitude (lat/latitude) are required"
       );
     }
 
@@ -120,37 +120,107 @@ export class DropsService {
     merchantId: string,
     page = 1,
     limit = 20,
+    search?: string,
+    status?: string
   ): Promise<{
     drops: DropResponseDto[];
     total: number;
     page: number;
     limit: number;
   }> {
-    const skip = (page - 1) * limit;
+    const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
+    const safeLimit = Math.min(
+      100,
+      Math.max(1, Number.isFinite(limit) ? limit : 20),
+    );
+    const filter = this.buildMerchantDropsFilter(merchantId, search, status);
+    const skip = (safePage - 1) * safeLimit;
 
     const [drops, total] = await Promise.all([
       this.database.drops
-        .find({ merchantId: new Types.ObjectId(merchantId), deletedAt: null })
+        .find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
+        .limit(safeLimit)
         .lean(),
-      this.database.drops.countDocuments({
-        merchantId: new Types.ObjectId(merchantId),
-        deletedAt: null,
-      }),
+      this.database.drops.countDocuments(filter),
     ]);
 
     return {
       drops: drops.map((d) => this.toResponseDto(d as Drop)),
       total,
-      page,
-      limit,
+      page: safePage,
+      limit: safeLimit,
     };
   }
 
-  async findForPublicMerchantStore(
+  private buildMerchantDropsFilter(
     merchantId: string,
+    search?: string,
+    status?: string
+  ): FilterQuery<DropDocument> {
+    const base: FilterQuery<DropDocument> = {
+      merchantId: new Types.ObjectId(merchantId),
+      deletedAt: null,
+    };
+
+    const andParts: FilterQuery<DropDocument>[] = [];
+    const trimmed = search?.trim();
+
+    if (trimmed) {
+      const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "i");
+      andParts.push({
+        $or: [{ name: regex }, { rewardValue: regex }],
+      });
+    }
+
+    const normalized = status?.trim().toLowerCase();
+    if (normalized && normalized !== "all") {
+      const now = new Date();
+      switch (normalized) {
+        case "inactive":
+          andParts.push({ active: false });
+          break;
+        case "scheduled":
+          andParts.push({ "schedule.start": { $gt: now } });
+          break;
+        case "expired":
+          andParts.push({ "schedule.end": { $lt: now } });
+          break;
+        case "active":
+          andParts.push({ active: true });
+          andParts.push({
+            $or: [
+              { "schedule.end": { $exists: false } },
+              { "schedule.end": null },
+              { "schedule.end": { $gte: now } },
+            ],
+          });
+          andParts.push({
+            $or: [
+              { "schedule.start": { $exists: false } },
+              { "schedule.start": null },
+              { "schedule.start": { $lte: now } },
+            ],
+          });
+          break;
+        default:
+          throw new BadRequestException(
+            "Invalid status. Use active, inactive, scheduled, expired, or all."
+          );
+      }
+    }
+
+    if (andParts.length === 0) {
+      return base;
+    }
+
+    return { ...base, $and: andParts };
+  }
+
+  async findForPublicMerchantStore(
+    merchantId: string
   ): Promise<DropResponseDto[]> {
     const drops = await this.database.drops
       .find({
@@ -169,22 +239,22 @@ export class DropsService {
       {
         $match: {
           active: true,
-          // $and: [
-          //   {
-          //     $or: [
-          //       { "schedule.start": { $exists: false } },
-          //       { "schedule.start": null },
-          //       { "schedule.start": { $lte: now } },
-          //     ],
-          //   },
-          //   {
-          //     $or: [
-          //       { "schedule.end": { $exists: false } },
-          //       { "schedule.end": null },
-          //       { "schedule.end": { $gte: now } },
-          //     ],
-          //   },
-          // ],
+          $and: [
+            {
+              $or: [
+                { "schedule.start": { $exists: false } },
+                { "schedule.start": null },
+                { "schedule.start": { $lte: now } },
+              ],
+            },
+            {
+              $or: [
+                { "schedule.end": { $exists: false } },
+                { "schedule.end": null },
+                { "schedule.end": { $gte: now } },
+              ],
+            },
+          ],
         },
       },
       { $sort: { createdAt: -1 } },
@@ -229,7 +299,7 @@ export class DropsService {
   async update(
     id: string,
     merchantId: string,
-    dto: UpdateDropDto,
+    dto: UpdateDropDto
   ): Promise<DropResponseDto> {
     const drop = await this.database.drops.findOne({
       _id: new Types.ObjectId(id),
@@ -239,7 +309,7 @@ export class DropsService {
 
     if (!drop) {
       throw new NotFoundException(
-        "Drop not found or you do not have permission",
+        "Drop not found or you do not have permission"
       );
     }
 
@@ -296,7 +366,7 @@ export class DropsService {
       (!dto.availabilityLimit || dto.availabilityLimit < 1)
     ) {
       throw new BadRequestException(
-        "Limited availability requires a valid limit",
+        "Limited availability requires a valid limit"
       );
     }
 
@@ -329,18 +399,18 @@ export class DropsService {
         merchantId: new Types.ObjectId(merchantId),
         deletedAt: null,
       },
-      { $set: { deletedAt: new Date(), active: false } },
+      { $set: { deletedAt: new Date(), active: false } }
     );
 
     if (!result.modifiedCount) {
       throw new NotFoundException(
-        "Drop not found or you do not have permission",
+        "Drop not found or you do not have permission"
       );
     }
   }
 
   async checkAvailability(
-    dropId: string,
+    dropId: string
   ): Promise<{ available: boolean; remainingClaims?: number }> {
     const drop = await this.database.drops
       .findOne({ _id: dropId, deletedAt: null })
@@ -395,10 +465,25 @@ export class DropsService {
     return true;
   }
 
+  private effectiveScheduleAfterUpdate(
+    drop: { schedule?: Drop["schedule"] },
+    dto: UpdateDropDto
+  ): Drop["schedule"] {
+    let start = drop.schedule?.start;
+    let end = drop.schedule?.end;
+    if (dto.startTime) {
+      start = new Date(dto.startTime);
+    }
+    if (dto.endTime) {
+      end = new Date(dto.endTime);
+    }
+    return { start, end };
+  }
+
   async getDetailWithAvailability(
     id: string,
     userLat?: number,
-    userLng?: number,
+    userLng?: number
   ): Promise<DropDetailResponseDto> {
     const drop = await this.database.drops
       .findOne({ _id: id, deletedAt: null })
@@ -415,7 +500,7 @@ export class DropsService {
         userLat,
         userLng,
         drop.location.coordinates[1],
-        drop.location.coordinates[0],
+        drop.location.coordinates[0]
       );
     }
 
@@ -454,7 +539,7 @@ export class DropsService {
     lat1: number,
     lng1: number,
     lat2: number,
-    lng2: number,
+    lng2: number
   ): number {
     const R = 6371000; // Earth's radius in meters
     const dLat = this.toRad(lat2 - lat1);

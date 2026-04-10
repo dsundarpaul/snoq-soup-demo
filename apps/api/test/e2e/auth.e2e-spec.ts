@@ -1,15 +1,18 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import { startE2eMongo } from "./mongo-test-server";
 import * as request from "supertest";
 import { randomUUID } from "crypto";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
 import { ThrottlerStorage } from "@nestjs/throttler";
+import { Types } from "mongoose";
 
 import { AppModule } from "../../src/app.module";
 import { DatabaseService } from "../../src/database/database.service";
+import { EmailVerificationTokenService } from "../../src/modules/auth/email-verification-token.service";
 
 // Mock throttler storage that always allows requests
 class MockThrottlerStorage implements ThrottlerStorage {
@@ -41,6 +44,33 @@ const randomPassword = () => {
   );
 };
 
+const predictableVerificationToken = (seq: number): string =>
+  Buffer.alloc(32, seq & 0xff).toString("hex");
+
+function mockMerchantVerificationTokenIssuance(
+  database: DatabaseService,
+): jest.SpyInstance {
+  let seq = 0;
+  return jest
+    .spyOn(EmailVerificationTokenService.prototype, "issueToken")
+    .mockImplementation(async function (
+      this: EmailVerificationTokenService,
+      merchantId: string,
+    ) {
+      seq += 1;
+      const plain = predictableVerificationToken(seq);
+      const tokenHash = this.hashPlainToken(plain);
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      await database.emailVerificationTokens.create({
+        merchantId: new Types.ObjectId(merchantId),
+        tokenHash,
+        expiresAt,
+        used: false,
+      });
+      return plain;
+    });
+}
+
 interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -59,12 +89,12 @@ interface AuthResponse {
 
 describe("Authentication E2E Tests", () => {
   let app: INestApplication;
-  let mongoServer: MongoMemoryServer;
+  let mongoServer: MongoMemoryReplSet;
   let database: DatabaseService;
   let jwtService: JwtService;
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await startE2eMongo();
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -89,12 +119,21 @@ describe("Authentication E2E Tests", () => {
     await mongoServer.stop();
   });
 
+  const verifyTestMerchantEmail = async (): Promise<void> => {
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/verify-email")
+      .send({ token: predictableVerificationToken(1) })
+      .expect(200);
+  };
+
   beforeEach(async () => {
-    // Clean up collections before each test
+    jest.restoreAllMocks();
     await database.merchants.deleteMany({});
     await database.hunters.deleteMany({});
     await database.admins.deleteMany({});
     await database.refreshTokens.deleteMany({});
+    await database.emailVerificationTokens.deleteMany({});
+    mockMerchantVerificationTokenIssuance(database);
   });
 
   describe("Merchant Authentication Flow", () => {
@@ -134,16 +173,12 @@ describe("Authentication E2E Tests", () => {
       expect(merchantInDb!.password).not.toBe(password);
       expect(await bcrypt.compare(password, merchantInDb!.password)).toBe(true);
 
-      // Get verification token from database
-      const merchantWithToken = await database.merchants
-        .findById(registerBody.user.id)
-        .lean();
-      const verificationToken = merchantWithToken!.emailVerification.token;
+      const verificationToken = predictableVerificationToken(1);
       expect(verificationToken).toBeDefined();
 
-      // Step 2: Verify Email
       await request(app.getHttpServer())
-        .post(`/api/v1/auth/merchant/verify-email/${verificationToken}`)
+        .post("/api/v1/auth/verify-email")
+        .send({ token: verificationToken })
         .expect(200);
 
       // Verify email is marked as verified
@@ -204,8 +239,7 @@ describe("Authentication E2E Tests", () => {
       const email = randomEmail();
       const password = randomPassword();
 
-      // Register merchant
-      const registerRes = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/register")
         .send({
           email,
@@ -215,20 +249,38 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
-      const merchant = await database.merchants
-        .findById(registerRes.body.user.id)
-        .lean();
-      const token = merchant!.emailVerification.token;
+      const token = predictableVerificationToken(1);
 
-      // First verification should succeed
       await request(app.getHttpServer())
-        .post(`/api/v1/auth/merchant/verify-email/${token}`)
+        .post("/api/v1/auth/verify-email")
+        .send({ token })
         .expect(200);
 
-      // Second use of same token should fail (token is cleared after use)
       await request(app.getHttpServer())
-        .post(`/api/v1/auth/merchant/verify-email/${token}`)
+        .post("/api/v1/auth/verify-email")
+        .send({ token })
         .expect(400);
+    });
+
+    it("should reject merchant login until email is verified", async () => {
+      const email = randomEmail();
+      const username = randomUsername();
+      const password = randomPassword();
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/merchant/register")
+        .send({
+          email,
+          password,
+          businessName: "Test Business",
+          username,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/merchant/login")
+        .send({ email, password })
+        .expect(403);
     });
 
     it("should enforce password requirements during registration", async () => {
@@ -486,6 +538,8 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
+      await verifyTestMerchantEmail();
+
       // Request password reset
       await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/forgot-password")
@@ -641,6 +695,8 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
+      await verifyTestMerchantEmail();
+
       const loginRes = await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/login")
         .send({ email, password })
@@ -674,6 +730,8 @@ describe("Authentication E2E Tests", () => {
           username: randomUsername(),
         })
         .expect(201);
+
+      await verifyTestMerchantEmail();
 
       const loginRes = await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/login")
@@ -711,6 +769,8 @@ describe("Authentication E2E Tests", () => {
           username: randomUsername(),
         })
         .expect(201);
+
+      await verifyTestMerchantEmail();
 
       // Create multiple sessions
       const login1 = await request(app.getHttpServer())
@@ -767,6 +827,8 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
+      await verifyTestMerchantEmail();
+
       const loginRes = await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/login")
         .send({ email, password })
@@ -812,6 +874,8 @@ describe("Authentication E2E Tests", () => {
           username: randomUsername(),
         })
         .expect(201);
+
+      await verifyTestMerchantEmail();
 
       // Multiple logins should generate different refresh tokens
       const tokens: string[] = [];
@@ -948,32 +1012,44 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
-      // Get original token
-      const merchant1 = await database.merchants
-        .findOne({ email: email.toLowerCase() })
-        .lean();
-      const originalToken = merchant1!.emailVerification.token;
+      const originalToken = predictableVerificationToken(1);
 
-      // Resend verification
-      await request(app.getHttpServer())
-        .post("/api/v1/auth/merchant/resend-verification")
+      await database.merchants.updateOne(
+        { email: email.toLowerCase() },
+        {
+          $set: {
+            lastVerificationSentAt: new Date(Date.now() - 120_000),
+          },
+        },
+      );
+
+      const resendRes = await request(app.getHttpServer())
+        .post("/api/v1/auth/resend-verification")
         .send({ email })
         .expect(200);
 
-      // Token should be regenerated
-      const merchant2 = await database.merchants
-        .findOne({ email: email.toLowerCase() })
-        .lean();
-      expect(merchant2!.emailVerification.token).toBeDefined();
-      expect(merchant2!.emailVerification.token).not.toBe(originalToken);
+      expect(resendRes.body).toMatchObject({
+        message: "If the email exists, a verification link has been sent.",
+      });
+
+      const newToken = predictableVerificationToken(2);
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/verify-email")
+        .send({ token: originalToken })
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/verify-email")
+        .send({ token: newToken })
+        .expect(200);
     });
 
     it("should not resend verification for already verified email", async () => {
       const email = randomEmail();
       const password = randomPassword();
 
-      // Register merchant
-      const registerRes = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/register")
         .send({
           email,
@@ -983,29 +1059,27 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
-      // Verify email
-      const merchant = await database.merchants
-        .findById(registerRes.body.user.id)
-        .lean();
+      const verifyToken = predictableVerificationToken(1);
       await request(app.getHttpServer())
-        .post(
-          `/api/v1/auth/merchant/verify-email/${merchant!.emailVerification.token}`,
-        )
+        .post("/api/v1/auth/verify-email")
+        .send({ token: verifyToken })
         .expect(200);
 
-      // Try to resend - should return success but not actually send
       await request(app.getHttpServer())
-        .post("/api/v1/auth/merchant/resend-verification")
+        .post("/api/v1/auth/resend-verification")
         .send({ email })
         .expect(200);
     });
 
     it("should not reveal if email exists for resend verification", async () => {
-      // Request for non-existent email should return 200
-      await request(app.getHttpServer())
-        .post("/api/v1/auth/merchant/resend-verification")
+      const res = await request(app.getHttpServer())
+        .post("/api/v1/auth/resend-verification")
         .send({ email: "nonexistent@example.com" })
         .expect(200);
+
+      expect(res.body).toMatchObject({
+        message: "If the email exists, a verification link has been sent.",
+      });
     });
   });
 

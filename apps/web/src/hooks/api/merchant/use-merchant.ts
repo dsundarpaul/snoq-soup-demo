@@ -6,13 +6,14 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { clearSessionsExcept } from "@/lib/auth-session";
 import {
   setTokenBundle,
   setStoredUser,
   clearTokenBundle,
   getRefreshToken,
 } from "@/lib/auth-tokens";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   mapAuthUserToMerchant,
   mapMerchantMeToLegacy,
@@ -26,10 +27,31 @@ import type {
   MerchantLoginInput,
   MerchantSignupInput,
 } from "./merchant.api-types";
+import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
+
+export type MerchantDropsListStatus =
+  | "all"
+  | "active"
+  | "inactive"
+  | "scheduled"
+  | "expired";
 
 export const merchantQueryKeys = {
   me: ["/api/v1/merchants/me"] as const,
   drops: ["/api/v1/merchants/me/drops"] as const,
+  dropsList: (
+    page: number,
+    limit: number,
+    search: string,
+    status: MerchantDropsListStatus
+  ) =>
+    [
+      ...merchantQueryKeys.drops,
+      page,
+      limit,
+      search,
+      status,
+    ] as const,
   stats: ["/api/v1/merchants/me/stats"] as const,
   analytics: (from: string, to: string) =>
     ["/api/v1/merchants/me/analytics", from, to] as const,
@@ -67,6 +89,10 @@ export function useMerchantLoginMutation(
       });
       setStoredUser("merchant", body.user);
       return mapAuthUserToMerchant(body.user);
+    },
+    onSuccess: (...args) => {
+      clearSessionsExcept("merchant");
+      options?.onSuccess?.(...args);
     },
   });
 }
@@ -107,6 +133,10 @@ export function useMerchantSignupMutation(
       });
       setStoredUser("merchant", body.user);
       return body;
+    },
+    onSuccess: (...args) => {
+      clearSessionsExcept("merchant");
+      options?.onSuccess?.(...args);
     },
   });
 }
@@ -190,12 +220,11 @@ export function useMerchantAnalyticsQuery(
   return useQuery({
     queryKey: merchantQueryKeys.analytics(from, to),
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/merchants/me/analytics`,
-        { auth: "merchant" }
-      );
-      await throwIfResNotOk(res);
+      const path = "/api/v1/merchants/me/analytics";
+      const res = await apiFetchMaybeRetry("GET", path, {
+        auth: "merchant",
+      });
+      await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as Record<string, unknown>;
       return mapMerchantAnalyticsToLegacy(json);
     },
@@ -209,12 +238,11 @@ export function useMerchantDropCodesQuery(dropId: string | null) {
       ? merchantQueryKeys.dropCodes(dropId)
       : ["merchant-drop-codes-disabled"],
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/merchants/me/drops/${dropId}/codes`,
-        { auth: "merchant" }
-      );
-      await throwIfResNotOk(res);
+      const path = `/api/v1/merchants/me/drops/${dropId}/codes`;
+      const res = await apiFetchMaybeRetry("GET", path, {
+        auth: "merchant",
+      });
+      await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as Record<string, unknown>;
       return mapPromoListToLegacy(json);
     },
@@ -243,54 +271,92 @@ export function useMerchantLogoMutation(
   });
 }
 
-export function useMerchantMeQuery() {
+export function useMerchantMeQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: merchantQueryKeys.me,
+    enabled: options?.enabled !== false,
     queryFn: async () => {
-      const res = await apiFetch("GET", "/api/v1/merchants/me", {
+      const path = "/api/v1/merchants/me";
+      const res = await apiFetchMaybeRetry("GET", path, {
         auth: "merchant",
       });
-      await throwIfResNotOk(res);
+      await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as Record<string, unknown>;
       return mapMerchantMeToLegacy(json);
     },
   });
 }
 
-export function useMerchantDropsListQuery() {
+export function useMerchantDropsListQuery(params: {
+  page: number;
+  limit: number;
+  search: string;
+  status: MerchantDropsListStatus;
+}) {
+  const { page, limit, search, status } = params;
   return useQuery({
-    queryKey: merchantQueryKeys.drops,
+    queryKey: merchantQueryKeys.dropsList(page, limit, search, status),
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        "/api/v1/merchants/me/drops?page=1&limit=100",
-        { auth: "merchant" }
-      );
-      await throwIfResNotOk(res);
+      const sp = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const q = search.trim();
+      if (q) sp.set("search", q);
+      if (status !== "all") sp.set("status", status);
+      const path = `/api/v1/merchants/me/drops?${sp.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, {
+        auth: "merchant",
+      });
+      await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as {
         drops?: Record<string, unknown>[];
+        total?: number;
+        page?: number;
+        limit?: number;
       };
-      return (json.drops ?? []).map((d) => mapNestDropToLegacy(d));
+      return {
+        drops: (json.drops ?? []).map((d) => mapNestDropToLegacy(d)),
+        total: json.total ?? 0,
+        page: json.page ?? page,
+        limit: json.limit ?? limit,
+      };
     },
   });
 }
 
-export function useMerchantLinkRedeemerHunterMutation(
+export function useMerchantDropActiveMutation(
   options?: Omit<
-    UseMutationOptions<{ success: boolean }, Error, string>,
+    UseMutationOptions<
+      Record<string, unknown>,
+      Error,
+      { dropId: string; active: boolean }
+    >,
     "mutationFn"
   >
 ) {
   return useMutation({
     ...options,
-    mutationFn: async (hunterId: string) => {
-      const res = await apiRequest(
-        "PUT",
-        `/api/v1/merchants/me/redeemer-hunters/${encodeURIComponent(hunterId)}`,
-        {},
+    mutationFn: async ({
+      dropId,
+      active,
+    }: {
+      dropId: string;
+      active: boolean;
+    }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/v1/merchants/me/drops/${dropId}`,
+        { active },
         { auth: "merchant" }
       );
-      return res.json() as Promise<{ success: boolean }>;
+      return response.json() as Promise<Record<string, unknown>>;
+    },
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.drops });
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.stats });
+      queryClient.invalidateQueries({ queryKey: dropQueryKeys.all });
+      options?.onSuccess?.(...args);
     },
   });
 }
@@ -299,11 +365,12 @@ export function useMerchantScannerTokenQuery() {
   return useQuery({
     queryKey: merchantQueryKeys.scannerToken,
     queryFn: async () => {
-      const res = await apiFetch("GET", "/api/v1/merchants/me/scanner-token", {
+      const path = "/api/v1/merchants/me/scanner-token";
+      const res = await apiFetchMaybeRetry("GET", path, {
         auth: "merchant",
       });
       if (res.status === 404) return null;
-      await throwIfResNotOk(res);
+      await throwIfResNotOk(res, path, "merchant");
       return res.json() as Promise<Record<string, unknown> | null>;
     },
   });

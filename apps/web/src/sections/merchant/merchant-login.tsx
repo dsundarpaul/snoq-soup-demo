@@ -36,8 +36,11 @@ import {
   useMerchantLoginMutation,
   useMerchantResendVerificationMutation,
 } from "@/hooks/api/merchant/use-merchant";
+import { useRedirectIfMerchantLoggedIn } from "@/hooks/use-redirect-if-merchant-logged-in";
+import { clearSessionsExcept } from "@/lib/auth-session";
 
 export default function MerchantLoginPage() {
+  useRedirectIfMerchantLoggedIn();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showResendOption, setShowResendOption] = useState(false);
@@ -254,6 +257,7 @@ export default function MerchantLoginPage() {
                   href="/login"
                   className="text-primary hover:underline font-medium"
                   data-testid="link-login-as-user"
+                  onClick={() => clearSessionsExcept("hunter")}
                 >
                   {t("merchant.loginAsUserLink")}
                 </Link>

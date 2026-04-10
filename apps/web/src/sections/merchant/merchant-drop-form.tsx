@@ -25,46 +25,36 @@ import {
   Timer,
   Target,
   Calendar,
-  Plus,
-  Pencil,
-  Eye,
 } from "lucide-react";
 import { MapPickerLazy } from "@/components/map-picker-lazy";
 import { DatetimePicker } from "@/components/datetime-picker";
 import { GooglePlacesAutocomplete } from "@/components/google-places-autocomplete";
 import type { CreateDropForm } from "./create-drop-schema";
-import type { Drop } from "@shared/schema";
+
+export const MERCHANT_DROP_FORM_ID = "merchant-drop-form";
 
 export interface MerchantDropFormProps {
   form: UseFormReturn<CreateDropForm>;
-  editingDrop: Drop | null;
   mapPickerRemountKey: number;
   isUploadingLogo: boolean;
   isGettingLocation: boolean;
-  isSubmitting: boolean;
   googleMapsApiKey: string | undefined;
   onLogoFile: (file: File) => void;
   onUseCurrentLocation: () => void;
   onOpenArPlacer: () => void;
-  onCancel: () => void;
-  onPreview: () => void;
   onSubmitValid: SubmitHandler<CreateDropForm>;
   onSubmitInvalid?: SubmitErrorHandler<CreateDropForm>;
 }
 
 export function MerchantDropForm({
   form,
-  editingDrop,
   mapPickerRemountKey,
   isUploadingLogo,
   isGettingLocation,
-  isSubmitting,
   googleMapsApiKey,
   onLogoFile,
   onUseCurrentLocation,
   onOpenArPlacer,
-  onCancel,
-  onPreview,
   onSubmitValid,
   onSubmitInvalid,
 }: MerchantDropFormProps) {
@@ -73,6 +63,7 @@ export function MerchantDropForm({
 
   return (
     <form
+      id={MERCHANT_DROP_FORM_ID}
       onSubmit={form.handleSubmit(onSubmitValid, onSubmitInvalid)}
       className="space-y-4"
     >
@@ -81,6 +72,7 @@ export function MerchantDropForm({
         <Input
           id="name"
           placeholder="e.g., Golden Cup Challenge"
+          maxLength={100}
           {...form.register("name")}
           data-testid="input-drop-name"
         />
@@ -96,6 +88,7 @@ export function MerchantDropForm({
         <Textarea
           id="description"
           placeholder="Describe what users will find..."
+          maxLength={250}
           {...form.register("description")}
           data-testid="input-drop-description"
         />
@@ -111,6 +104,7 @@ export function MerchantDropForm({
         <Input
           id="rewardValue"
           placeholder="e.g., 50% OFF, Free Coffee"
+          maxLength={50}
           {...form.register("rewardValue")}
           data-testid="input-drop-reward"
         />
@@ -269,12 +263,15 @@ export function MerchantDropForm({
         <Input
           id="radius"
           type="number"
+          min={5}
+          max={200}
           {...form.register("radius")}
           data-testid="input-drop-radius"
         />
         {form.formState.errors.radius && (
           <p className="text-sm text-destructive">
-            Radius must be between 5 and 1000 meters
+            {form.formState.errors.radius.message ??
+              "Radius must be between 5 and 200 meters"}
           </p>
         )}
       </div>
@@ -420,43 +417,6 @@ export function MerchantDropForm({
         </div>
       </div>
 
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onPreview}
-          disabled={!form.watch("name") || !form.watch("rewardValue")}
-          data-testid="button-preview-drop"
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          Preview
-        </Button>
-        <Button
-          type="submit"
-          className="flex-1"
-          disabled={isSubmitting}
-          data-testid="button-submit-drop"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {editingDrop ? "Updating..." : "Creating..."}
-            </>
-          ) : (
-            <>
-              {editingDrop ? (
-                <Pencil className="w-4 h-4 mr-2" />
-              ) : (
-                <Plus className="w-4 h-4 mr-2" />
-              )}
-              {editingDrop ? "Update Drop" : "Create Drop"}
-            </>
-          )}
-        </Button>
-      </div>
     </form>
   );
 }

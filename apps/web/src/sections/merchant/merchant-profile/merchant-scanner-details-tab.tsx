@@ -369,6 +369,7 @@ export function MerchantScannerDetailsTab({
               <DatePickerField
                 id="scanner-expiry"
                 label="QR / link expiry date"
+                preset="future-only"
                 value={expiryDate}
                 onChange={setExpiryDate}
                 data-testid="input-scanner-expiry"

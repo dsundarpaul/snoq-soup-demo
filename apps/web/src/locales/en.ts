@@ -94,6 +94,8 @@ const en = {
   "merchant.yourBusinessName": "Your business name",
   "merchant.youAtBusiness": "you@business.com",
   "merchant.atLeast6Chars": "At least 6 characters",
+  "merchant.passwordRequirements":
+    "Min 8 characters, 1 uppercase, 1 number",
   "merchant.becomeMerchant": "Become a Merchant",
   "merchant.createMerchantAccount": "Create Merchant Account",
   "merchant.startRewarding": "Start rewarding your customers",
@@ -117,6 +119,12 @@ const en = {
   "profile.nickname": "Nickname",
   "profile.yourHunterName": "Your hunter name",
   "profile.dateOfBirth": "Date of Birth",
+  "profile.mobileLengthHint": "Expected length: {range}",
+  "profile.dobMinAgeHint":
+    "You must be at least 5 years old. Future dates cannot be selected.",
+  "profile.dobInvalidMinAge": "Invalid date of birth",
+  "profile.dobInvalidMinAgeDesc":
+    "Choose a date that is not in the future and is at least 5 years ago.",
   "profile.gender": "Gender",
   "profile.selectGender": "Select gender",
   "profile.male": "Male",

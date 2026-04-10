@@ -85,7 +85,7 @@ export class VouchersService {
     // const claimedAt = new Date();
     // const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
 
-    console.log('before voucher create', magicToken)
+    console.log("before voucher create", magicToken);
 
     // Create voucher
     const voucher = await this.database.vouchers.create({
@@ -107,7 +107,7 @@ export class VouchersService {
     // Assign promo code if available
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
-      drop._id as Types.ObjectId
+      drop._id as Types.ObjectId,
     );
 
     // Increment hunter stats if hunterId provided

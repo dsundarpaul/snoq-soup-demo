@@ -459,7 +459,7 @@ export class AdminService {
       };
     });
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
 
     return {
       items,
@@ -467,7 +467,7 @@ export class AdminService {
       page,
       limit,
       totalPages,
-      hasNextPage: page < totalPages,
+      hasNextPage: page < totalPages && total > 0,
       hasPrevPage: page > 1,
     };
   }

@@ -15,8 +15,25 @@ import {
   Tag,
   Pencil,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { Drop } from "@shared/schema";
+import type { MerchantDropsListStatus } from "@/hooks/api/merchant/use-merchant";
+import {
+  canToggleMerchantDropActive,
+  MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED,
+} from "@/utils/merchant-drop-active-toggle";
 import type { DashboardStats } from "./merchant-dashboard.types";
 
 export interface MerchantDropsPanelProps {
@@ -24,12 +41,23 @@ export interface MerchantDropsPanelProps {
   statsLoading: boolean;
   drops: Drop[];
   dropsLoading: boolean;
+  dropsTotal: number;
+  dropsPage: number;
+  dropsPageSize: number;
+  dropsSearch: string;
+  dropsStatus: MerchantDropsListStatus;
+  onDropsSearchChange: (value: string) => void;
+  onDropsStatusChange: (value: MerchantDropsListStatus) => void;
+  onDropsPageChange: (page: number) => void;
   deletePending: boolean;
   onCreateClick: () => void;
   onShareDrop: (dropId: string) => void;
   onCodesClick: (dropId: string) => void;
   onEditDrop: (drop: Drop) => void;
   onDeleteDrop: (dropId: string) => void;
+  onDropActiveChange: (dropId: string, active: boolean) => void;
+  dropActiveTogglePending: boolean;
+  dropActiveTogglingId: string | null;
 }
 
 export function MerchantDropsPanel({
@@ -37,13 +65,34 @@ export function MerchantDropsPanel({
   statsLoading,
   drops,
   dropsLoading,
+  dropsTotal,
+  dropsPage,
+  dropsPageSize,
+  dropsSearch,
+  dropsStatus,
+  onDropsSearchChange,
+  onDropsStatusChange,
+  onDropsPageChange,
   deletePending,
   onCreateClick,
   onShareDrop,
   onCodesClick,
   onEditDrop,
   onDeleteDrop,
+  onDropActiveChange,
+  dropActiveTogglePending,
+  dropActiveTogglingId,
 }: MerchantDropsPanelProps) {
+  const hasFilters =
+    dropsSearch.trim() !== "" || dropsStatus !== "all";
+  const filteredEmpty = !dropsLoading && drops.length === 0 && hasFilters;
+  const noDropsAtAll =
+    !dropsLoading && drops.length === 0 && !hasFilters;
+  const totalPages = Math.max(1, Math.ceil(dropsTotal / dropsPageSize));
+  const rangeStart =
+    dropsTotal === 0 ? 0 : (dropsPage - 1) * dropsPageSize + 1;
+  const rangeEnd = Math.min(dropsPage * dropsPageSize, dropsTotal);
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -113,27 +162,70 @@ export function MerchantDropsPanel({
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" />
-            Active Drops
-          </CardTitle>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={onCreateClick}
-            data-testid="button-create-drop"
-          >
-            <Plus className="w-4 h-4" />
-            New Drop
-          </Button>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              Drops
+            </CardTitle>
+            <Button
+              size="sm"
+              className="gap-2 shrink-0"
+              onClick={onCreateClick}
+              data-testid="button-create-drop"
+            >
+              <Plus className="w-4 h-4" />
+              New Drop
+            </Button>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative flex-1 min-w-[200px] sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search name or reward…"
+                value={dropsSearch}
+                onChange={(e) => onDropsSearchChange(e.target.value)}
+                className="pl-9"
+                aria-label="Search drops"
+              />
+            </div>
+            <Select
+              value={dropsStatus}
+              onValueChange={(v) =>
+                onDropsStatusChange(v as MerchantDropsListStatus)
+              }
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {dropsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : drops.length === 0 ? (
+          ) : filteredEmpty ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">
+                No matching drops
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Try a different search or status filter.
+              </p>
+            </div>
+          ) : noDropsAtAll ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <MapPin className="w-8 h-8 text-muted-foreground" />
@@ -153,6 +245,7 @@ export function MerchantDropsPanel({
               </Button>
             </div>
           ) : (
+            <div className="space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -165,6 +258,9 @@ export function MerchantDropsPanel({
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                       Reward
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Active
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                       Status
@@ -205,6 +301,18 @@ export function MerchantDropsPanel({
                         <Badge className="bg-teal text-teal-foreground">
                           {drop.rewardValue}
                         </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <MerchantDropActiveSwitch
+                          drop={drop}
+                          rowBusy={
+                            dropActiveTogglePending &&
+                            dropActiveTogglingId === drop.id
+                          }
+                          onToggle={(next) =>
+                            onDropActiveChange(drop.id, next)
+                          }
+                        />
                       </td>
                       <td className="py-3 px-4">
                         <DropStatusBadge drop={drop} />
@@ -269,10 +377,84 @@ export function MerchantDropsPanel({
                 </tbody>
               </table>
             </div>
+            {dropsTotal > 0 ? (
+              <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  {rangeStart}–{rangeEnd} of {dropsTotal}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    disabled={dropsPage <= 1}
+                    onClick={() => onDropsPageChange(dropsPage - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground tabular-nums px-1">
+                    Page {dropsPage} / {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    disabled={dropsPage >= totalPages}
+                    onClick={() => onDropsPageChange(dropsPage + 1)}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            </div>
           )}
         </CardContent>
       </Card>
     </>
+  );
+}
+
+function MerchantDropActiveSwitch({
+  drop,
+  rowBusy,
+  onToggle,
+}: {
+  drop: Drop;
+  rowBusy: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  const canToggle = canToggleMerchantDropActive(drop);
+
+  if (!canToggle) {
+    return (
+      <button
+        type="button"
+        className="inline-flex rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        onClick={() => window.alert(MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED)}
+        title={MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED}
+        aria-label={MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED}
+      >
+        <Switch
+          checked={drop.active}
+          disabled
+          className="pointer-events-none"
+        />
+      </button>
+    );
+  }
+
+  return (
+    <Switch
+      checked={drop.active}
+      disabled={rowBusy}
+      onCheckedChange={onToggle}
+      aria-label={drop.active ? "Deactivate drop" : "Activate drop"}
+    />
   );
 }
 

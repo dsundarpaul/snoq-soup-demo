@@ -9,6 +9,7 @@ import { Hunter } from "./schemas/hunter.schema";
 import { Admin } from "./schemas/admin.schema";
 import { PromoCode } from "./schemas/promo-code.schema";
 import { RefreshToken } from "./schemas/refresh-token.schema";
+import { EmailVerificationToken } from "./schemas/email-verification-token.schema";
 
 @Injectable()
 export class DatabaseService {
@@ -20,5 +21,7 @@ export class DatabaseService {
     @InjectModel(Admin.name) readonly admins: Model<Admin>,
     @InjectModel(PromoCode.name) readonly promoCodes: Model<PromoCode>,
     @InjectModel(RefreshToken.name) readonly refreshTokens: Model<RefreshToken>,
+    @InjectModel(EmailVerificationToken.name)
+    readonly emailVerificationTokens: Model<EmailVerificationToken>,
   ) {}
 }

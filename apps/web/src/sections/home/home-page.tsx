@@ -37,6 +37,7 @@ import { HomeHeader } from "@/sections/home/home-header";
 import type { Drop, Voucher } from "@shared/schema";
 import { useActiveDropsQuery } from "@/hooks/api/drop/use-drop";
 import { useTreasureHunterProfileQuery } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import { clearSessionsExcept } from "@/lib/auth-session";
 import type { TranslationKey } from "@/locales/en";
 
 type TFunc = (
@@ -204,6 +205,11 @@ function DropCard({
                 hunterSignedIn
                   ? `/hunt?drop=${drop.id}`
                   : `/login?next=${encodeURIComponent(`/hunt?drop=${drop.id}`)}`
+              }
+              onClick={
+                hunterSignedIn
+                  ? undefined
+                  : () => clearSessionsExcept("hunter")
               }
             >
               <Button
@@ -609,6 +615,11 @@ export default function HomePage() {
               hunterSignedIn
                 ? "/hunt"
                 : `/login?next=${encodeURIComponent("/hunt")}`
+            }
+            onClick={
+              hunterSignedIn
+                ? undefined
+                : () => clearSessionsExcept("hunter")
             }
           >
             <Button

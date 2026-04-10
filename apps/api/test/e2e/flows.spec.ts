@@ -2,13 +2,14 @@ import { faker } from "@faker-js/faker";
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import { startE2eMongo } from "./mongo-test-server";
 import * as request from "supertest";
 import { AppModule } from "../../src/app.module";
 
 describe("SouqSnap E2E Flows", () => {
   let app: INestApplication;
-  let mongoServer: MongoMemoryServer;
+  let mongoServer: MongoMemoryReplSet;
   let merchantToken: string;
   let hunterToken: string;
   let adminToken: string;
@@ -20,7 +21,7 @@ describe("SouqSnap E2E Flows", () => {
   const deviceId = faker.string.uuid();
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await startE2eMongo();
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -472,7 +473,8 @@ describe("SouqSnap E2E Flows", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("drops");
+      expect(response.body).toHaveProperty("items");
+      expect(response.body).toHaveProperty("total");
     });
 
     it("POST /api/v1/admin/drops - should create drop as admin", async () => {

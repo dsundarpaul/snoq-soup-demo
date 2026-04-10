@@ -32,7 +32,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("rounded-none bg-transparent p-0", className)}
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
@@ -45,13 +45,18 @@ function Calendar({
           "relative flex flex-col gap-4 md:flex-row",
           defaultClassNames.months
         ),
-        month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
+        month: cn("flex w-full flex-col gap-3", defaultClassNames.month),
         month_caption: cn(
-          "flex h-8 w-full items-center justify-center px-8",
+          "flex w-full items-center justify-center",
+          captionLayout === "label"
+            ? "h-8 px-8"
+            : "min-h-10 flex-wrap gap-y-1 px-2 py-1.5 sm:px-3",
           defaultClassNames.month_caption
         ),
         nav: cn(
-          "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
+          captionLayout === "label"
+            ? "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1"
+            : "relative mt-1 flex w-full items-center justify-center gap-1",
           defaultClassNames.nav
         ),
         button_previous: cn(
@@ -72,21 +77,22 @@ function Calendar({
           defaultClassNames.caption_label
         ),
         dropdowns: cn(
-          "flex h-8 w-full items-center justify-center gap-1.5 text-sm font-medium",
+          "flex w-full items-center justify-center gap-1.5 text-sm font-medium",
+          captionLayout === "label" ? "h-8" : "min-h-9 gap-2 py-0.5",
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
-          "relative rounded-md border border-input shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
+          "relative h-9 min-w-[4.25rem] rounded-md border border-input bg-muted/50 text-sm shadow-xs transition-colors hover:bg-muted focus-within:border-ring focus-within:bg-background focus-within:ring-[3px] focus-within:ring-ring/40",
           defaultClassNames.dropdown_root
         ),
         dropdown: cn("absolute inset-0 opacity-0", defaultClassNames.dropdown),
         table: "w-full border-collapse",
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
-          "flex-1 select-none rounded-md text-[0.8rem] font-normal text-muted-foreground",
+          "flex-1 select-none text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground",
           defaultClassNames.weekday
         ),
-        week: cn("mt-2 flex w-full", defaultClassNames.week),
+        week: cn("mt-1.5 flex w-full", defaultClassNames.week),
         week_number_header: cn(
           "w-8 select-none",
           defaultClassNames.week_number_header
@@ -114,7 +120,7 @@ function Calendar({
           defaultClassNames.outside
         ),
         disabled: cn(
-          "text-muted-foreground opacity-50",
+          "cursor-not-allowed text-muted-foreground opacity-45",
           defaultClassNames.disabled
         ),
         hidden: cn("invisible", defaultClassNames.hidden),
@@ -125,11 +131,14 @@ function Calendar({
           <div
             ref={rootRef}
             data-slot="calendar"
-            className={cn(className)}
+            className={cn(
+              "rounded-xl border border-border/80 bg-card p-3 shadow-sm",
+              className
+            )}
             style={
               {
                 ...style,
-                "--cell-size": "2.25rem",
+                "--cell-size": "2.5rem",
               } as React.CSSProperties
             }
             {...rootProps}
@@ -182,7 +191,7 @@ function CalendarDayButton({
       data-range-middle={modifiers.range_middle}
       className={cn(
         buttonVariants({ variant: "ghost" }),
-        "flex aspect-square h-[--cell-size] w-[--cell-size] flex-col gap-1 font-normal leading-none",
+        "flex aspect-square h-[--cell-size] w-[--cell-size] flex-col gap-1 rounded-lg font-normal leading-none transition-colors duration-150",
         "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[selected-single=true]:hover:bg-primary data-[selected-single=true]:hover:text-primary-foreground",
         "data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground",
         "data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground",

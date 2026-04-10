@@ -1,7 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import { startE2eMongo } from "./mongo-test-server";
 import * as request from "supertest";
 import { AppModule } from "../../src/app.module";
 import { JwtService } from "@nestjs/jwt";
@@ -70,14 +71,14 @@ const commandInjection = () => "$(whoami)`whoami`;whoami";
 
 describe("SouqSnap E2E Security & Edge Cases", () => {
   let app: INestApplication;
-  let mongoServer: MongoMemoryServer;
+  let mongoServer: MongoMemoryReplSet;
   let jwtService: JwtService;
   let validToken: string;
   let expiredToken: string;
   let deviceId: string;
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await startE2eMongo();
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({

@@ -28,8 +28,10 @@ import {
   type AdminLoginInput,
 } from "@/hooks/api/admin/admin.api-types";
 import { useAdminLoginMutation } from "@/hooks/api/admin/use-admin";
+import { useRedirectIfAdminLoggedIn } from "@/hooks/use-redirect-if-admin-logged-in";
 
 export default function AdminLoginPage() {
+  useRedirectIfAdminLoggedIn();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -86,7 +88,7 @@ export default function AdminLoginPage() {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="admin@souq-snap.com"
+                        placeholder="admin@admin.com"
                         data-testid="input-admin-email"
                         {...field}
                       />

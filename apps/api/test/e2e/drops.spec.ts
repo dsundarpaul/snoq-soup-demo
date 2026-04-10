@@ -1,7 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { MongooseModule, getModelToken } from "@nestjs/mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import { startE2eMongo } from "./mongo-test-server";
 import { Model } from "mongoose";
 import * as request from "supertest";
 import { AppModule } from "../../src/app.module";
@@ -83,7 +84,7 @@ const generateFutureDate = (hoursFromNow: number) => {
 
 describe("Drops E2E Tests", () => {
   let app: INestApplication;
-  let mongoServer: MongoMemoryServer;
+  let mongoServer: MongoMemoryReplSet;
   let dropModel: Model<DropDocument>;
   let merchantToken: string;
   let merchantId: string;
@@ -91,7 +92,7 @@ describe("Drops E2E Tests", () => {
   const createdDropIds: string[] = [];
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await startE2eMongo();
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -804,7 +805,10 @@ describe("Drops E2E Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("drops");
+      expect(response.body).toHaveProperty("items");
+      expect(response.body).toHaveProperty("total");
+      expect(response.body).toHaveProperty("page");
+      expect(response.body).toHaveProperty("limit");
     });
   });
 

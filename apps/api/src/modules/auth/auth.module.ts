@@ -7,10 +7,14 @@ import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { DatabaseModule } from "../../database/database.module";
+import { MailModule } from "../mail/mail.module";
+import { EmailVerificationTokenService } from "./email-verification-token.service";
+import { EmailVerificationCleanupService } from "./email-verification-cleanup.service";
 
 @Module({
   imports: [
     DatabaseModule,
+    MailModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.register({
       secret: config.jwt.secret,
@@ -19,7 +23,12 @@ import { DatabaseModule } from "../../database/database.module";
       },
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    EmailVerificationTokenService,
+    EmailVerificationCleanupService,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

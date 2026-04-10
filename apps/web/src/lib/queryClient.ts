@@ -18,7 +18,7 @@ export async function apiRequest(
     auth: role,
     deviceId: options?.deviceId,
   });
-  await throwIfResNotOk(res);
+  await throwIfResNotOk(res, url, role);
   return res;
 }
 
@@ -33,7 +33,7 @@ export function getQueryFn<T>(options: { on401: On401 }): QueryFunction<T> {
     if (on401 === "returnNull" && res.status === 401) {
       return null as T;
     }
-    await throwIfResNotOk(res);
+    await throwIfResNotOk(res, path, role);
     if (res.status === 204) {
       return undefined as T;
     }
