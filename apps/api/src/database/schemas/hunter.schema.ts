@@ -86,7 +86,7 @@ class Stats {
 export class Hunter {
   @ApiProperty({
     example: "device_abc123",
-    description: "Unique device identifier",
+    description: "Device identifier",
   })
   @IsString()
   @Prop({ type: String, required: true })
@@ -159,7 +159,6 @@ export type HunterDocument = HydratedDocument<Hunter>;
 export const HunterSchema = SchemaFactory.createForClass(Hunter);
 
 // Indexes
-HunterSchema.index({ deviceId: 1 }, { unique: true });
 HunterSchema.index(
   { email: 1 },
   { unique: true, partialFilterExpression: { email: { $type: "string" } } },

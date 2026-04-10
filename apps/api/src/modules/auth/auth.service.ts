@@ -30,7 +30,7 @@ import { TokenResponseDto } from "./dto/response/token-response.dto";
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly JWT_ACCESS_EXPIRY = "15m";
+  private readonly JWT_ACCESS_EXPIRY = "20m";
   private readonly JWT_REFRESH_EXPIRY_DAYS = 7;
   private readonly MAX_LOGIN_ATTEMPTS = 5;
   private readonly LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -180,21 +180,15 @@ export class AuthService {
   }
 
   async registerHunter(dto: RegisterHunterDto): Promise<AuthResponseDto> {
-    const existingDevice = await this.database.hunters.findOne({
-      deviceId: dto.deviceId,
-      deletedAt: null,
-    });
-    if (existingDevice) {
-      throw new ConflictException("Device already registered");
-    }
-
     if (dto.email) {
       const existingEmail = await this.database.hunters.findOne({
         email: dto.email.toLowerCase(),
         deletedAt: null,
       });
       if (existingEmail) {
-        throw new ConflictException("Email already registered");
+        throw new ConflictException(
+          `Email already registered with: ${dto.email.substring(0, 3)}***${dto.email.substring(dto.email.length - 3)}`
+        );
       }
     }
 
