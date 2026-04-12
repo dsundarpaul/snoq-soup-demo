@@ -8,6 +8,10 @@ import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
 import { publicUrls } from "@/lib/app-config";
 import { useToast } from "@/hooks/use-toast";
+import {
+  validateImageFile,
+  ACCEPTED_IMAGE_TYPES,
+} from "@/lib/upload-validation";
 import { StaffScannerLink } from "@/sections/merchant/staff-scanner-link";
 import {
   Card,
@@ -82,45 +86,32 @@ export function MerchantProfileInformationTab({
                 </Button>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept={ACCEPTED_IMAGE_TYPES}
                   className="hidden"
                   data-testid="input-merchant-logo-upload"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
+                    const check = validateImageFile(file);
+                    if (!check.valid) {
+                      toast({ title: check.message, variant: "destructive" });
+                      e.target.value = "";
+                      return;
+                    }
                     try {
                       toast({ title: "Uploading…" });
-                      const contentType =
-                        file.type && file.type.length > 0
-                          ? file.type
-                          : "image/png";
-                      const presignPath = "/api/v1/upload/presign";
-                      const presignRes = await apiFetchMaybeRetry(
+                      const uploadPath = "/api/v1/s3/upload";
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      formData.append("namespace", "merchants");
+                      const uploadRes = await apiFetchMaybeRetry(
                         "POST",
-                        presignPath,
-                        {
-                          auth: "merchant",
-                          body: {
-                            filename: file.name,
-                            contentType,
-                            size: file.size,
-                          },
-                        }
+                        uploadPath,
+                        { auth: "merchant", body: formData, json: false }
                       );
-                      await throwIfResNotOk(presignRes, presignPath, "merchant");
-                      const presignJson = (await presignRes.json()) as {
-                        presignedUrl: string;
-                        publicUrl: string;
-                        key?: string;
-                      };
-                      const uploadRes = await fetch(presignJson.presignedUrl, {
-                        method: "PUT",
-                        body: file,
-                        headers: { "Content-Type": contentType },
-                      });
-                      if (!uploadRes.ok) throw new Error("Failed to upload");
-                      const logoUrl =
-                        presignJson.publicUrl || presignJson.key || "";
+                      await throwIfResNotOk(uploadRes, uploadPath, "merchant");
+                      const { publicUrl: logoUrl } =
+                        (await uploadRes.json()) as { publicUrl: string };
                       const logoPath = "/api/v1/merchants/me/logo";
                       const saveRes = await apiFetchMaybeRetry(
                         "PATCH",

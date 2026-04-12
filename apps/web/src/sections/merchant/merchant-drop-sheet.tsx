@@ -21,6 +21,7 @@ import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import { mapNestDropToLegacy, createDropFormToNestDto } from "@/lib/nest-mappers";
 import { useToast } from "@/hooks/use-toast";
+import { validateImageFile } from "@/lib/upload-validation";
 import type { Drop } from "@shared/schema";
 import { ARDropPlacer } from "@/components/ar-drop-placer";
 import {
@@ -218,36 +219,29 @@ export function MerchantDropSheet({
   };
 
   const handleFileUpload = async (file: File) => {
+    const check = validateImageFile(file);
+    if (!check.valid) {
+      toast({ title: check.message, variant: "destructive" });
+      return;
+    }
     setIsUploadingLogo(true);
     toast({
       title: "Uploading...",
       description: "Please wait while your logo is being uploaded.",
     });
     try {
-      const contentType =
-        file.type && file.type.length > 0 ? file.type : "image/png";
-      const presignPath = "/api/v1/upload/presign";
-      const presignRes = await apiFetchMaybeRetry("POST", presignPath, {
+      const uploadPath = "/api/v1/s3/upload";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("namespace", "drops");
+      const uploadRes = await apiFetchMaybeRetry("POST", uploadPath, {
         auth: "merchant",
-        body: {
-          filename: file.name,
-          contentType,
-          size: file.size,
-        },
+        body: formData,
+        json: false,
       });
-      await throwIfResNotOk(presignRes, presignPath, "merchant");
-      const presignJson = (await presignRes.json()) as {
-        presignedUrl: string;
-        publicUrl: string;
-        key?: string;
-      };
-      const uploadResponse = await fetch(presignJson.presignedUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": contentType },
-      });
-      if (!uploadResponse.ok) throw new Error("Failed to upload file");
-      form.setValue("logoUrl", presignJson.publicUrl || presignJson.key || "");
+      await throwIfResNotOk(uploadRes, uploadPath, "merchant");
+      const { publicUrl } = (await uploadRes.json()) as { publicUrl: string };
+      form.setValue("logoUrl", publicUrl);
       toast({
         title: "Logo uploaded!",
         description: "Your logo has been uploaded successfully.",

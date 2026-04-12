@@ -13,7 +13,7 @@ import { AdminModule } from "./modules/admin/admin.module";
 import { CommandsModule } from "./modules/commands/commands.module";
 import { ScannerModule } from "./modules/scanner/scanner.module";
 import { PromoCodesModule } from "./modules/promo-codes/promo-codes.module";
-import { UploadModule } from "./modules/upload/upload.module";
+import { S3Module } from "./modules/s3/s3.module";
 
 @Module({
   imports: [
@@ -57,7 +57,7 @@ import { UploadModule } from "./modules/upload/upload.module";
     CommandsModule,
     ScannerModule,
     PromoCodesModule,
-    UploadModule,
+    S3Module,
   ],
   providers: [
     // Apply rate limiting globally

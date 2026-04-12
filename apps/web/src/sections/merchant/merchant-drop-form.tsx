@@ -36,6 +36,7 @@ import {
   getCreateDropEmptyValues,
   type CreateDropForm,
 } from "./create-drop-schema";
+import { ACCEPTED_IMAGE_TYPES } from "@/lib/upload-validation";
 
 export const MERCHANT_DROP_FORM_ID = "merchant-drop-form";
 
@@ -152,7 +153,7 @@ export function MerchantDropForm({
             )}
             <input
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_IMAGE_TYPES}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) onLogoFile(file);
@@ -168,8 +169,7 @@ export function MerchantDropForm({
           Click upload icon to select an image, or paste a URL
         </p>
         {form.watch("logoUrl") &&
-          (form.watch("logoUrl")?.startsWith("http") ||
-            form.watch("logoUrl")?.startsWith("/objects/")) && (
+          form.watch("logoUrl")?.startsWith("http") && (
             <div className="flex items-center gap-2 p-2 bg-muted rounded">
               <img
                 src={form.watch("logoUrl")}

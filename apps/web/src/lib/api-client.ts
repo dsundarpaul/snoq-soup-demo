@@ -52,7 +52,7 @@ export async function throwIfResNotOk(
 export function inferAuthRoleFromPath(path: string): AuthRole | undefined {
   if (path.includes("/hunters/me")) return "hunter";
   if (path.includes("/admin/")) return "admin";
-  if (path.includes("/merchants/me") || path.includes("/upload/presign")) {
+  if (path.includes("/merchants/me") || path.includes("/s3/")) {
     return "merchant";
   }
   return undefined;

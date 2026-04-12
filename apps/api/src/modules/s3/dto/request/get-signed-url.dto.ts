@@ -18,21 +18,16 @@ export const ALLOWED_MIME_TYPES = [
 
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export class PresignUploadDto {
-  @ApiProperty({
-    example: "logo.png",
-    description: "Original filename",
-    minLength: 1,
-    maxLength: 255,
-  })
+export class GetSignedUrlDto {
+  @ApiProperty({ example: "logo.png", description: "Original filename" })
   @IsString()
   @IsNotEmpty()
   @Matches(/^[^\\/:*?"<>|]+$/, {
     message: "Filename contains invalid characters",
   })
-  filename!: string;
+  fileName!: string;
 
   @ApiProperty({
     example: "image/png",
@@ -56,4 +51,15 @@ export class PresignUploadDto {
   @Min(1)
   @Max(MAX_FILE_SIZE, { message: "File size must not exceed 5MB" })
   size!: number;
+
+  @ApiProperty({
+    example: "merchants",
+    description: "Storage namespace/folder",
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
+    message: "Namespace must be alphanumeric (hyphens/underscores allowed)",
+  })
+  namespace!: string;
 }

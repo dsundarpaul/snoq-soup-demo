@@ -23,16 +23,9 @@ export const createDropSchema = z.object({
   logoUrl: z
     .string()
     .optional()
-    .refine(
-      (val) =>
-        !val ||
-        val === "" ||
-        /^https?:\/\/.+/.test(val) ||
-        val.startsWith("/objects/"),
-      {
-        message: "Must be a valid URL or empty",
-      }
-    ),
+    .refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
+      message: "Must be a valid HTTP URL or empty",
+    }),
   redemptionType: z.enum(["anytime", "timer", "window"]).default("anytime"),
   redemptionMinutes: z.coerce.number().optional(),
   redemptionDeadline: z.string().optional(),

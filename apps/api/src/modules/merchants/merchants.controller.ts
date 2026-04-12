@@ -26,7 +26,10 @@ import {
   CurrentUserType,
 } from "../../common/decorators/current-user.decorator";
 import { UserRole } from "../../common/enums/user-role.enum";
-import { UpdateMerchantDto } from "./dto/request/update-merchant.dto";
+import {
+  UpdateMerchantDto,
+  UpdateMerchantLogoDto,
+} from "./dto/request/update-merchant.dto";
 import { GenerateScannerTokenDto } from "./dto/request/generate-scanner-token.dto";
 import { MerchantResponseDto } from "./dto/response/merchant-response.dto";
 import { MerchantPublicResponseDto } from "./dto/response/merchant-public-response.dto";
@@ -72,9 +75,9 @@ export class MerchantsController {
   @ApiResponse({ status: 200, type: MerchantResponseDto })
   async updateLogo(
     @CurrentUser() user: CurrentUserType,
-    @Body("logoUrl") logoUrl: string,
+    @Body() dto: UpdateMerchantLogoDto,
   ): Promise<MerchantResponseDto> {
-    return this.merchantsService.updateLogo(user.userId, logoUrl);
+    return this.merchantsService.updateLogo(user.userId, dto.logoUrl);
   }
 
   @Post("me/scanner-token")

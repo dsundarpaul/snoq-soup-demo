@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import type { Cache } from "cache-manager";
-import { FilterQuery, now, PipelineStage, Types } from "mongoose";
+import { FilterQuery, PipelineStage, Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
 import { Drop, DropDocument } from "../../database/schemas/drop.schema";
 import { CreateDropDto } from "./dto/request/create-drop.dto";
@@ -252,23 +252,26 @@ export class DropsService {
       return cached;
     }
 
+    const currentTime = new Date();
+
     const pipeline: PipelineStage[] = [
       {
         $match: {
           active: true,
+          deletedAt: null,
           $and: [
             {
               $or: [
                 { "schedule.start": { $exists: false } },
                 { "schedule.start": null },
-                { "schedule.start": { $lte: now } },
+                { "schedule.start": { $lte: currentTime } },
               ],
             },
             {
               $or: [
                 { "schedule.end": { $exists: false } },
                 { "schedule.end": null },
-                { "schedule.end": { $gte: now } },
+                { "schedule.end": { $gte: currentTime } },
               ],
             },
           ],

@@ -7,6 +7,7 @@ import {
   IsBoolean,
   Min,
   Max,
+  Matches,
 } from "class-validator";
 
 enum RedemptionType {
@@ -88,6 +89,7 @@ export class UpdateDropDto {
   })
   @IsString()
   @IsOptional()
+  @Matches(/^https?:\/\/.+/, { message: "logoUrl must be a valid HTTP URL" })
   logoUrl?: string;
 
   @ApiProperty({
