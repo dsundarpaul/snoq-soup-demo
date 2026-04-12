@@ -759,17 +759,22 @@ export default function ARGamePage() {
                 <Trophy className="w-6 h-6 text-teal" />
               )}
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-white font-[Poppins]">
-                {activeDrop?.name || t("common.loading")}
-              </h3>
-              <p className="text-sm text-slate-400">
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="font-semibold text-white font-[Poppins] truncate min-w-0 flex-1">
+                  {activeDrop?.name || t("common.loading")}
+                </h3>
+                <Badge className="shrink-0 bg-teal text-teal-foreground flex items-center gap-1 max-w-[45%]">
+                  <Trophy className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    {activeDrop?.rewardValue}
+                  </span>
+                </Badge>
+              </div>
+              <p className="text-sm text-slate-400 line-clamp-2">
                 {activeDrop?.description || t("drop.claimYourReward")}
               </p>
             </div>
-            <Badge className="bg-teal text-teal-foreground">
-              {activeDrop?.rewardValue}
-            </Badge>
           </div>
 
           {alreadyClaimed ? (
