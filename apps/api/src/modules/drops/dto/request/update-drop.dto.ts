@@ -137,6 +137,7 @@ export class UpdateDropDto {
   @IsNumber()
   @IsOptional()
   @Min(1)
+  @Max(99999)
   availabilityLimit?: number;
 
   @ApiProperty({

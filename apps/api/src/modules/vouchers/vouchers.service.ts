@@ -35,7 +35,27 @@ export class VouchersService {
   constructor(private readonly database: DatabaseService) {}
 
   async claim(dto: ClaimVoucherDto): Promise<VoucherResponseDto> {
-    const { dropId, deviceId, hunterId } = dto;
+    const { dropId, deviceId, hunterId: hunterIdRaw } = dto;
+
+    let linkedHunterId: Types.ObjectId | undefined;
+    if (hunterIdRaw?.trim()) {
+      try {
+        const candidate = new Types.ObjectId(hunterIdRaw.trim());
+        const hunter = await this.database.hunters
+          .findOne({
+            _id: candidate,
+            deviceId,
+            deletedAt: null,
+          })
+          .select("_id")
+          .lean();
+        if (hunter?._id) {
+          linkedHunterId = hunter._id as Types.ObjectId;
+        }
+      } catch {
+        linkedHunterId = undefined;
+      }
+    }
 
     // Validate drop exists and is active
     const drop = await this.database.drops.findOne({
@@ -85,8 +105,6 @@ export class VouchersService {
     // const claimedAt = new Date();
     // const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
 
-    console.log("before voucher create", magicToken);
-
     // Create voucher
     const voucher = await this.database.vouchers.create({
       dropId: new Types.ObjectId(dropId),
@@ -94,7 +112,7 @@ export class VouchersService {
       magicToken,
       claimedBy: {
         deviceId,
-        hunterId: hunterId ? new Types.ObjectId(hunterId) : undefined,
+        hunterId: linkedHunterId,
       },
       // claimedAt,
       // expiresAt,
@@ -102,7 +120,6 @@ export class VouchersService {
       redeemedAt: null,
       redeemedBy: {},
     });
-    console.log("after voucher create", voucher);
 
     // Assign promo code if available
     await this.assignPromoCode(
@@ -110,14 +127,12 @@ export class VouchersService {
       drop._id as Types.ObjectId,
     );
 
-    // Increment hunter stats if hunterId provided
-    if (hunterId) {
-      await this.database.hunters.findByIdAndUpdate(hunterId, {
+    if (linkedHunterId) {
+      await this.database.hunters.findByIdAndUpdate(linkedHunterId, {
         $inc: { "stats.totalClaims": 1 },
       });
     }
 
-    console.log("end of service of vouchers");
     return this.toResponseDto(voucher, drop);
   }
 

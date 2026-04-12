@@ -2,22 +2,18 @@ function trimTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-const DEFAULT_PUBLIC_SITE_URL = "https://souq-snap.com";
-
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
 
 export const API_ORIGIN = rawApiUrl ? trimTrailingSlash(rawApiUrl) : "";
 
 export function getPublicSiteUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
-  if (baseUrl) {
-    return trimTrailingSlash(baseUrl);
+
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_BASE_URL is not set");
   }
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (appUrl) {
-    return trimTrailingSlash(appUrl);
-  }
-  return DEFAULT_PUBLIC_SITE_URL;
+
+  return trimTrailingSlash(baseUrl);
 }
 
 export function publicPageUrl(path: string): string {

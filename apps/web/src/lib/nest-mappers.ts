@@ -217,6 +217,46 @@ export function mapRedeemResultToLegacy(raw: Record<string, unknown>): {
   return { voucher, drop };
 }
 
+export function mapStaffScannerRedeemToLegacy(raw: Record<string, unknown>): {
+  voucher: Voucher;
+  drop: Drop;
+} {
+  const vid = String(raw.voucherId ?? "");
+  const token = String(raw.magicToken ?? "");
+  const redeemedAtRaw = raw.redeemedAt;
+  const redeemedAt =
+    redeemedAtRaw != null ? new Date(String(redeemedAtRaw)) : new Date();
+  const vInfo = raw.voucher as
+    | { dropName?: string; rewardValue?: string }
+    | null
+    | undefined;
+  const voucher = {
+    id: vid,
+    dropId: "",
+    merchantId: "",
+    claimedAt: new Date(),
+    redeemedAt,
+    redeemed: true,
+    userEmail: null,
+    userPhone: null,
+    magicToken: token,
+    deviceId: null,
+    hunterId: null,
+    expiresAt: null,
+  } as Voucher;
+  const drop = mapNestDropToLegacy({
+    id: "",
+    merchantId: "",
+    name: String(vInfo?.dropName ?? ""),
+    description: "",
+    rewardValue: String(vInfo?.rewardValue ?? ""),
+    logoUrl: null,
+    location: { lat: 0, lng: 0 },
+    radius: 15,
+  });
+  return { voucher, drop };
+}
+
 export function mapMerchantPublicToStoreData(raw: Record<string, unknown>): {
   merchant: {
     businessName: string;

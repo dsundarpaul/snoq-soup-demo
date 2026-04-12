@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ export default function VerifyEmailPage() {
   );
   const [message, setMessage] = useState("");
   const { t } = useLanguage();
+  const verifyStartedForToken = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -26,21 +27,38 @@ export default function VerifyEmailPage() {
       return;
     }
 
+    if (verifyStartedForToken.current === token) {
+      return;
+    }
+    verifyStartedForToken.current = token;
+
     const verifyEmail = async () => {
       try {
         const response = await fetch(
-          `${API_ORIGIN}/api/v1/auth/merchant/verify-email/${encodeURIComponent(token)}`,
+          `${API_ORIGIN}/api/v1/auth/merchant/verify-email/${encodeURIComponent(
+            token
+          )}`,
           { method: "POST", credentials: "omit" }
         );
-        const data = await response.json();
 
         if (response.ok) {
           setStatus("success");
           setMessage(t("verify.yourEmailVerified"));
-        } else {
-          setStatus("error");
-          setMessage(data.message || "Verification failed");
+          return;
         }
+
+        let errorMessage = "Verification failed";
+        const contentType = response.headers.get("content-type");
+        if (contentType?.includes("application/json")) {
+          try {
+            const data = (await response.json()) as { message?: string };
+            errorMessage = data.message || errorMessage;
+          } catch {
+            // ignore non-JSON body
+          }
+        }
+        setStatus("error");
+        setMessage(errorMessage);
       } catch (error) {
         setStatus("error");
         setMessage(t("toast.somethingWentWrong"));

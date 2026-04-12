@@ -14,6 +14,18 @@ import { Eye, Trophy, MapPin, Target } from "lucide-react";
 import type { CreateDropForm } from "./create-drop-schema";
 import type { Drop } from "@shared/schema";
 
+function formatPreviewCoordinates(
+  latitude: unknown,
+  longitude: unknown
+): string {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return "—";
+  }
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
 export interface MerchantDropPreviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -175,8 +187,10 @@ export function MerchantDropPreviewDialog({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Location:</span>
               <span className="font-medium font-mono text-xs">
-                {form.watch("latitude")?.toFixed(4)},{" "}
-                {form.watch("longitude")?.toFixed(4)}
+                {formatPreviewCoordinates(
+                  form.watch("latitude"),
+                  form.watch("longitude")
+                )}
               </span>
             </div>
           </div>

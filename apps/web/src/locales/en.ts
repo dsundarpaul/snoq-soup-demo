@@ -92,6 +92,8 @@ const en = {
   "merchant.createAccount": "Create a merchant account",
   "merchant.businessName": "Business Name",
   "merchant.yourBusinessName": "Your business name",
+  "merchant.usernameSlugHint":
+    "3–30 characters: letters, numbers, and underscores only. Fills from your business name until you edit it.",
   "merchant.youAtBusiness": "you@business.com",
   "merchant.atLeast6Chars": "At least 6 characters",
   "merchant.passwordRequirements":

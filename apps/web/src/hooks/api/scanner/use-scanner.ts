@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { API_ORIGIN } from "@/lib/app-config";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import type {
   CreateStaffScannerAssignmentInput,
   StaffScannerAssignment,
@@ -127,6 +128,12 @@ export function useStaffScannerRedeemMutation(
     onSuccess: (...args) => {
       queryClient.invalidateQueries({
         queryKey: scannerQueryKeys.validate(token),
+      });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.profile,
+      });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.history,
       });
       options?.onSuccess?.(...args);
     },

@@ -32,4 +32,40 @@ export class MailService {
       html: `<p><a href="${verifyUrl}">Verify your email</a></p>`,
     });
   }
+
+  async sendPasswordResetEmail(
+    email: string,
+    token: string,
+    kind: "merchant" | "hunter",
+  ): Promise<void> {
+    const base = config.FRONTEND_URL.replace(/\/$/, "");
+    const path =
+      kind === "merchant"
+        ? `/merchant/reset-password/${encodeURIComponent(token)}`
+        : `/reset-password/${encodeURIComponent(token)}`;
+    const resetUrl = `${base}${path}`;
+
+    if (!config.ENABLE_EMAIL || !config.smtp.host) {
+      console.log(`Password reset email to ${email}: ${resetUrl}`);
+      return;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: config.smtp.secure,
+      auth: {
+        user: config.smtp.user,
+        pass: config.smtp.pass,
+      },
+    });
+
+    await transporter.sendMail({
+      from: config.smtp.from,
+      to: email,
+      subject: "Reset your password",
+      text: `Reset your password: ${resetUrl}`,
+      html: `<p><a href="${resetUrl}">Reset your password</a></p>`,
+    });
+  }
 }

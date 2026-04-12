@@ -2,7 +2,10 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import type { Cache } from "cache-manager";
 import { FilterQuery, now, PipelineStage, Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
 import { Drop, DropDocument } from "../../database/schemas/drop.schema";
@@ -15,9 +18,15 @@ import {
   ActiveDropDto,
 } from "./dto/response/active-drops-response.dto";
 
+const ACTIVE_DROPS_CACHE_KEY = "drops:active:v1";
+const ACTIVE_DROPS_CACHE_TTL_MS = 20_000;
+
 @Injectable()
 export class DropsService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+  ) {}
 
   async create(
     merchantId: string,
@@ -103,6 +112,7 @@ export class DropsService {
       voucherAbsoluteExpiresAt,
       voucherTtlHoursAfterClaim,
     });
+    await this.invalidateActiveDropsCache();
     return this.toResponseDto(drop);
   }
 
@@ -131,7 +141,7 @@ export class DropsService {
     const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
     const safeLimit = Math.min(
       100,
-      Math.max(1, Number.isFinite(limit) ? limit : 20),
+      Math.max(1, Number.isFinite(limit) ? limit : 20)
     );
     const filter = this.buildMerchantDropsFilter(merchantId, search, status);
     const skip = (safePage - 1) * safeLimit;
@@ -235,6 +245,13 @@ export class DropsService {
   }
 
   async findAllActive(): Promise<ActiveDropsResponseDto> {
+    const cached = await this.cacheManager.get<ActiveDropsResponseDto>(
+      ACTIVE_DROPS_CACHE_KEY
+    );
+    if (cached) {
+      return cached;
+    }
+
     const pipeline: PipelineStage[] = [
       {
         $match: {
@@ -290,10 +307,18 @@ export class DropsService {
 
     const drops = await this.database.drops.aggregate<ActiveDropDto>(pipeline);
 
-    return {
+    const result: ActiveDropsResponseDto = {
       drops,
       total: drops.length,
     };
+
+    await this.cacheManager.set(
+      ACTIVE_DROPS_CACHE_KEY,
+      result,
+      ACTIVE_DROPS_CACHE_TTL_MS
+    );
+
+    return result;
   }
 
   async update(
@@ -389,6 +414,7 @@ export class DropsService {
     Object.assign(drop, updateData);
     await drop.save();
 
+    await this.invalidateActiveDropsCache();
     return this.toResponseDto(drop);
   }
 
@@ -407,6 +433,12 @@ export class DropsService {
         "Drop not found or you do not have permission"
       );
     }
+
+    await this.invalidateActiveDropsCache();
+  }
+
+  private async invalidateActiveDropsCache(): Promise<void> {
+    await this.cacheManager.del(ACTIVE_DROPS_CACHE_KEY);
   }
 
   async checkAvailability(

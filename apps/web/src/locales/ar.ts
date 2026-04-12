@@ -92,6 +92,8 @@ const ar = {
   "merchant.createAccount": "إنشاء حساب تاجر",
   "merchant.businessName": "اسم النشاط التجاري",
   "merchant.yourBusinessName": "اسم نشاطك التجاري",
+  "merchant.usernameSlugHint":
+    "من 3 إلى 30 حرفاً: أحرف وأرقام وشرطة سفلية فقط. يُملأ تلقائياً من اسم النشاط حتى تعدّله.",
   "merchant.youAtBusiness": "you@business.com",
   "merchant.atLeast6Chars": "6 أحرف على الأقل",
   "merchant.passwordRequirements":

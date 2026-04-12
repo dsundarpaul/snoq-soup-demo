@@ -162,7 +162,6 @@ export const MerchantSchema = SchemaFactory.createForClass(Merchant);
 // Indexes
 MerchantSchema.index({ email: 1 }, { unique: true });
 MerchantSchema.index({ username: 1 }, { unique: true });
-MerchantSchema.index({ "emailVerification.token": 1 }, { sparse: true });
 MerchantSchema.index({ "passwordReset.token": 1 }, { sparse: true });
 MerchantSchema.index({ "scannerToken.token": 1 }, { sparse: true });
 MerchantSchema.index({ deletedAt: 1 });

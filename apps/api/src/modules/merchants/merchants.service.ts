@@ -338,48 +338,59 @@ export class MerchantsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const pipeline: PipelineStage[] = [
-      { $match: { merchantId: merchantObjectId } },
+    const dropsOverviewPipeline: PipelineStage[] = [
+      { $match: { merchantId: merchantObjectId, deletedAt: null } },
+      {
+        $group: {
+          _id: null,
+          totalDrops: { $sum: 1 },
+          activeDrops: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$active", true] },
+                    {
+                      $or: [
+                        { $eq: ["$schedule.end", null] },
+                        { $gte: ["$schedule.end", new Date()] },
+                      ],
+                    },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          expiredDrops: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$schedule.end", null] },
+                    { $lt: ["$schedule.end", new Date()] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ];
+
+    const vouchersFacetPipeline: PipelineStage[] = [
+      { $match: { merchantId: merchantObjectId, deletedAt: null } },
       {
         $facet: {
           overview: [
             {
               $group: {
                 _id: null,
-                totalDrops: { $sum: 1 },
-                activeDrops: {
-                  $sum: {
-                    $cond: [
-                      {
-                        $and: [
-                          { $eq: ["$active", true] },
-                          {
-                            $or: [
-                              { $eq: ["$schedule.end", null] },
-                              { $gte: ["$schedule.end", new Date()] },
-                            ],
-                          },
-                        ],
-                      },
-                      1,
-                      0,
-                    ],
-                  },
-                },
-                expiredDrops: {
-                  $sum: {
-                    $cond: [
-                      {
-                        $and: [
-                          { $ne: ["$schedule.end", null] },
-                          { $lt: ["$schedule.end", new Date()] },
-                        ],
-                      },
-                      1,
-                      0,
-                    ],
-                  },
-                },
+                totalClaims: { $sum: 1 },
+                totalRedemptions: { $sum: { $cond: ["$redeemed", 1, 0] } },
               },
             },
           ],
@@ -449,7 +460,7 @@ export class MerchantsService {
               $match: {
                 redeemed: true,
                 claimedAt: { $exists: true },
-                redeemedAt: { $exists: true },
+                redeemedAt: { $exists: true, $ne: null },
               },
             },
             {
@@ -470,33 +481,25 @@ export class MerchantsService {
       },
     ];
 
-    const [dropsAgg, vouchersAgg] = await Promise.all([
-      this.database.drops.aggregate(pipeline),
-      this.database.vouchers.aggregate([
-        { $match: { merchantId: merchantObjectId, deletedAt: null } },
-        {
-          $group: {
-            _id: null,
-            totalClaims: { $sum: 1 },
-            totalRedemptions: { $sum: { $cond: ["$redeemed", 1, 0] } },
-          },
-        },
-      ]),
+    const [dropsOverviewAgg, vouchersFacetAgg] = await Promise.all([
+      this.database.drops.aggregate(dropsOverviewPipeline),
+      this.database.vouchers.aggregate(vouchersFacetPipeline),
     ]);
 
-    const dropsFacet = dropsAgg[0] || {
-      overview: [{ totalDrops: 0, activeDrops: 0, expiredDrops: 0 }],
-      dailyStats: [],
-      dropPerformance: [],
-      avgTimeToRedemption: [{ avgHours: null }],
-    };
-
-    const overview = dropsFacet.overview[0] || {
+    const dropOverview = dropsOverviewAgg[0] || {
       totalDrops: 0,
       activeDrops: 0,
       expiredDrops: 0,
     };
-    const vouchersOverview = vouchersAgg[0] || {
+
+    const vouchersFacet = vouchersFacetAgg[0] || {
+      overview: [{ totalClaims: 0, totalRedemptions: 0 }],
+      dailyStats: [],
+      dropPerformance: [],
+      avgTimeToRedemption: [],
+    };
+
+    const vouchersOverview = vouchersFacet.overview[0] || {
       totalClaims: 0,
       totalRedemptions: 0,
     };
@@ -509,8 +512,8 @@ export class MerchantsService {
           )
         : 0;
 
-    const avgTimeToRedemption = dropsFacet.avgTimeToRedemption[0]?.avgHours
-      ? Math.round(dropsFacet.avgTimeToRedemption[0].avgHours * 10) / 10
+    const avgTimeToRedemption = vouchersFacet.avgTimeToRedemption[0]?.avgHours
+      ? Math.round(vouchersFacet.avgTimeToRedemption[0].avgHours * 10) / 10
       : null;
 
     const dailyStatsMap = new Map<
@@ -520,14 +523,13 @@ export class MerchantsService {
     for (let i = 0; i < 30; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      // Type-safe refactor: safely get date string without non-null assertion
       const dateParts = date.toISOString().split("T");
       const dateStr: string =
         dateParts.length > 0 ? (dateParts[0] as string) : "";
       dailyStatsMap.set(dateStr, { claims: 0, redemptions: 0 });
     }
 
-    for (const stat of dropsFacet.dailyStats) {
+    for (const stat of vouchersFacet.dailyStats) {
       dailyStatsMap.set(stat._id.date, {
         claims: stat.claims,
         redemptions: stat.redemptions,
@@ -538,8 +540,9 @@ export class MerchantsService {
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Type-safe refactor: properly typed drop performance mapping
-    const topDrops: DropPerformanceItem[] = (dropsFacet.dropPerformance || [])
+    const topDrops: DropPerformanceItem[] = (
+      vouchersFacet.dropPerformance || []
+    )
       .slice(0, 5)
       .map((d: { id: unknown; name: unknown; redemptions: unknown }) => ({
         id: d.id as string,
@@ -549,16 +552,16 @@ export class MerchantsService {
 
     return {
       overview: {
-        totalDrops: overview.totalDrops,
-        activeDrops: overview.activeDrops,
-        expiredDrops: overview.expiredDrops,
+        totalDrops: dropOverview.totalDrops,
+        activeDrops: dropOverview.activeDrops,
+        expiredDrops: dropOverview.expiredDrops,
         totalClaims: vouchersOverview.totalClaims,
         totalRedemptions: vouchersOverview.totalRedemptions,
         conversionRate,
         avgTimeToRedemption,
       },
       dailyStats,
-      dropPerformance: dropsFacet.dropPerformance || [],
+      dropPerformance: vouchersFacet.dropPerformance || [],
       topDrops,
     };
   }

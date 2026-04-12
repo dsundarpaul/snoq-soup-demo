@@ -106,19 +106,14 @@ export function useMerchantSignupMutation(
   return useMutation({
     ...options,
     mutationFn: async (data: MerchantSignupInput) => {
-      const local = data.email.split("@")[0] ?? "merchant";
-      const username = local
-        .replace(/[^a-zA-Z0-9_]/g, "_")
-        .slice(0, 30)
-        .toLowerCase();
       const response = await apiRequest(
         "POST",
         "/api/v1/auth/merchant/register",
         {
           email: data.email,
           password: data.password,
-          username: username || "merchant",
           businessName: data.businessName,
+          username: data.username.trim().toLowerCase(),
         },
         { auth: undefined }
       );
@@ -170,13 +165,12 @@ export function useMerchantForgotPasswordMutation(
   return useMutation({
     ...options,
     mutationFn: async (data: { email: string }) => {
-      const response = await apiRequest(
+      await apiRequest(
         "POST",
         "/api/v1/auth/merchant/forgot-password",
         data,
         { auth: undefined }
       );
-      return response.json();
     },
   });
 }
@@ -184,13 +178,12 @@ export function useMerchantForgotPasswordMutation(
 export function useMerchantResetPasswordMutation(token: string) {
   return useMutation({
     mutationFn: async (data: { password: string }) => {
-      const response = await apiRequest(
+      await apiRequest(
         "POST",
         `/api/v1/auth/merchant/reset-password/${token}`,
         data,
         { auth: undefined }
       );
-      return response.json();
     },
   });
 }

@@ -218,13 +218,12 @@ export function useTreasureHunterForgotPasswordMutation(
 ) {
   return useMutation({
     mutationFn: async (data: { email: string }) => {
-      const res = await apiRequest(
+      await apiRequest(
         "POST",
         "/api/v1/auth/hunter/forgot-password",
         data,
         { auth: undefined }
       );
-      return res.json();
     },
     ...options,
   });
@@ -233,13 +232,12 @@ export function useTreasureHunterForgotPasswordMutation(
 export function useTreasureHunterResetPasswordMutation(token: string) {
   return useMutation({
     mutationFn: async (data: { password: string }) => {
-      const res = await apiRequest(
+      await apiRequest(
         "POST",
         `/api/v1/auth/hunter/reset-password/${token}`,
         data,
         { auth: undefined }
       );
-      return res.json();
     },
   });
 }

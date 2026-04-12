@@ -42,7 +42,7 @@ export class AuthService {
     @InjectConnection() private readonly connection: Connection,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-    private readonly emailVerificationTokenService: EmailVerificationTokenService
+    private readonly emailVerificationTokenService: EmailVerificationTokenService,
   ) {}
 
   private hashToken(token: string): string {
@@ -55,7 +55,7 @@ export class AuthService {
 
   private async verifyPassword(
     password: string,
-    hashedPassword: string
+    hashedPassword: string,
   ): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
   }
@@ -63,14 +63,6 @@ export class AuthService {
   private isLockedOut(lockUntil: Date | null | undefined): boolean {
     if (!lockUntil) return false;
     return new Date() < new Date(lockUntil);
-  }
-
-  private async sendPasswordResetEmail(
-    email: string,
-    token: string
-  ): Promise<void> {
-    // Email sending implementation will be added
-    console.log(`Password reset email to ${email}: token=${token}`);
   }
 
   private mapMerchantToUserDto(merchant: MerchantDocument) {
@@ -143,12 +135,12 @@ export class AuthService {
               deletedAt: null,
             },
           ],
-          { session }
+          { session },
         );
         merchant = created!;
         verificationPlain = await this.emailVerificationTokenService.issueToken(
           merchant._id.toString(),
-          session
+          session,
         );
       });
     } finally {
@@ -158,19 +150,19 @@ export class AuthService {
     try {
       await this.mailService.sendVerificationEmail(
         merchant.email,
-        verificationPlain
+        verificationPlain,
       );
     } catch (err) {
       this.logger.error(
         `Verification email failed after signup transaction commit: ${
           err instanceof Error ? err.message : String(err)
-        }`
+        }`,
       );
     }
 
     const tokens = await this.generateTokenPair(
       merchant._id.toString(),
-      UserType.MERCHANT
+      UserType.MERCHANT,
     );
 
     return {
@@ -187,7 +179,7 @@ export class AuthService {
       });
       if (existingEmail) {
         throw new ConflictException(
-          `Email already registered with: ${dto.email.substring(0, 3)}***${dto.email.substring(dto.email.length - 3)}`
+          `Email already registered with: ${dto.email.substring(0, 3)}***${dto.email.substring(dto.email.length - 3)}`,
         );
       }
     }
@@ -207,7 +199,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       hunter._id.toString(),
-      UserType.HUNTER
+      UserType.HUNTER,
     );
 
     return {
@@ -218,7 +210,7 @@ export class AuthService {
 
   async loginMerchant(
     email: string,
-    password: string
+    password: string,
   ): Promise<AuthResponseDto> {
     const merchant = await this.database.merchants
       .findOne({
@@ -237,7 +229,7 @@ export class AuthService {
 
     const isValidPassword = await this.verifyPassword(
       password,
-      merchant.password
+      merchant.password,
     );
 
     if (!isValidPassword) {
@@ -252,7 +244,7 @@ export class AuthService {
 
       await this.database.merchants.updateOne(
         { _id: merchant._id },
-        { $set: updateData }
+        { $set: updateData },
       );
 
       throw new UnauthorizedException("Invalid credentials");
@@ -260,18 +252,18 @@ export class AuthService {
 
     await this.database.merchants.updateOne(
       { _id: merchant._id },
-      { $set: { loginAttempts: 0, lockUntil: null } }
+      { $set: { loginAttempts: 0, lockUntil: null } },
     );
 
     if (!merchant.emailVerified) {
       throw new ForbiddenException(
-        "Please verify your email before logging in."
+        "Please verify your email before logging in.",
       );
     }
 
     const tokens = await this.generateTokenPair(
       merchant._id.toString(),
-      UserType.MERCHANT
+      UserType.MERCHANT,
     );
 
     return {
@@ -294,7 +286,7 @@ export class AuthService {
 
     const isValidPassword = await this.verifyPassword(
       password,
-      hunter.password
+      hunter.password,
     );
 
     if (!isValidPassword) {
@@ -303,7 +295,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       hunter._id.toString(),
-      UserType.HUNTER
+      UserType.HUNTER,
     );
 
     return {
@@ -333,7 +325,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       hunter._id.toString(),
-      UserType.HUNTER
+      UserType.HUNTER,
     );
 
     return {
@@ -372,7 +364,7 @@ export class AuthService {
 
       await this.database.admins.updateOne(
         { _id: admin._id },
-        { $set: updateData }
+        { $set: updateData },
       );
 
       throw new UnauthorizedException("Invalid credentials");
@@ -380,12 +372,12 @@ export class AuthService {
 
     await this.database.admins.updateOne(
       { _id: admin._id },
-      { $set: { loginAttempts: 0, lockUntil: null } }
+      { $set: { loginAttempts: 0, lockUntil: null } },
     );
 
     const tokens = await this.generateTokenPair(
       admin._id.toString(),
-      UserType.ADMIN
+      UserType.ADMIN,
     );
 
     return {
@@ -396,6 +388,10 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     const tokenHash = this.emailVerificationTokenService.hashPlainToken(token);
+    this.logger.log(
+      `[verifyEmail] enter hashPrefix=${tokenHash.slice(0, 8)} at=${new Date().toISOString()}`,
+    );
+
     const session = await this.connection.startSession();
 
     try {
@@ -410,11 +406,9 @@ export class AuthService {
               expiresAt: { $gt: now },
             },
             { $set: { used: true } },
-            { session, new: true }
+            { session, new: true },
           )
           .exec();
-
-        console.log(claimed);
 
         if (claimed) {
           const merchantRes = await this.database.merchants.updateOne(
@@ -426,52 +420,82 @@ export class AuthService {
               $set: { emailVerified: true },
               $unset: { emailVerification: 1 },
             },
-            { session }
+            { session },
           );
-          console.log("merchantRes.matchedCount", merchantRes.matchedCount);
+
           if (merchantRes.matchedCount === 0) {
             throw new BadRequestException(
-              "Invalid or expired verification token"
+              "Invalid or expired verification token",
             );
           }
+
+          this.logger.log(
+            `[verifyEmail] verified merchantId=${claimed.merchantId.toString()}`,
+          );
           return;
+        }
+
+        const existing = await this.database.emailVerificationTokens
+          .findOne({ tokenHash })
+          .session(session)
+          .lean();
+
+        if (!existing) {
+          this.logger.log(
+            `[verifyEmail] no row hashPrefix=${tokenHash.slice(0, 8)}`,
+          );
+          throw new BadRequestException(
+            "Invalid or expired verification token",
+          );
+        }
+
+        if (!existing.used) {
+          if (new Date(existing.expiresAt) <= now) {
+            throw new BadRequestException("Verification token has expired");
+          }
+          this.logger.log(
+            `[verifyEmail] odd state unused+unexpired hashPrefix=${tokenHash.slice(0, 8)}`,
+          );
+          throw new BadRequestException(
+            "Invalid or expired verification token",
+          );
         }
 
         const merchant = await this.database.merchants
           .findOne({
-            "emailVerification.token": token,
+            _id: existing.merchantId,
             deletedAt: null,
           })
-          .session(session);
+          .session(session)
+          .lean();
 
-        console.log("merchant", merchant);
-
-        if (!merchant) {
-          throw new BadRequestException(
-            "Invalid or expired verification token"
+        if (merchant?.emailVerified) {
+          this.logger.log(
+            `[verifyEmail] idempotent ok merchantId=${existing.merchantId.toString()}`,
           );
+          return;
         }
 
-        if (
-          merchant.emailVerification?.expiresAt &&
-          new Date() > new Date(merchant.emailVerification.expiresAt)
-        ) {
-          console.log("verification token has exprierd");
-          throw new BadRequestException("Verification token has expired");
-        }
-
-        await this.emailVerificationTokenService.markAllUnusedUsedForMerchant(
-          merchant._id.toString(),
-          session
-        );
-
-        await this.database.merchants.updateOne(
-          { _id: merchant._id },
+        const merchantRes = await this.database.merchants.updateOne(
+          {
+            _id: existing.merchantId,
+            deletedAt: null,
+          },
           {
             $set: { emailVerified: true },
             $unset: { emailVerification: 1 },
           },
-          { session }
+          { session },
+        );
+
+        if (merchantRes.matchedCount === 0) {
+          throw new BadRequestException(
+            "Invalid or expired verification token",
+          );
+        }
+
+        this.logger.log(
+          `[verifyEmail] repaired merchantId=${existing.merchantId.toString()}`,
         );
       });
     } finally {
@@ -507,12 +531,12 @@ export class AuthService {
 
         await this.emailVerificationTokenService.markAllUnusedUsedForMerchant(
           merchant._id.toString(),
-          session
+          session,
         );
 
         verificationPlain = await this.emailVerificationTokenService.issueToken(
           merchant._id.toString(),
-          session
+          session,
         );
         targetEmail = merchant.email;
 
@@ -522,7 +546,7 @@ export class AuthService {
             $set: { lastVerificationSentAt: new Date() },
             $unset: { emailVerification: 1 },
           },
-          { session }
+          { session },
         );
       });
     } finally {
@@ -533,13 +557,13 @@ export class AuthService {
       try {
         await this.mailService.sendVerificationEmail(
           targetEmail,
-          verificationPlain
+          verificationPlain,
         );
       } catch (err) {
         this.logger.error(
           `Verification email failed after resend transaction commit: ${
             err instanceof Error ? err.message : String(err)
-          }`
+          }`,
         );
       }
     }
@@ -578,26 +602,43 @@ export class AuthService {
     if (userType === UserType.MERCHANT) {
       await this.database.merchants.updateOne(
         { _id: user._id },
-        { $set: updateData }
+        { $set: updateData },
       );
     } else {
       await this.database.hunters.updateOne(
         { _id: user._id },
-        { $set: updateData }
+        { $set: updateData },
       );
     }
 
     if (!user.email) {
-      return; // Can't send email without email address
+      return;
     }
 
-    await this.sendPasswordResetEmail(user.email, resetToken);
+    const kind =
+      userType === UserType.MERCHANT
+        ? ("merchant" as const)
+        : ("hunter" as const);
+
+    try {
+      await this.mailService.sendPasswordResetEmail(
+        user.email,
+        resetToken,
+        kind,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Password reset email failed for ${user.email}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
   async resetPassword(
     token: string,
     password: string,
-    userType: UserType
+    userType: UserType,
   ): Promise<void> {
     let user: MerchantDocument | HunterDocument | null = null;
 
@@ -632,7 +673,7 @@ export class AuthService {
         {
           $set: { password: hashedPassword },
           $unset: { "passwordReset.token": 1, "passwordReset.expiresAt": 1 },
-        }
+        },
       );
       await this.revokeAllUserTokens(user._id.toString(), UserType.MERCHANT);
     } else {
@@ -641,7 +682,7 @@ export class AuthService {
         {
           $set: { password: hashedPassword },
           $unset: { "passwordReset.token": 1, "passwordReset.expiresAt": 1 },
-        }
+        },
       );
       await this.revokeAllUserTokens(user._id.toString(), UserType.HUNTER);
     }
@@ -665,10 +706,10 @@ export class AuthService {
       // Revoke entire token family (potential token theft)
       await this.database.refreshTokens.updateMany(
         { family: tokenDoc.family },
-        { $set: { revokedAt: new Date() } }
+        { $set: { revokedAt: new Date() } },
       );
       throw new UnauthorizedException(
-        "Token reuse detected. Please login again."
+        "Token reuse detected. Please login again.",
       );
     }
 
@@ -679,14 +720,14 @@ export class AuthService {
     // Revoke the current token
     await this.database.refreshTokens.updateOne(
       { _id: tokenDoc._id },
-      { $set: { revokedAt: new Date() } }
+      { $set: { revokedAt: new Date() } },
     );
 
     // Generate new token pair with same family
     const tokens = await this.generateTokenPair(
       tokenDoc.userId.toString(),
       tokenDoc.userType,
-      tokenDoc.family
+      tokenDoc.family,
     );
 
     return tokens;
@@ -697,14 +738,14 @@ export class AuthService {
 
     await this.database.refreshTokens.updateOne(
       { token: hashedToken },
-      { $set: { revokedAt: new Date() } }
+      { $set: { revokedAt: new Date() } },
     );
   }
 
   async generateTokenPair(
     userId: string,
     userType: UserType,
-    existingFamily?: string
+    existingFamily?: string,
   ): Promise<TokenResponseDto> {
     const family = existingFamily || randomUUID();
     const refreshToken = randomUUID();
@@ -717,7 +758,7 @@ export class AuthService {
       },
       {
         expiresIn: this.JWT_ACCESS_EXPIRY,
-      }
+      },
     );
 
     const expiresAt = new Date();
@@ -741,13 +782,13 @@ export class AuthService {
   async revokeAllUserTokens(userId: string, userType: UserType): Promise<void> {
     await this.database.refreshTokens.updateMany(
       { userId, userType, revokedAt: null },
-      { $set: { revokedAt: new Date() } }
+      { $set: { revokedAt: new Date() } },
     );
   }
 
   async validateUser(
     userId: string,
-    userType: UserType
+    userType: UserType,
   ): Promise<Merchant | Hunter | Admin | null> {
     if (userType === UserType.MERCHANT) {
       return this.database.merchants.findById(userId);

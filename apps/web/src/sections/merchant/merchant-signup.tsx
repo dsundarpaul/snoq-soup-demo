@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   type MerchantSignupFormInput,
 } from "@shared/schema";
 import { useMerchantSignupMutation } from "@/hooks/api/merchant/use-merchant";
+import { slugifyBusinessNameForMerchantUsername } from "@/lib/merchant-username";
 
 export default function MerchantSignupPage() {
   const [emailSent, setEmailSent] = useState(false);
@@ -34,11 +35,24 @@ export default function MerchantSignupPage() {
     resolver: zodResolver(merchantSignupFormSchema),
     defaultValues: {
       businessName: "",
+      username: "",
       email: "",
       password: "",
       confirmPassword: "",
     },
   });
+
+  const { control, setValue } = form;
+  const businessName = useWatch({ control, name: "businessName" });
+  const usernameEditedByUser = useRef(false);
+
+  useEffect(() => {
+    if (usernameEditedByUser.current) {
+      return;
+    }
+    const slug = slugifyBusinessNameForMerchantUsername(businessName ?? "");
+    setValue("username", slug, { shouldValidate: false });
+  }, [businessName, setValue]);
 
   const signupMutation = useMerchantSignupMutation({
     onSuccess: (_, variables) => {
@@ -50,6 +64,7 @@ export default function MerchantSignupPage() {
   const onSubmit = (data: MerchantSignupFormInput) => {
     signupMutation.mutate({
       businessName: data.businessName,
+      username: data.username.trim().toLowerCase(),
       email: data.email,
       password: data.password,
     });
@@ -150,6 +165,32 @@ export default function MerchantSignupPage() {
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("auth.username")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t("auth.enterUsername")}
+                        autoComplete="username"
+                        data-testid="input-username"
+                        {...field}
+                        onChange={(e) => {
+                          usernameEditedByUser.current = true;
+                          field.onChange(e);
+                        }}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {t("merchant.usernameSlugHint")}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

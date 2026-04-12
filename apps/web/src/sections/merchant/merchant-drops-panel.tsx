@@ -34,6 +34,7 @@ import {
   canToggleMerchantDropActive,
   MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED,
 } from "@/utils/merchant-drop-active-toggle";
+import { toast } from "@/hooks/use-toast";
 import type { DashboardStats } from "./merchant-dashboard.types";
 
 export interface MerchantDropsPanelProps {
@@ -431,11 +432,21 @@ function MerchantDropActiveSwitch({
   const canToggle = canToggleMerchantDropActive(drop);
 
   if (!canToggle) {
+    const showBlockedToast = () =>
+      toast({ title: MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED });
+
     return (
-      <button
-        type="button"
-        className="inline-flex rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        onClick={() => window.alert(MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED)}
+      <div
+        role="button"
+        tabIndex={0}
+        className="inline-flex cursor-pointer rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        onClick={showBlockedToast}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            showBlockedToast();
+          }
+        }}
         title={MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED}
         aria-label={MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED}
       >
@@ -444,7 +455,7 @@ function MerchantDropActiveSwitch({
           disabled
           className="pointer-events-none"
         />
-      </button>
+      </div>
     );
   }
 

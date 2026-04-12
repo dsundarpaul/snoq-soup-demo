@@ -20,6 +20,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from "@nestjs/swagger";
+import { SkipThrottle } from "@nestjs/throttler";
 import { DropsService } from "./drops.service";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
@@ -42,6 +43,7 @@ export class DropsController {
 
   // Public endpoints
   @Get("drops/active")
+  @SkipThrottle({ default: true, strict: true })
   @ApiOperation({ summary: "List all active drops" })
   @ApiResponse({ status: 200, type: ActiveDropsResponseDto })
   async findActive(): Promise<ActiveDropsResponseDto> {

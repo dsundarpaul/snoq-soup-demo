@@ -49,10 +49,20 @@ const nestPassword = z
   .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
   .regex(/[0-9]/, "Password must contain at least one number");
 
+export const merchantUsernameSlugSchema = z
+  .string()
+  .min(3, "Username must be at least 3 characters")
+  .max(30, "Username must be at most 30 characters")
+  .regex(
+    /^[a-zA-Z0-9_]+$/,
+    "Username can only contain letters, numbers, and underscores"
+  );
+
 export const merchantSignupSchema = z.object({
   businessName: z
     .string()
     .min(2, "Business name must be at least 2 characters"),
+  username: merchantUsernameSlugSchema,
   email: z.string().email("Please enter a valid email"),
   password: nestPassword,
 });

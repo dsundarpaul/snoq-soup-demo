@@ -22,7 +22,13 @@ export function MerchantDashboardHeader({
   return (
     <header className="border-b border-border bg-card">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={() => {
+            window.location.reload();
+          }}
+          className="flex items-center gap-2 sm:gap-3 min-w-0 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
           <img
             src={merchant?.logoUrl || appLogoSrc}
             alt={merchant?.businessName || "Souq-Snap"}
@@ -36,7 +42,7 @@ export function MerchantDashboardHeader({
               Merchant Dashboard
             </p>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
           <Button

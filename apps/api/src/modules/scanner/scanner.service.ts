@@ -142,6 +142,8 @@ export class ScannerService {
       merchantIdStr,
     );
 
+    const rewardFromVoucher = result.voucher?.drop?.rewardValue;
+
     return {
       success: result.success,
       voucherId: result.voucherId,
@@ -151,7 +153,7 @@ export class ScannerService {
       voucher: result.dropName
         ? {
             dropName: result.dropName,
-            rewardValue: "", // Will be populated if needed from drop data
+            rewardValue: rewardFromVoucher ?? "",
           }
         : null,
     };

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { CacheModule } from "@nestjs/cache-manager";
 import { ScheduleModule } from "@nestjs/schedule";
 import { APP_GUARD } from "@nestjs/core";
 import { DatabaseModule } from "./database/database.module";
@@ -22,15 +23,25 @@ import { UploadModule } from "./modules/upload/upload.module";
       throttlers: [
         {
           name: "default",
-          ttl: 60000, // 1 minute
-          limit: 100, // 100 requests per minute
+          ttl: 60000,
+          limit: 100,
         },
         {
           name: "strict",
           ttl: 60000,
-          limit: 20, // 20 requests per minute for sensitive endpoints
+          limit: 20,
+        },
+        {
+          name: "publicHeavyRead",
+          ttl: 60000,
+          limit: 10000,
         },
       ],
+    }),
+
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 20_000,
     }),
 
     // Global modules

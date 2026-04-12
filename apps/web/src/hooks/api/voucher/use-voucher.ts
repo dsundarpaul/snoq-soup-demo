@@ -12,6 +12,7 @@ import {
   mapClaimResponseToLegacy,
   mapNestVoucherToLegacy,
 } from "@/lib/nest-mappers";
+import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import type { AuthRole } from "@/lib/auth-tokens";
 import type { Drop, Voucher } from "@shared/schema";
 
@@ -22,20 +23,25 @@ export function useClaimVoucherMutation(
     UseMutationOptions<
       ClaimResult,
       Error,
-      { dropId: string; deviceId: string }
+      { dropId: string; deviceId: string; hunterId?: string }
     >,
     "mutationFn"
   >
 ) {
   return useMutation({
     ...options,
-    mutationFn: async (data: { dropId: string; deviceId: string }) => {
+    mutationFn: async (data: {
+      dropId: string;
+      deviceId: string;
+      hunterId?: string;
+    }) => {
       const response = await apiRequest(
         "POST",
         "/api/v1/vouchers/claim",
         {
           dropId: data.dropId,
           deviceId: data.deviceId,
+          ...(data.hunterId ? { hunterId: data.hunterId } : {}),
         },
         { auth: undefined, deviceId: data.deviceId }
       );
@@ -44,6 +50,12 @@ export function useClaimVoucherMutation(
     },
     onSuccess: (data, variables, onMutateResult, context) => {
       queryClient.invalidateQueries({ queryKey: dropQueryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.profile,
+      });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.history,
+      });
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
@@ -78,6 +90,12 @@ export function useRedeemVoucherMutation(
       return response.json() as Promise<Record<string, unknown>>;
     },
     onSuccess: (...args) => {
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.profile,
+      });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.history,
+      });
       options?.onSuccess?.(...args);
     },
   });

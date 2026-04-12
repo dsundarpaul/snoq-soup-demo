@@ -18,12 +18,13 @@ import {
 } from "lucide-react";
 import type { Voucher, Drop } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
+import { useToast } from "@/hooks/use-toast";
 import {
   useStaffScannerValidateQuery,
   useStaffScannerRedeemMutation,
 } from "@/hooks/api/scanner/use-scanner";
 import { parseVoucherQrPayload } from "@/lib/parse-voucher-qr";
-import { mapRedeemResultToLegacy } from "@/lib/nest-mappers";
+import { mapStaffScannerRedeemToLegacy } from "@/lib/nest-mappers";
 
 type ScanResult =
   | { status: "success"; voucher: Voucher; drop: Drop }
@@ -35,6 +36,7 @@ export default function StaffScannerPage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,20 +52,24 @@ export default function StaffScannerPage() {
 
   const redeemMutation = useStaffScannerRedeemMutation(tokenStr, {
     onSuccess: (data) => {
-      if (data.success) {
-        const { voucher, drop } = mapRedeemResultToLegacy(data);
-        setScanResult({
-          status: "success",
-          voucher,
-          drop,
-        });
-      } else {
+      if (data.success === false) {
         setScanResult({
           status: "invalid",
           message:
             (data.message as string) || t("scanner.invalidVoucher"),
         });
+        return;
       }
+      const { voucher, drop } = mapStaffScannerRedeemToLegacy(data);
+      setScanResult({
+        status: "success",
+        voucher,
+        drop,
+      });
+      toast({
+        title: t("scanner.success"),
+        description: t("scanner.redeemSuccess"),
+      });
     },
     onError: (error: Error) => {
       const msg = error.message;

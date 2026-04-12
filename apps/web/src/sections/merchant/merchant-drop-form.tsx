@@ -1,10 +1,12 @@
 "use client";
 
+import { useForm } from "react-hook-form";
 import type {
   SubmitErrorHandler,
   SubmitHandler,
   UseFormReturn,
 } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +31,20 @@ import {
 import { MapPickerLazy } from "@/components/map-picker-lazy";
 import { DatetimePicker } from "@/components/datetime-picker";
 import { GooglePlacesAutocomplete } from "@/components/google-places-autocomplete";
-import type { CreateDropForm } from "./create-drop-schema";
+import {
+  createDropSchema,
+  getCreateDropEmptyValues,
+  type CreateDropForm,
+} from "./create-drop-schema";
 
 export const MERCHANT_DROP_FORM_ID = "merchant-drop-form";
+
+export function useMerchantDropForm(): UseFormReturn<CreateDropForm> {
+  return useForm<CreateDropForm>({
+    resolver: zodResolver(createDropSchema),
+    defaultValues: getCreateDropEmptyValues(),
+  });
+}
 
 export interface MerchantDropFormProps {
   form: UseFormReturn<CreateDropForm>;
@@ -271,7 +284,7 @@ export function MerchantDropForm({
         {form.formState.errors.radius && (
           <p className="text-sm text-destructive">
             {form.formState.errors.radius.message ??
-              "Radius must be between 5 and 200 meters"}
+              "Radius must be between 5 and 2000 meters"}
           </p>
         )}
       </div>
@@ -382,7 +395,8 @@ export function MerchantDropForm({
           <Input
             id="captureLimit"
             type="number"
-            min="1"
+            min={1}
+            max={99999}
             placeholder="Enter limit"
             {...form.register("captureLimit", { valueAsNumber: true })}
             data-testid="input-capture-limit"
@@ -416,7 +430,6 @@ export function MerchantDropForm({
           />
         </div>
       </div>
-
     </form>
   );
 }

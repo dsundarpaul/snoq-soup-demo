@@ -17,17 +17,32 @@ export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: NonNullable<VariantProps<typeof buttonVariants>["variant"]>
 }
 
+function captionUsesDropdown(
+  layout: CalendarProps["captionLayout"]
+): boolean {
+  return (
+    layout === "dropdown" ||
+    layout === "dropdown-months" ||
+    layout === "dropdown-years"
+  )
+}
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
   buttonVariant = "ghost",
   captionLayout = "label",
+  navLayout: navLayoutProp,
   formatters,
   components,
   ...props
 }: CalendarProps) {
   const defaultClassNames = getDefaultClassNames()
+  const captionIsDropdown = captionUsesDropdown(captionLayout)
+  const navLayout =
+    navLayoutProp ?? (captionIsDropdown ? "around" : undefined)
+  const useAroundDropdownNav = captionIsDropdown && navLayout === "around"
 
   return (
     <DayPicker
@@ -45,28 +60,41 @@ function Calendar({
           "relative flex flex-col gap-4 md:flex-row",
           defaultClassNames.months
         ),
-        month: cn("flex w-full flex-col gap-3", defaultClassNames.month),
+        month: cn(
+          "flex w-full flex-col gap-3",
+          useAroundDropdownNav &&
+            "grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] items-center gap-x-2 gap-y-3",
+          defaultClassNames.month
+        ),
         month_caption: cn(
           "flex w-full items-center justify-center",
           captionLayout === "label"
             ? "h-8 px-8"
-            : "min-h-10 flex-wrap gap-y-1 px-2 py-1.5 sm:px-3",
+            : "min-h-10 min-w-0 flex-wrap gap-y-1 px-0 py-1 sm:px-0.5",
+          useAroundDropdownNav && "row-start-1",
           defaultClassNames.month_caption
+        ),
+        month_grid: cn(
+          "w-full border-collapse",
+          useAroundDropdownNav && "col-span-3 row-start-2 min-w-0",
+          defaultClassNames.month_grid
         ),
         nav: cn(
           captionLayout === "label"
             ? "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1"
-            : "relative mt-1 flex w-full items-center justify-center gap-1",
+            : "relative mt-1 flex w-full items-center justify-between gap-1",
           defaultClassNames.nav
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "h-8 w-8 p-0 select-none aria-disabled:opacity-50",
+          "h-8 w-8 shrink-0 p-0 select-none aria-disabled:opacity-50",
+          useAroundDropdownNav && "row-start-1",
           defaultClassNames.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "h-8 w-8 p-0 select-none aria-disabled:opacity-50",
+          "h-8 w-8 shrink-0 p-0 select-none aria-disabled:opacity-50",
+          useAroundDropdownNav && "row-start-1",
           defaultClassNames.button_next
         ),
         caption_label: cn(
@@ -77,12 +105,22 @@ function Calendar({
           defaultClassNames.caption_label
         ),
         dropdowns: cn(
-          "flex w-full items-center justify-center gap-1.5 text-sm font-medium",
-          captionLayout === "label" ? "h-8" : "min-h-9 gap-2 py-0.5",
+          "flex w-full text-sm font-medium",
+          captionLayout === "label"
+            ? "h-8 items-center justify-center gap-1.5"
+            : "min-h-9 min-w-0 flex-col gap-2 py-0.5",
           defaultClassNames.dropdowns
         ),
+        months_dropdown: cn(
+          "w-full min-w-0",
+          defaultClassNames.months_dropdown
+        ),
+        years_dropdown: cn(
+          "w-full min-w-0",
+          defaultClassNames.years_dropdown
+        ),
         dropdown_root: cn(
-          "relative h-9 min-w-[4.25rem] rounded-md border border-input bg-muted/50 text-sm shadow-xs transition-colors hover:bg-muted focus-within:border-ring focus-within:bg-background focus-within:ring-[3px] focus-within:ring-ring/40",
+          "relative h-9 w-full min-w-0 rounded-md border border-input bg-muted/50 text-sm shadow-xs transition-colors hover:bg-muted focus-within:border-ring focus-within:bg-background focus-within:ring-[3px] focus-within:ring-ring/40",
           defaultClassNames.dropdown_root
         ),
         dropdown: cn("absolute inset-0 opacity-0", defaultClassNames.dropdown),
@@ -158,6 +196,7 @@ function Calendar({
         ...components,
       }}
       {...props}
+      navLayout={navLayout}
     />
   )
 }

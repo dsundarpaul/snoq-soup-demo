@@ -31,6 +31,7 @@ import {
 import type { Drop, Voucher } from "@shared/schema";
 import { useActiveDropsQuery } from "@/hooks/api/drop/use-drop";
 import { useClaimVoucherMutation } from "@/hooks/api/voucher/use-voucher";
+import { useTreasureHunterProfileQuery } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 
 const DEFAULT_DROP = {
   id: "default-drop",
@@ -510,7 +511,14 @@ export default function ARGamePage() {
   const searchParams = useSearchParams();
   const targetDropId = searchParams.get("drop");
 
+  const { data: hunterProfile } = useTreasureHunterProfileQuery(
+    deviceId ?? ""
+  );
+
   const { vouchers, saveVoucher, hasClaimedDrop } = useVoucherStorage();
+  const [dismissedClaimDropId, setDismissedClaimDropId] = useState<
+    string | null
+  >(null);
   const [claimedVoucher, setClaimedVoucher] = useState<{
     voucher: Voucher;
     drop: Drop;
@@ -583,21 +591,43 @@ export default function ARGamePage() {
 
   const handleClaim = () => {
     if (activeDrop && isInRange && !alreadyClaimed && deviceId) {
-      claimMutation.mutate({ dropId: activeDrop.id, deviceId });
+      const hunterId =
+        typeof hunterProfile?.id === "string" ? hunterProfile.id : undefined;
+      claimMutation.mutate({
+        dropId: activeDrop.id,
+        deviceId,
+        ...(hunterId ? { hunterId } : {}),
+      });
     }
   };
+
+  useEffect(() => {
+    setDismissedClaimDropId(null);
+  }, [activeDrop?.id]);
 
   useEffect(() => {
     const existingVoucher = vouchers.find(
       (v) => v.voucher.dropId === activeDrop?.id
     );
-    if (existingVoucher && !claimedVoucher) {
+    if (
+      existingVoucher &&
+      !claimedVoucher &&
+      activeDrop &&
+      dismissedClaimDropId !== activeDrop.id
+    ) {
       setClaimedVoucher({
         voucher: existingVoucher.voucher,
         drop: existingVoucher.drop,
       });
     }
-  }, [vouchers, activeDrop, claimedVoucher]);
+  }, [vouchers, activeDrop, claimedVoucher, dismissedClaimDropId]);
+
+  const handleBackFromClaimedVoucher = () => {
+    if (activeDrop) {
+      setDismissedClaimDropId(activeDrop.id);
+    }
+    setClaimedVoucher(null);
+  };
 
   if (showCaptureAnimation) {
     return <CaptureAnimationInner onComplete={handleAnimationComplete} />;
@@ -609,7 +639,7 @@ export default function ARGamePage() {
         <Button
           variant="ghost"
           className="mb-4"
-          onClick={() => setClaimedVoucher(null)}
+          onClick={handleBackFromClaimedVoucher}
           data-testid="button-back-to-hunt"
         >
           <ChevronLeft className="w-4 h-4 mr-2" />

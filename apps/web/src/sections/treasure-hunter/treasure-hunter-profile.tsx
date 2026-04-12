@@ -188,54 +188,6 @@ export default function ProfilePage() {
               </div>
             </Card>
 
-            {profile?.id ? (
-              <Card className="p-4">
-                <p className="text-xs text-muted-foreground">
-                  {t("profile.hunterId")}
-                </p>
-                <div className="flex gap-2 mt-1 items-center">
-                  <code className="text-sm font-mono flex-1 truncate">
-                    {String(profile.id)}
-                  </code>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(String(profile.id));
-                      toast({ title: t("profile.copyHunterId") });
-                    }}
-                    data-testid="button-copy-hunter-id"
-                  >
-                    {t("profile.copyHunterId")}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {t("profile.hunterIdHint")}
-                </p>
-              </Card>
-            ) : null}
-
-            <Link href="/hunter-scan">
-              <Card
-                className="p-4 hover-elevate cursor-pointer"
-                data-testid="link-hunter-scan"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <QrCode className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{t("profile.scanToRedeem")}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {t("profile.scanToRedeemDesc")}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </Card>
-            </Link>
-
             {isEditing && profile?.email && (
               <Card className="p-4">
                 <form onSubmit={handleProfileUpdate} className="space-y-4">

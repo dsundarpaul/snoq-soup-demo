@@ -14,7 +14,7 @@ export const createDropSchema = z.object({
   radius: z.coerce
     .number()
     .min(5, "Radius must be at least 5 meters")
-    .max(200, "Radius must be at most 200 meters")
+    .max(2000, "Radius must be at most 2000 meters")
     .default(15),
   rewardValue: z
     .string()
@@ -40,7 +40,15 @@ export const createDropSchema = z.object({
     .enum(["unlimited", "captureLimit", "timeWindow"])
     .default("unlimited"),
   captureLimit: z
-    .union([z.coerce.number().min(1), z.literal(""), z.undefined(), z.null()])
+    .union([
+      z.coerce
+        .number()
+        .min(1)
+        .max(99999, "Maximum captures cannot exceed 99,999"),
+      z.literal(""),
+      z.undefined(),
+      z.null(),
+    ])
     .optional()
     .nullable()
     .transform((v) =>
@@ -59,6 +67,27 @@ export const createDropSchema = z.object({
 });
 
 export type CreateDropForm = z.infer<typeof createDropSchema>;
+
+export function getCreateDropEmptyValues(): CreateDropForm {
+  return {
+    name: "",
+    description: "",
+    latitude: 24.7136,
+    longitude: 46.6753,
+    radius: 15,
+    rewardValue: "",
+    logoUrl: "",
+    redemptionType: "anytime",
+    redemptionMinutes: undefined,
+    redemptionDeadline: "",
+    availabilityType: "unlimited",
+    captureLimit: undefined,
+    startTime: "",
+    endTime: "",
+    voucherAbsoluteExpiresAt: "",
+    voucherTtlHoursAfterClaim: undefined,
+  };
+}
 
 export function formatIsoForDatetimeLocalInput(
   date: Date | string | null | undefined
