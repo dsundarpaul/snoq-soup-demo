@@ -7,9 +7,11 @@ import {
 } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
+  clearHunterSuppressDeviceLogin,
   clearSessionsExcept,
   hadAuthCredentials,
   invalidateAuthSession,
+  setHunterSuppressDeviceLoginAfterLogout,
 } from "@/lib/auth-session";
 import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
@@ -84,6 +86,7 @@ export function useTreasureHunterLoginMutation(
       return body;
     },
     onSuccess: (...args) => {
+      clearHunterSuppressDeviceLogin();
       clearSessionsExcept("hunter");
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
@@ -144,6 +147,7 @@ export function useTreasureHunterSignupMutation(
       return body;
     },
     onSuccess: (...args) => {
+      clearHunterSuppressDeviceLogin();
       clearSessionsExcept("hunter");
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
@@ -162,6 +166,7 @@ export function useTreasureHunterLogoutMutation(
   return useMutation({
     ...options,
     mutationFn: async ({ deviceId }: { deviceId: string }) => {
+      setHunterSuppressDeviceLoginAfterLogout();
       const refresh = getRefreshToken("hunter");
       if (refresh) {
         try {

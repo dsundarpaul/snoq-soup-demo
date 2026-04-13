@@ -55,9 +55,32 @@ function invalidateDropRelatedQueries(): void {
   void queryClient.invalidateQueries({ queryKey: dropQueryKeys.all });
 }
 
+function legacyAvailabilityToMerchantForm(
+  drop: Drop
+): "unlimited" | "captureLimit" {
+  const raw = drop.availabilityType as unknown;
+  if (raw !== null && typeof raw === "object") {
+    return drop.captureLimit != null && Number(drop.captureLimit) > 0
+      ? "captureLimit"
+      : "unlimited";
+  }
+  if (typeof raw !== "string") {
+    return drop.captureLimit != null && Number(drop.captureLimit) > 0
+      ? "captureLimit"
+      : "unlimited";
+  }
+  if (raw === "captureLimit") {
+    return "captureLimit";
+  }
+  if (raw === "timeWindow") {
+    return "unlimited";
+  }
+  return "unlimited";
+}
+
 function dropToFormValues(drop: Drop): CreateDropForm {
   const redemptionTypeValue = drop.redemptionType || "anytime";
-  const availabilityTypeValue = drop.availabilityType || "unlimited";
+  const availabilityTypeValue = legacyAvailabilityToMerchantForm(drop);
   return {
     name: drop.name,
     description: drop.description,
@@ -69,10 +92,7 @@ function dropToFormValues(drop: Drop): CreateDropForm {
     redemptionType: redemptionTypeValue as "anytime" | "timer" | "window",
     redemptionMinutes: drop.redemptionMinutes ?? undefined,
     redemptionDeadline: formatIsoForDatetimeLocalInput(drop.redemptionDeadline),
-    availabilityType: availabilityTypeValue as
-      | "unlimited"
-      | "captureLimit"
-      | "timeWindow",
+    availabilityType: availabilityTypeValue,
     captureLimit: drop.captureLimit ?? undefined,
     startTime: formatIsoForDatetimeLocalInput(drop.startTime),
     endTime: formatIsoForDatetimeLocalInput(drop.endTime),

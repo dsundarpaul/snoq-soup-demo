@@ -73,7 +73,9 @@ export function MerchantDropForm({
   onSubmitInvalid,
 }: MerchantDropFormProps) {
   const redemptionType = form.watch("redemptionType");
-  const availabilityType = form.watch("availabilityType");
+  const availabilityTypeRaw = form.watch("availabilityType");
+  const availabilitySelectValue =
+    availabilityTypeRaw === "captureLimit" ? "captureLimit" : "unlimited";
 
   return (
     <form
@@ -261,23 +263,13 @@ export function MerchantDropForm({
         placeholder="Type an address to move the pin…"
       />
 
-      <MapPickerLazy
-        remountKey={mapPickerRemountKey}
-        latitude={form.watch("latitude") || 24.7136}
-        longitude={form.watch("longitude") || 46.6753}
-        onLocationChange={(lat, lng) => {
-          form.setValue("latitude", parseFloat(lat.toFixed(6)));
-          form.setValue("longitude", parseFloat(lng.toFixed(6)));
-        }}
-      />
-
       <div className="space-y-2">
         <Label htmlFor="radius">Claim Radius (meters)</Label>
         <Input
           id="radius"
           type="number"
           min={5}
-          max={200}
+          max={2000}
           {...form.register("radius")}
           data-testid="input-drop-radius"
         />
@@ -288,6 +280,18 @@ export function MerchantDropForm({
           </p>
         )}
       </div>
+
+      <MapPickerLazy
+        remountKey={mapPickerRemountKey}
+        apiKey={googleMapsApiKey}
+        latitude={Number(form.watch("latitude")) || 24.7136}
+        longitude={Number(form.watch("longitude")) || 46.6753}
+        radiusMeters={Number(form.watch("radius")) || 15}
+        onLocationChange={(lat, lng) => {
+          form.setValue("latitude", parseFloat(lat.toFixed(6)));
+          form.setValue("longitude", parseFloat(lng.toFixed(6)));
+        }}
+      />
 
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
@@ -364,7 +368,7 @@ export function MerchantDropForm({
           Availability Type
         </Label>
         <Select
-          value={form.watch("availabilityType")}
+          value={availabilitySelectValue}
           onValueChange={(value: "unlimited" | "captureLimit") => {
             form.setValue("availabilityType", value);
             if (value !== "captureLimit") {
@@ -382,14 +386,14 @@ export function MerchantDropForm({
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          {availabilityType === "unlimited" &&
+          {availabilitySelectValue === "unlimited" &&
             "Anyone can claim this drop at any time"}
-          {availabilityType === "captureLimit" &&
+          {availabilitySelectValue === "captureLimit" &&
             "Limited number of users can claim this drop"}
         </p>
       </div>
 
-      {availabilityType === "captureLimit" && (
+      {availabilitySelectValue === "captureLimit" && (
         <div className="space-y-2">
           <Label htmlFor="captureLimit">Maximum Captures</Label>
           <Input

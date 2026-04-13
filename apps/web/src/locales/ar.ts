@@ -222,6 +222,7 @@ const ar = {
   "merchantVouchers.subtitle": "جميع القسائم الصادرة عن كنوزك.",
   "merchantVouchers.empty": "لا توجد قسائم بعد.",
   "merchantVouchers.drop": "الكنز",
+  "merchantVouchers.claimedBy": "اقتُنص بواسطة",
   "merchantVouchers.claimed": "تاريخ الاقتناص",
   "merchantVouchers.expires": "ينتهي",
   "merchantVouchers.status": "الحالة",

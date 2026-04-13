@@ -10,53 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { Loader2, MapPin, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const SCRIPT_ID = "google-maps-places-js";
-
-function loadPlacesScript(apiKey: string): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.google?.maps?.places) return Promise.resolve();
-
-  const existing = document.getElementById(
-    SCRIPT_ID
-  ) as HTMLScriptElement | null;
-  if (existing) {
-    return new Promise((resolve, reject) => {
-      if (window.google?.maps?.places) {
-        resolve();
-        return;
-      }
-      const done = () => {
-        if (window.google?.maps?.places) resolve();
-        else reject(new Error("Google Maps failed"));
-      };
-      existing.addEventListener("load", done, { once: true });
-      existing.addEventListener(
-        "error",
-        () => reject(new Error("Script error")),
-        {
-          once: true,
-        }
-      );
-    });
-  }
-
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.id = SCRIPT_ID;
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
-      apiKey
-    )}&libraries=places`;
-    s.async = true;
-    s.defer = true;
-    s.onload = () => {
-      if (window.google?.maps?.places) resolve();
-      else reject(new Error("Google Maps not available"));
-    };
-    s.onerror = () => reject(new Error("Could not load script"));
-    document.head.appendChild(s);
-  });
-}
+import { loadGoogleMapsScript } from "@/lib/google-maps-script";
 
 export interface GooglePlacesAutocompleteProps {
   apiKey: string | undefined;
@@ -117,7 +71,7 @@ export function GooglePlacesAutocomplete({
     if (!apiKey || disabled) return;
     let cancelled = false;
 
-    loadPlacesScript(apiKey)
+    loadGoogleMapsScript(apiKey)
       .then(() => {
         if (cancelled || !window.google?.maps?.places) return;
         autoServiceRef.current = new google.maps.places.AutocompleteService();

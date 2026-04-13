@@ -138,9 +138,20 @@ export function useMerchantVouchersQuery(page = 1, limit = 20) {
       };
       const vouchers = (json.vouchers ?? []).map((v) => {
         const drop = v.drop as { name?: string } | undefined;
+        const claimedBy = v.claimedBy as
+          | { name?: string | null; email?: string | null }
+          | undefined;
         return {
           voucher: mapNestVoucherToLegacy(v),
           dropName: String(drop?.name ?? ""),
+          claimerName:
+            claimedBy?.name != null && String(claimedBy.name).trim() !== ""
+              ? String(claimedBy.name).trim()
+              : null,
+          claimerEmail:
+            claimedBy?.email != null && String(claimedBy.email).trim() !== ""
+              ? String(claimedBy.email).trim()
+              : null,
         };
       });
       return { vouchers, total: Number(json.total ?? 0) };

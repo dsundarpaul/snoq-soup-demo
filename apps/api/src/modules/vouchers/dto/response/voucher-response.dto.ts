@@ -52,6 +52,14 @@ export class ClaimedByDto {
     nullable: true,
   })
   phone?: string;
+
+  @ApiProperty({
+    example: "HunterJoe",
+    description: "Hunter display name (nickname) when resolved from profile",
+    nullable: true,
+    required: false,
+  })
+  name?: string | null;
 }
 
 export class RedeemedByDto {

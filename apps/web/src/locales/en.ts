@@ -222,6 +222,7 @@ const en = {
   "merchantVouchers.subtitle": "All vouchers issued from your drops.",
   "merchantVouchers.empty": "No vouchers yet.",
   "merchantVouchers.drop": "Drop",
+  "merchantVouchers.claimedBy": "Claimed by",
   "merchantVouchers.claimed": "Claimed",
   "merchantVouchers.expires": "Expires",
   "merchantVouchers.status": "Status",

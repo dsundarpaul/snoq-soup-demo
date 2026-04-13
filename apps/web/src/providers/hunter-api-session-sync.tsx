@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { API_ORIGIN } from "@/lib/app-config";
 import { useDeviceId } from "@/hooks/use-device-id";
+import { isHunterDeviceLoginSuppressed } from "@/lib/auth-session";
 import { getAccessToken, setTokenBundle } from "@/lib/auth-tokens";
 
 export function HunterApiSessionSync() {
@@ -10,7 +11,13 @@ export function HunterApiSessionSync() {
 
   useEffect(() => {
     const tryDeviceLogin = () => {
-      if (!deviceId || getAccessToken("hunter")) return;
+      if (
+        !deviceId ||
+        getAccessToken("hunter") ||
+        isHunterDeviceLoginSuppressed()
+      ) {
+        return;
+      }
       void (async () => {
         try {
           const res = await fetch(
@@ -37,9 +44,6 @@ export function HunterApiSessionSync() {
       })();
     };
     tryDeviceLogin();
-    window.addEventListener("souqsnap-auth-changed", tryDeviceLogin);
-    return () =>
-      window.removeEventListener("souqsnap-auth-changed", tryDeviceLogin);
   }, [deviceId]);
 
   return null;

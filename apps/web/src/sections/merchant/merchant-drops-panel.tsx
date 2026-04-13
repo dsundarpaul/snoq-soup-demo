@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useDeferredValue, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { Drop } from "@shared/schema";
-import type { MerchantDropsListStatus } from "@/hooks/api/merchant/use-merchant";
+import {
+  useMerchantDropsListQuery,
+  type MerchantDropsListStatus,
+} from "@/hooks/api/merchant/use-merchant";
 import {
   canToggleMerchantDropActive,
   MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED,
@@ -37,19 +41,11 @@ import {
 import { toast } from "@/hooks/use-toast";
 import type { DashboardStats } from "./merchant-dashboard.types";
 
+const DROPS_PAGE_SIZE = 10;
+
 export interface MerchantDropsPanelProps {
   stats: DashboardStats | undefined;
   statsLoading: boolean;
-  drops: Drop[];
-  dropsLoading: boolean;
-  dropsTotal: number;
-  dropsPage: number;
-  dropsPageSize: number;
-  dropsSearch: string;
-  dropsStatus: MerchantDropsListStatus;
-  onDropsSearchChange: (value: string) => void;
-  onDropsStatusChange: (value: MerchantDropsListStatus) => void;
-  onDropsPageChange: (page: number) => void;
   deletePending: boolean;
   onCreateClick: () => void;
   onShareDrop: (dropId: string) => void;
@@ -64,16 +60,6 @@ export interface MerchantDropsPanelProps {
 export function MerchantDropsPanel({
   stats,
   statsLoading,
-  drops,
-  dropsLoading,
-  dropsTotal,
-  dropsPage,
-  dropsPageSize,
-  dropsSearch,
-  dropsStatus,
-  onDropsSearchChange,
-  onDropsStatusChange,
-  onDropsPageChange,
   deletePending,
   onCreateClick,
   onShareDrop,
@@ -84,15 +70,43 @@ export function MerchantDropsPanel({
   dropActiveTogglePending,
   dropActiveTogglingId,
 }: MerchantDropsPanelProps) {
+  const [dropsPage, setDropsPage] = useState(1);
+  const [dropsSearch, setDropsSearch] = useState("");
+  const [dropsStatus, setDropsStatus] =
+    useState<MerchantDropsListStatus>("all");
+  const deferredDropsSearch = useDeferredValue(dropsSearch);
+
+  useEffect(() => {
+    setDropsPage(1);
+  }, [deferredDropsSearch, dropsStatus]);
+
+  const { data: dropsListData, isLoading: dropsLoading } =
+    useMerchantDropsListQuery({
+      page: dropsPage,
+      limit: DROPS_PAGE_SIZE,
+      search: deferredDropsSearch,
+      status: dropsStatus,
+    });
+
+  const drops = dropsListData?.drops ?? [];
+  const dropsTotal = dropsListData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(dropsTotal / DROPS_PAGE_SIZE));
+
+  useEffect(() => {
+    if (dropsListData === undefined) return;
+    if (dropsPage > totalPages) {
+      setDropsPage(totalPages);
+    }
+  }, [dropsListData, dropsPage, totalPages]);
+
   const hasFilters =
     dropsSearch.trim() !== "" || dropsStatus !== "all";
   const filteredEmpty = !dropsLoading && drops.length === 0 && hasFilters;
   const noDropsAtAll =
     !dropsLoading && drops.length === 0 && !hasFilters;
-  const totalPages = Math.max(1, Math.ceil(dropsTotal / dropsPageSize));
   const rangeStart =
-    dropsTotal === 0 ? 0 : (dropsPage - 1) * dropsPageSize + 1;
-  const rangeEnd = Math.min(dropsPage * dropsPageSize, dropsTotal);
+    dropsTotal === 0 ? 0 : (dropsPage - 1) * DROPS_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(dropsPage * DROPS_PAGE_SIZE, dropsTotal);
 
   return (
     <>
@@ -185,7 +199,7 @@ export function MerchantDropsPanel({
               <Input
                 placeholder="Search name or reward…"
                 value={dropsSearch}
-                onChange={(e) => onDropsSearchChange(e.target.value)}
+                onChange={(e) => setDropsSearch(e.target.value)}
                 className="pl-9"
                 aria-label="Search drops"
               />
@@ -193,7 +207,7 @@ export function MerchantDropsPanel({
             <Select
               value={dropsStatus}
               onValueChange={(v) =>
-                onDropsStatusChange(v as MerchantDropsListStatus)
+                setDropsStatus(v as MerchantDropsListStatus)
               }
             >
               <SelectTrigger className="w-full sm:w-[180px]">
@@ -390,7 +404,7 @@ export function MerchantDropsPanel({
                     size="sm"
                     className="gap-1"
                     disabled={dropsPage <= 1}
-                    onClick={() => onDropsPageChange(dropsPage - 1)}
+                    onClick={() => setDropsPage((p) => Math.max(1, p - 1))}
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Previous
@@ -404,7 +418,9 @@ export function MerchantDropsPanel({
                     size="sm"
                     className="gap-1"
                     disabled={dropsPage >= totalPages}
-                    onClick={() => onDropsPageChange(dropsPage + 1)}
+                    onClick={() =>
+                      setDropsPage((p) => Math.min(totalPages, p + 1))
+                    }
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />

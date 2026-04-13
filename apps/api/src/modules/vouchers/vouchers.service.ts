@@ -354,13 +354,60 @@ export class VouchersService {
       drops.map((d) => [d._id.toString(), d as DropDocument]),
     );
 
+    const hunterIdStrings = new Set<string>();
+    for (const v of vouchers) {
+      const hid = v.claimedBy?.hunterId;
+      if (!hid) continue;
+      const s = typeof hid === "string" ? hid : hid.toString();
+      if (Types.ObjectId.isValid(s)) {
+        hunterIdStrings.add(s);
+      }
+    }
+
+    const hunterDocs =
+      hunterIdStrings.size > 0
+        ? await this.database.hunters
+            .find({
+              _id: {
+                $in: [...hunterIdStrings].map((id) => new Types.ObjectId(id)),
+              },
+              deletedAt: null,
+            })
+            .select("nickname email")
+            .lean()
+        : [];
+
+    const hunterById = new Map(
+      hunterDocs.map((h) => [
+        h._id.toString(),
+        {
+          nickname: h.nickname ?? null,
+          email: h.email ?? null,
+        },
+      ]),
+    );
+
     return {
-      vouchers: vouchers.map((v) =>
-        this.toResponseDto(
+      vouchers: vouchers.map((v) => {
+        const dto = this.toResponseDto(
           v as VoucherDocument,
           dropMap.get(v.dropId?.toString() ?? "") ?? null,
-        ),
-      ),
+        );
+        const hid = dto.claimedBy?.hunterId;
+        if (hid) {
+          const hunter = hunterById.get(hid);
+          if (hunter) {
+            dto.claimedBy = {
+              ...dto.claimedBy,
+              ...(hunter.nickname != null && hunter.nickname !== ""
+                ? { name: hunter.nickname }
+                : {}),
+              email: dto.claimedBy.email ?? hunter.email ?? undefined,
+            };
+          }
+        }
+        return dto;
+      }),
       total,
     };
   }

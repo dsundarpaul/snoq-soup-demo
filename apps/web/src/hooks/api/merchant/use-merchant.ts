@@ -36,6 +36,17 @@ export type MerchantDropsListStatus =
   | "scheduled"
   | "expired";
 
+export function clearMerchantSessionQueries(): void {
+  queryClient.removeQueries({
+    predicate: (q) => {
+      const k0 = q.queryKey[0];
+      return (
+        typeof k0 === "string" && k0.includes("/api/v1/merchants/")
+      );
+    },
+  });
+}
+
 export const merchantQueryKeys = {
   me: ["/api/v1/merchants/me"] as const,
   drops: ["/api/v1/merchants/me/drops"] as const,
@@ -91,6 +102,7 @@ export function useMerchantLoginMutation(
       return mapAuthUserToMerchant(body.user);
     },
     onSuccess: (...args) => {
+      clearMerchantSessionQueries();
       clearSessionsExcept("merchant");
       options?.onSuccess?.(...args);
     },
@@ -130,6 +142,7 @@ export function useMerchantSignupMutation(
       return body;
     },
     onSuccess: (...args) => {
+      clearMerchantSessionQueries();
       clearSessionsExcept("merchant");
       options?.onSuccess?.(...args);
     },
@@ -199,10 +212,11 @@ export async function merchantLogout(): Promise<void> {
         { auth: "merchant" }
       );
     } catch {
-      clearTokenBundle("merchant");
+      /* tokens cleared below */
     }
   }
   clearTokenBundle("merchant");
+  clearMerchantSessionQueries();
 }
 
 export function useMerchantAnalyticsQuery(

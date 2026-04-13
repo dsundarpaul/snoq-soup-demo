@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useDeferredValue, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { format, subDays } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -12,11 +12,9 @@ import {
   merchantLogout,
   merchantQueryKeys,
   useMerchantMeQuery,
-  useMerchantDropsListQuery,
   useMerchantAnalyticsQuery,
   useMerchantDropCodesQuery,
   useMerchantDropActiveMutation,
-  type MerchantDropsListStatus,
 } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
@@ -40,8 +38,6 @@ import { filterAnalyticsByRange } from "@/sections/merchant/filter-analytics-by-
 import { MerchantDropSheet } from "@/sections/merchant/merchant-drop-sheet";
 import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
 import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
-const DROPS_PAGE_SIZE = 10;
-
 export default function MerchantDashboardPage() {
   const router = useRouter();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -65,37 +61,6 @@ export default function MerchantDashboardPage() {
   );
 
   const { data: merchant, isLoading: merchantLoading } = useMerchantMeQuery();
-
-  const [dropsPage, setDropsPage] = useState(1);
-  const [dropsSearch, setDropsSearch] = useState("");
-  const [dropsStatus, setDropsStatus] =
-    useState<MerchantDropsListStatus>("all");
-  const deferredDropsSearch = useDeferredValue(dropsSearch);
-
-  useEffect(() => {
-    setDropsPage(1);
-  }, [deferredDropsSearch, dropsStatus]);
-
-  const { data: dropsListData, isLoading: dropsLoading } =
-    useMerchantDropsListQuery({
-      page: dropsPage,
-      limit: DROPS_PAGE_SIZE,
-      search: deferredDropsSearch,
-      status: dropsStatus,
-    });
-
-  const drops = dropsListData?.drops ?? [];
-  const dropsTotal = dropsListData?.total ?? 0;
-  const dropsTotalPages = Math.max(
-    1,
-    Math.ceil(dropsTotal / DROPS_PAGE_SIZE)
-  );
-
-  useEffect(() => {
-    if (dropsPage > dropsTotalPages) {
-      setDropsPage(dropsTotalPages);
-    }
-  }, [dropsPage, dropsTotalPages]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: merchantQueryKeys.stats,
@@ -348,16 +313,6 @@ export default function MerchantDashboardPage() {
             <MerchantDropsPanel
               stats={stats}
               statsLoading={statsLoading}
-              drops={drops}
-              dropsLoading={dropsLoading}
-              dropsTotal={dropsTotal}
-              dropsPage={dropsPage}
-              dropsPageSize={DROPS_PAGE_SIZE}
-              dropsSearch={dropsSearch}
-              dropsStatus={dropsStatus}
-              onDropsSearchChange={setDropsSearch}
-              onDropsStatusChange={setDropsStatus}
-              onDropsPageChange={setDropsPage}
               deletePending={deleteDropMutation.isPending}
               onCreateClick={openCreateDropDialog}
               onShareDrop={(dropId) => {

@@ -5,6 +5,8 @@ import {
   getRefreshToken,
 } from "@/lib/auth-tokens";
 
+const HUNTER_SUPPRESS_DEVICE_LOGIN_KEY = "souqsnap_hunter_suppress_device_login";
+
 const LOGIN_PATHS: Record<AuthRole, string> = {
   merchant: "/merchant",
   hunter: "/login",
@@ -28,4 +30,19 @@ export function clearSessionsExcept(targetRole: AuthRole): void {
       clearTokenBundle(r);
     }
   });
+}
+
+export function setHunterSuppressDeviceLoginAfterLogout(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(HUNTER_SUPPRESS_DEVICE_LOGIN_KEY, "1");
+}
+
+export function clearHunterSuppressDeviceLogin(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(HUNTER_SUPPRESS_DEVICE_LOGIN_KEY);
+}
+
+export function isHunterDeviceLoginSuppressed(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(HUNTER_SUPPRESS_DEVICE_LOGIN_KEY) === "1";
 }

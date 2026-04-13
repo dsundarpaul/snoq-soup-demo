@@ -58,16 +58,42 @@ export function MerchantVouchersPanel() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("merchantVouchers.drop")}</TableHead>
+                  <TableHead>{t("merchantVouchers.claimedBy")}</TableHead>
                   <TableHead>{t("merchantVouchers.claimed")}</TableHead>
                   <TableHead>{t("merchantVouchers.expires")}</TableHead>
                   <TableHead>{t("merchantVouchers.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map(({ voucher, dropName }) => (
+                {rows.map(
+                  ({ voucher, dropName, claimerName, claimerEmail }) => (
                   <TableRow key={voucher.id}>
                     <TableCell className="font-medium max-w-[200px] truncate">
                       {dropName || voucher.dropId.slice(0, 8)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-[220px]">
+                      {claimerName || claimerEmail ? (
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          {claimerName ? (
+                            <span className="font-medium text-foreground truncate">
+                              {claimerName}
+                            </span>
+                          ) : null}
+                          {claimerEmail ? (
+                            <span
+                              className={
+                                claimerName
+                                  ? "truncate text-xs"
+                                  : "font-medium text-foreground truncate"
+                              }
+                            >
+                              {claimerEmail}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                       {fmt(voucher.claimedAt)}
@@ -87,7 +113,8 @@ export function MerchantVouchersPanel() {
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  ),
+                )}
               </TableBody>
             </Table>
           )}
