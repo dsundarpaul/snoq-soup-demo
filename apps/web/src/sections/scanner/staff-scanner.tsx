@@ -208,7 +208,7 @@ export default function StaffScannerPage() {
           </div>
           <div>
             <h1
-              className="font-bold text-foreground font-[Poppins]"
+              className="font-bold text-foreground"
               data-testid="text-business-name"
             >
               {validation.businessName}
@@ -231,7 +231,7 @@ export default function StaffScannerPage() {
                       <CheckCircle className="w-12 h-12 text-white" />
                     </div>
                     <h2
-                      className="text-3xl font-bold text-green-500 mb-2 font-[Poppins]"
+                      className="text-3xl font-bold text-green-500 mb-2"
                       data-testid="text-scan-success"
                     >
                       {t("scanner.success")}
@@ -278,7 +278,7 @@ export default function StaffScannerPage() {
                       <Gift className="w-12 h-12 text-white" />
                     </div>
                     <h2
-                      className="text-3xl font-bold text-amber-500 mb-2 font-[Poppins]"
+                      className="text-3xl font-bold text-amber-500 mb-2"
                       data-testid="text-already-redeemed"
                     >
                       {t("scanner.alreadyRedeemed")}
@@ -299,7 +299,7 @@ export default function StaffScannerPage() {
                       <XCircle className="w-12 h-12 text-white" />
                     </div>
                     <h2
-                      className="text-3xl font-bold text-red-500 mb-2 font-[Poppins]"
+                      className="text-3xl font-bold text-red-500 mb-2"
                       data-testid="text-scan-invalid"
                     >
                       {t("scanner.invalid")}

@@ -504,37 +504,10 @@ export function mapAdminMerchantItem(raw: Record<string, unknown>) {
   };
 }
 
-export function mapAdminDropItem(
-  raw: Record<string, unknown>,
-  merchantName = ""
-) {
-  const loc = raw.location as { lat?: number; lng?: number } | undefined;
-  const redemption = raw.redemption as Record<string, unknown> | undefined;
-  const availability = raw.availability as Record<string, unknown> | undefined;
-  const schedule = raw.schedule as Record<string, unknown> | undefined;
-  return {
-    id: String(raw.id ?? ""),
-    merchantId: String(raw.merchantId ?? ""),
-    name: String(raw.name ?? ""),
-    description: String(raw.description ?? ""),
-    merchantName,
-    rewardValue: String(raw.rewardValue ?? ""),
-    latitude: loc?.lat ?? 0,
-    longitude: loc?.lng ?? 0,
-    radius: Number(raw.radius ?? 0),
-    logoUrl: (raw.logoUrl as string | null) ?? null,
-    redemptionType: String(redemption?.type ?? "anytime"),
-    redemptionMinutes: (redemption?.minutes as number) ?? null,
-    redemptionDeadline: redemption?.deadline
-      ? toIso(redemption.deadline as Date)
-      : null,
-    availabilityType: String(availability?.type ?? "unlimited"),
-    captureLimit: (availability?.limit as number) ?? null,
-    startTime: schedule?.start ? toIso(schedule.start as Date) : null,
-    endTime: schedule?.end ? toIso(schedule.end as Date) : null,
-    active: raw.active !== false,
-    createdAt: toIso(raw.createdAt as Date) ?? "",
-  };
+export function mapAdminDropItem(raw: Record<string, unknown>) {
+  const legacy = mapNestDropToLegacy(raw);
+  const merchantName = String(raw.merchantName ?? "");
+  return { ...legacy, merchantName };
 }
 
 export function mapAdminUserItem(raw: Record<string, unknown>) {

@@ -117,7 +117,7 @@ export default function MerchantStorePage() {
                     alt="Souq-Snap"
                     className="w-9 h-9 rounded-lg"
                   />
-                  <span className="font-bold text-lg font-[Poppins]">
+                  <span className="font-bold text-lg">
                     Souq-Snap
                   </span>
                 </div>
@@ -163,7 +163,7 @@ export default function MerchantStorePage() {
                   alt="Souq-Snap"
                   className="w-9 h-9 rounded-lg"
                 />
-                <span className="font-bold text-lg font-[Poppins]">
+                <span className="font-bold text-lg">
                   Souq-Snap
                 </span>
               </div>

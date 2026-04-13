@@ -194,7 +194,7 @@ export default function ScannerPage() {
               <QrCode className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="font-bold text-foreground font-[Poppins]">
+              <h1 className="font-bold text-foreground">
                 {t("scanner.title")}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -215,7 +215,7 @@ export default function ScannerPage() {
                     <div className="w-24 h-24 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-6">
                       <CheckCircle className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold text-green-500 mb-2 font-[Poppins]">
+                    <h2 className="text-3xl font-bold text-green-500 mb-2">
                       {t("scanner.success")}
                     </h2>
                     <p className="text-lg text-foreground mb-4">
@@ -260,7 +260,7 @@ export default function ScannerPage() {
                     <div className="w-24 h-24 rounded-full bg-amber-500 flex items-center justify-center mx-auto mb-6">
                       <Gift className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold text-amber-500 mb-2 font-[Poppins]">
+                    <h2 className="text-3xl font-bold text-amber-500 mb-2">
                       {t("scanner.alreadyRedeemed")}
                     </h2>
                     <p className="text-lg text-foreground mb-4">
@@ -282,7 +282,7 @@ export default function ScannerPage() {
                     <div className="w-24 h-24 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-6">
                       <XCircle className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold text-red-500 mb-2 font-[Poppins]">
+                    <h2 className="text-3xl font-bold text-red-500 mb-2">
                       {t("scanner.invalid")}
                     </h2>
                     <p className="text-lg text-foreground mb-4">

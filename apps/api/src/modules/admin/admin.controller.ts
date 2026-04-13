@@ -8,6 +8,8 @@ import {
   Param,
   Query,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -205,18 +207,26 @@ export class AdminController {
   @ApiQuery({ name: "merchantId", required: false, type: String })
   @ApiQuery({ name: "active", required: false, type: Boolean })
   @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "all | active | inactive | scheduled | expired",
+  })
   async findAllDrops(
     @Query("page") page?: string,
     @Query("limit") limit?: string,
     @Query("merchantId") merchantId?: string,
     @Query("active") active?: string,
     @Query("search") search?: string,
+    @Query("status") status?: string,
   ): Promise<any> {
     const query: DropQuery = {
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 20,
       merchantId,
       search,
+      status,
     };
     if (active !== undefined) {
       query.active = active === "true";
@@ -239,6 +249,7 @@ export class AdminController {
     description: "Forbidden - Admin access required",
   })
   @ApiResponse({ status: 404, description: "Merchant not found" })
+  @HttpCode(HttpStatus.CREATED)
   async createDropAsAdmin(@Body() dto: any) {
     return this.adminService.createDropAsAdmin(dto);
   }

@@ -3,10 +3,18 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { MongooseModule, getModelToken } from "@nestjs/mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { startE2eMongo } from "./mongo-test-server";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import * as request from "supertest";
 import { AppModule } from "../../src/app.module";
 import { Drop, DropDocument } from "../../src/database/schemas/drop.schema";
+import {
+  Voucher,
+  VoucherDocument,
+} from "../../src/database/schemas/voucher.schema";
+import {
+  PromoCode,
+  PromoCodeDocument,
+} from "../../src/database/schemas/promo-code.schema";
 
 // Random data generators for Riyadh area
 const randomCoords = () => ({
@@ -86,6 +94,8 @@ describe("Drops E2E Tests", () => {
   let app: INestApplication;
   let mongoServer: MongoMemoryReplSet;
   let dropModel: Model<DropDocument>;
+  let voucherModel: Model<VoucherDocument>;
+  let promoCodeModel: Model<PromoCodeDocument>;
   let merchantToken: string;
   let merchantId: string;
   let adminToken: string;
@@ -106,6 +116,12 @@ describe("Drops E2E Tests", () => {
 
     dropModel = moduleFixture.get<Model<DropDocument>>(
       getModelToken(Drop.name),
+    );
+    voucherModel = moduleFixture.get<Model<VoucherDocument>>(
+      getModelToken(Voucher.name),
+    );
+    promoCodeModel = moduleFixture.get<Model<PromoCodeDocument>>(
+      getModelToken(PromoCode.name),
     );
 
     // Register a merchant for testing
@@ -139,8 +155,10 @@ describe("Drops E2E Tests", () => {
   });
 
   afterEach(async () => {
-    // Clean up created drops
     for (const dropId of createdDropIds) {
+      const oid = new Types.ObjectId(dropId);
+      await voucherModel.deleteMany({ dropId: oid });
+      await promoCodeModel.deleteMany({ dropId: oid });
       await dropModel.findByIdAndDelete(dropId);
     }
     createdDropIds.length = 0;
@@ -663,6 +681,80 @@ describe("Drops E2E Tests", () => {
         .expect(404); // Not found for this merchant
     });
 
+    it("DELETE /api/v1/merchants/me/drops/:id - should reject when promo codes exist", async () => {
+      const coords = randomCoords();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/v1/merchants/me/drops")
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .send({
+          name: "Drop With Codes",
+          description: "Has promo codes",
+          lat: coords.lat,
+          lng: coords.lng,
+          radius: 100,
+          rewardValue: "10% OFF",
+          redemption: { type: "unlimited" },
+          availability: {
+            startTime: generateFutureDate(-1),
+            endTime: generateFutureDate(24),
+          },
+          active: true,
+        })
+        .expect(201);
+
+      const dropId = createResponse.body.id;
+      createdDropIds.push(dropId);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/merchants/me/drops/${dropId}/codes/bulk`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .send({
+          codes: [`DELBLK${Date.now()}`],
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/merchants/me/drops/${dropId}`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(409);
+    });
+
+    it("DELETE /api/v1/merchants/me/drops/:id - should reject when vouchers exist", async () => {
+      const coords = randomCoords();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/v1/merchants/me/drops")
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .send({
+          name: "Drop With Voucher",
+          description: "Has voucher",
+          lat: coords.lat,
+          lng: coords.lng,
+          radius: 100,
+          rewardValue: "15% OFF",
+          redemption: { type: "unlimited" },
+          availability: {
+            startTime: generateFutureDate(-1),
+            endTime: generateFutureDate(24),
+          },
+          active: true,
+        })
+        .expect(201);
+
+      const dropId = createResponse.body.id;
+      createdDropIds.push(dropId);
+
+      await voucherModel.create({
+        dropId: new Types.ObjectId(dropId),
+        merchantId: new Types.ObjectId(merchantId),
+        magicToken: `mv-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/merchants/me/drops/${dropId}`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(409);
+    });
+
     it("DELETE /api/v1/merchants/me/drops/:id - should return 404 for already deleted drop", async () => {
       // Create and soft delete a drop
       const coords = randomCoords();
@@ -755,15 +847,15 @@ describe("Drops E2E Tests", () => {
           merchantId: merchantId,
           name: "Admin Created Drop",
           description: "Created by admin for merchant",
-          lat: coords.lat,
-          lng: coords.lng,
+          latitude: coords.lat,
+          longitude: coords.lng,
           radius: randomRadius(),
           rewardValue: "90% OFF",
-          redemption: { type: "limited", limit: 5 },
-          availability: {
-            startTime: generateFutureDate(-1),
-            endTime: generateFutureDate(24),
-          },
+          redemptionType: "anytime",
+          availabilityType: "limited",
+          availabilityLimit: 5,
+          startTime: generateFutureDate(-1).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
           active: true,
         })
         .expect(201);
@@ -809,6 +901,10 @@ describe("Drops E2E Tests", () => {
       expect(response.body).toHaveProperty("total");
       expect(response.body).toHaveProperty("page");
       expect(response.body).toHaveProperty("limit");
+      const first = (response.body.items as { merchantName?: string }[])[0];
+      if (first) {
+        expect(first).toHaveProperty("merchantName");
+      }
     });
   });
 

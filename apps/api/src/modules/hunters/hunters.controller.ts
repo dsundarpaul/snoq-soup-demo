@@ -11,9 +11,7 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Public } from "../../common/decorators/public.decorator";
-import { DeviceGuard } from "../../common/guards/device.guard";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { DeviceId } from "../../common/decorators/device-id.decorator";
 import { UpdateProfileDto } from "./dto/request/update-profile.dto";
 import { UpdateNicknameDto } from "./dto/request/update-nickname.dto";
 import { HunterResponseDto } from "./dto/response/hunter-response.dto";
@@ -26,33 +24,28 @@ export class HuntersController {
   constructor(private readonly huntersService: HuntersService) {}
 
   @Get("hunters/me")
-  @UseGuards(JwtAuthGuard, DeviceGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("hunter")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current hunter profile" })
   @ApiResponse({ status: 200, type: HunterResponseDto })
   @ApiResponse({ status: 404, description: "Hunter not found" })
   async getMe(
     @CurrentUser("userId") hunterId: string,
-    @DeviceId() deviceId: string,
   ): Promise<HunterResponseDto> {
-    // If no hunterId from JWT but deviceId exists, find or create by device
-    if (!hunterId && deviceId) {
-      return this.huntersService.findOrCreateByDevice(deviceId);
-    }
-
     return this.huntersService.findById(hunterId);
   }
 
   @Get("hunters/me/history")
-  @UseGuards(JwtAuthGuard, DeviceGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("hunter")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current hunter's voucher history" })
   @ApiResponse({ status: 200, type: HunterHistoryResponseDto })
   async getHistory(
     @CurrentUser("userId") hunterId: string,
-    @DeviceId() deviceId: string,
   ): Promise<HunterHistoryResponseDto> {
-    return this.huntersService.getHistory(hunterId, deviceId);
+    return this.huntersService.getHistory(hunterId);
   }
 
   @Patch("hunters/me/profile")

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useDeviceId } from "@/hooks/use-device-id";
 import { useTreasureHunterProfileQuery } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,9 +33,9 @@ type ScanResult =
 
 export default function HunterScannerPage() {
   const router = useRouter();
-  const deviceId = useDeviceId();
+  const hasHunterAuth = useHasRoleCredentials("hunter");
   const { data: profile, isLoading: profileLoading } =
-    useTreasureHunterProfileQuery(deviceId ?? "");
+    useTreasureHunterProfileQuery();
   const { t } = useLanguage();
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
@@ -157,11 +157,15 @@ export default function HunterScannerPage() {
   }, [redeemMutation, t]);
 
   useEffect(() => {
-    if (!deviceId || profileLoading) return;
+    if (!hasHunterAuth) {
+      router.replace(`/login?next=${encodeURIComponent("/hunter-scan")}`);
+      return;
+    }
+    if (profileLoading) return;
     if (!profile?.email) {
       router.replace(`/login?next=${encodeURIComponent("/hunter-scan")}`);
     }
-  }, [deviceId, profileLoading, profile?.email, router]);
+  }, [hasHunterAuth, profileLoading, profile?.email, router]);
 
   const stopScanner = useCallback(async () => {
     if (html5QrCodeRef.current) {
@@ -212,7 +216,7 @@ export default function HunterScannerPage() {
               <QrCode className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="font-bold text-foreground font-[Poppins]">
+              <h1 className="font-bold text-foreground">
                 {t("scanner.title")}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -224,7 +228,7 @@ export default function HunterScannerPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8">
-        {!deviceId || profileLoading ? (
+        {!hasHunterAuth || profileLoading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
@@ -252,7 +256,7 @@ export default function HunterScannerPage() {
                     <div className="w-24 h-24 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-6">
                       <CheckCircle className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold text-green-500 mb-2 font-[Poppins]">
+                    <h2 className="text-3xl font-bold text-green-500 mb-2">
                       {t("scanner.success")}
                     </h2>
                     <p className="text-lg text-foreground mb-4">
@@ -297,7 +301,7 @@ export default function HunterScannerPage() {
                     <div className="w-24 h-24 rounded-full bg-amber-500 flex items-center justify-center mx-auto mb-6">
                       <Gift className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold text-amber-500 mb-2 font-[Poppins]">
+                    <h2 className="text-3xl font-bold text-amber-500 mb-2">
                       {t("scanner.alreadyRedeemed")}
                     </h2>
                     <p className="text-lg text-foreground mb-4">
@@ -319,7 +323,7 @@ export default function HunterScannerPage() {
                     <div className="w-24 h-24 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-6">
                       <XCircle className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-3xl font-bold text-red-500 mb-2 font-[Poppins]">
+                    <h2 className="text-3xl font-bold text-red-500 mb-2">
                       {t("scanner.invalid")}
                     </h2>
                     <p className="text-lg text-foreground mb-4">

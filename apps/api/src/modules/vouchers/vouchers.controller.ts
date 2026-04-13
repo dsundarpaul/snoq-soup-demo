@@ -5,10 +5,12 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
+import type { Request } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -56,10 +58,12 @@ export class VouchersController {
   async claim(
     @Body() dto: ClaimVoucherDto,
     @DeviceId() deviceId: string,
+    @Req() req: Request & { hunterId?: string },
   ): Promise<VoucherResponseDto> {
     return this.vouchersService.claim({
       ...dto,
       deviceId,
+      deviceResolvedHunterId: req.hunterId,
     });
   }
 
@@ -102,6 +106,7 @@ export class VouchersController {
   }
 
   @Post("vouchers/send-email")
+  @Public()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Send voucher via email" })
@@ -113,6 +118,7 @@ export class VouchersController {
       dto.voucherId,
       dto.email,
       dto.magicLink,
+      dto.magicToken,
     );
     return { success: true };
   }
@@ -181,14 +187,14 @@ export class VouchersController {
   }
 
   @Get("hunters/me/vouchers")
-  @UseGuards(JwtAuthGuard, DeviceGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("hunter")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current hunter's vouchers" })
   @ApiResponse({ status: 200, type: [VoucherResponseDto] })
   async findByHunter(
     @CurrentUser() user: CurrentUserType,
-    @DeviceId() deviceId: string,
   ): Promise<VoucherResponseDto[]> {
-    return this.vouchersService.findByHunter(user.userId, deviceId);
+    return this.vouchersService.findByHunter(user.userId);
   }
 }

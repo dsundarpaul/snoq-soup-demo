@@ -74,6 +74,7 @@ function ARCameraView({
 }: ARCameraViewProps) {
   const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const {
@@ -88,31 +89,42 @@ function ARCameraView({
 
   useEffect(() => {
     let stream: MediaStream | null = null;
+    let cancelled = false;
 
     const startCamera = async () => {
+      setCameraError(null);
+      setCameraActive(false);
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
           audio: false,
         });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           setCameraActive(true);
         }
       } catch (err) {
         console.error("Camera error:", err);
-        setCameraError(t("ar.cameraDenied"));
+        if (!cancelled) {
+          setCameraError(t("ar.cameraDenied"));
+          setCameraActive(false);
+        }
       }
     };
 
-    startCamera();
+    void startCamera();
 
     return () => {
+      cancelled = true;
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [cameraAttempt, t]);
 
   useEffect(() => {
     if (
@@ -177,10 +189,17 @@ function ARCameraView({
   if (cameraError) {
     return (
       <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-primary/20 to-slate-900 flex items-center justify-center">
-        <div className="text-center p-6">
+        <div className="text-center p-6 max-w-sm">
           <AlertCircle className="w-16 h-16 text-teal mx-auto mb-4" />
           <p className="text-white text-lg mb-2">{t("ar.cameraRequired")}</p>
-          <p className="text-slate-400 text-sm">{cameraError}</p>
+          <p className="text-slate-400 text-sm mb-4">{cameraError}</p>
+          <p className="text-slate-500 text-xs mb-4">{t("ar.permissionsSettingsHint")}</p>
+          <Button
+            className="bg-primary text-white"
+            onClick={() => setCameraAttempt((n) => n + 1)}
+          >
+            {t("scanner.tryAgain")}
+          </Button>
         </div>
       </div>
     );
@@ -208,12 +227,18 @@ function ARCameraView({
               <p className="text-sm text-muted-foreground mb-4">
                 {t("ar.compassDesc")}
               </p>
+              {orientationError ? (
+                <p className="text-sm text-destructive mb-4">{orientationError}</p>
+              ) : null}
               <Button
-                onClick={requestPermission}
+                onClick={() => void requestPermission()}
                 className="bg-primary text-white"
               >
                 {t("ar.enableCompass")}
               </Button>
+              <p className="text-xs text-muted-foreground mt-3">
+                {t("ar.permissionsSettingsHint")}
+              </p>
             </div>
           </Card>
         </div>
@@ -495,7 +520,7 @@ function CaptureAnimationInner({ onComplete }: { onComplete: () => void }) {
             <path d="M7 12h10l-1.5 6c-.1.5-.5.8-1 .8H9.5c-.5 0-.9-.3-1-.8L7 12z" />
           </svg>
         </div>
-        <h2 className="text-3xl font-bold text-teal mt-6 animate-pulse font-[Poppins]">
+        <h2 className="text-3xl font-bold text-teal mt-6 animate-pulse">
           {t("ar.captured")}
         </h2>
         <p className="text-white/80 mt-2">{t("ar.rewardClaimed")}</p>
@@ -507,13 +532,17 @@ function CaptureAnimationInner({ onComplete }: { onComplete: () => void }) {
 export default function ARGamePage() {
   const { t } = useLanguage();
   const geo = useGeolocation();
+  const locationReady =
+    !geo.loading &&
+    geo.latitude !== null &&
+    geo.longitude !== null &&
+    !geo.error;
+  const locationBlocked = !geo.loading && geo.error !== null;
   const deviceId = useDeviceId();
   const searchParams = useSearchParams();
   const targetDropId = searchParams.get("drop");
 
-  const { data: hunterProfile } = useTreasureHunterProfileQuery(
-    deviceId ?? ""
-  );
+  const { data: hunterProfile } = useTreasureHunterProfileQuery();
 
   const { vouchers, saveVoucher, hasClaimedDrop } = useVoucherStorage();
   const [dismissedClaimDropId, setDismissedClaimDropId] = useState<
@@ -590,7 +619,13 @@ export default function ARGamePage() {
   };
 
   const handleClaim = () => {
-    if (activeDrop && isInRange && !alreadyClaimed && deviceId) {
+    if (
+      activeDrop &&
+      locationReady &&
+      isInRange &&
+      !alreadyClaimed &&
+      deviceId
+    ) {
       const hunterId =
         typeof hunterProfile?.id === "string" ? hunterProfile.id : undefined;
       claimMutation.mutate({
@@ -661,11 +696,36 @@ export default function ARGamePage() {
         userLon={geo.longitude || 46.6753}
         targetLat={activeDrop?.latitude || 24.7136}
         targetLon={activeDrop?.longitude || 46.6753}
-        isInRange={isInRange}
-        distance={distance || 0}
+        isInRange={locationReady && isInRange}
+        distance={locationReady ? distance || 0 : 0}
         logoUrl={activeDrop?.logoUrl}
         dropName={activeDrop?.name || t("voucher.reward")}
       />
+
+      {locationBlocked ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 p-4">
+          <Card className="max-w-sm w-full p-6 bg-background/95 backdrop-blur border-teal/30">
+            <div className="text-center">
+              <MapPin className="w-14 h-14 text-teal mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground mb-2">
+                {t("ar.locationRequired")}
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t("ar.locationRequiredDesc")}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {t("ar.permissionsSettingsHint")}
+              </p>
+              <Button
+                className="w-full bg-primary text-primary-foreground"
+                onClick={() => geo.retry()}
+              >
+                {t("scanner.tryAgain")}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       <div className="absolute top-0 left-0 right-0 z-10 p-4">
         <div className="flex items-center justify-between">
@@ -761,7 +821,7 @@ export default function ARGamePage() {
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-1">
               <div className="flex items-center gap-2 min-w-0">
-                <h3 className="font-semibold text-white font-[Poppins] truncate min-w-0 flex-1">
+                <h3 className="font-semibold text-white truncate min-w-0 flex-1">
                   {activeDrop?.name || t("common.loading")}
                 </h3>
                 <Badge className="shrink-0 bg-teal text-teal-foreground flex items-center gap-1 max-w-[45%]">
@@ -791,7 +851,7 @@ export default function ARGamePage() {
               <Trophy className="w-4 h-4 mr-2" />
               {t("voucher.viewVoucher")}
             </Button>
-          ) : isInRange ? (
+          ) : isInRange && locationReady ? (
             <Button
               onClick={handleClaim}
               disabled={claimMutation.isPending}

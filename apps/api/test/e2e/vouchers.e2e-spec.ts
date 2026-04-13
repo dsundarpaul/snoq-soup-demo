@@ -489,6 +489,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
         .send({
           voucherId: claimRes.body.id,
           email: generateEmail("share"),
+          magicToken: claimRes.body.magicToken,
           magicLink: `https://app.souqsnap.com/v/${claimRes.body.magicToken}`,
         })
         .expect(200);
@@ -635,7 +636,6 @@ describe("Voucher Lifecycle E2E Tests", () => {
       const vouchersRes = await request(app.getHttpServer())
         .get("/api/v1/hunters/me/vouchers")
         .set("Authorization", `Bearer ${hunterRes.body.accessToken}`)
-        .set("X-Device-ID", deviceId)
         .expect(200);
 
       expect(Array.isArray(vouchersRes.body)).toBe(true);

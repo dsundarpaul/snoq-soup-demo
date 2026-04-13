@@ -59,6 +59,10 @@ export function useDeviceOrientation() {
   }, []);
 
   const requestPermission = useCallback(async () => {
+    setOrientation((prev) => ({
+      ...prev,
+      error: null,
+    }));
     if (
       typeof (DeviceOrientationEvent as any).requestPermission === "function"
     ) {
@@ -72,12 +76,14 @@ export function useDeviceOrientation() {
         } else {
           setOrientation((prev) => ({
             ...prev,
+            permissionGranted: false,
             error: "Permission denied for device orientation",
           }));
         }
       } catch (err) {
         setOrientation((prev) => ({
           ...prev,
+          permissionGranted: false,
           error: "Failed to request orientation permission",
         }));
       }

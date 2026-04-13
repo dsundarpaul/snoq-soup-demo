@@ -136,6 +136,11 @@ export class DropsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete drop (soft delete)" })
   @ApiResponse({ status: 204 })
+  @ApiResponse({
+    status: 409,
+    description:
+      "Drop has linked vouchers or promo codes and cannot be deleted",
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteDrop(
     @CurrentUser() user: CurrentUserType,

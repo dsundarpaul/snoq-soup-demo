@@ -63,7 +63,7 @@ export default function MerchantForgotPasswordPage() {
           <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/30">
             <Trophy className="w-10 h-10 text-teal" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground font-[Poppins]">
+          <h1 className="text-3xl font-bold text-foreground">
             Souq-Snap
           </h1>
           <p className="text-muted-foreground mt-2">{t("merchant.portal")}</p>

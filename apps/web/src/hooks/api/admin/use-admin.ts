@@ -26,9 +26,11 @@ import {
   mapPromoListToLegacy,
 } from "@/lib/nest-mappers";
 
-const ADMIN_LIST_LIMIT = 500;
+export const ADMIN_TABLE_PAGE_SIZE = 20;
 
-export const ADMIN_DROPS_PAGE_SIZE = 20;
+export const ADMIN_DROPS_PAGE_SIZE = ADMIN_TABLE_PAGE_SIZE;
+
+const ADMIN_EXPORT_PAGE_SIZE = 100;
 
 export type AdminDropsListData = {
   items: ReturnType<typeof mapAdminDropItem>[];
@@ -38,6 +40,49 @@ export type AdminDropsListData = {
   totalPages: number;
   hasNextPage: boolean;
   hasPrevPage: boolean;
+};
+
+export type AdminMerchantsListData = {
+  items: ReturnType<typeof mapAdminMerchantItem>[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type AdminUsersListData = {
+  items: ReturnType<typeof mapAdminUserItem>[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type AdminDropsListParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  merchantId?: string;
+  active?: boolean;
+};
+
+export type AdminMerchantsListParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  isVerified?: boolean;
+};
+
+export type AdminUsersListParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  minClaims?: number;
 };
 
 export const adminQueryKeys = {
@@ -335,35 +380,84 @@ export function useAdminAnalyticsQuery(
   });
 }
 
-export function useAdminMerchantsListQuery(enabled: boolean) {
+export function useAdminMerchantsListQuery(
+  enabled: boolean,
+  params: AdminMerchantsListParams,
+) {
+  const { page, limit, search, isVerified } = params;
   return useQuery({
-    queryKey: [...adminQueryKeys.merchants, ADMIN_LIST_LIMIT] as const,
+    queryKey: [
+      ...adminQueryKeys.merchants,
+      "paged",
+      page,
+      limit,
+      search ?? "",
+      isVerified === undefined ? "all" : String(isVerified),
+    ] as const,
     enabled,
-    queryFn: async () => {
-      const path = `/api/v1/admin/merchants?page=1&limit=${ADMIN_LIST_LIMIT}`;
+    queryFn: async (): Promise<AdminMerchantsListData> => {
+      const sp = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const q = search?.trim();
+      if (q) sp.set("search", q);
+      if (isVerified !== undefined) sp.set("isVerified", String(isVerified));
+      const path = `/api/v1/admin/merchants?${sp.toString()}`;
       const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
       await throwIfResNotOk(res, path, "admin");
       const json = (await res.json()) as {
         items?: Record<string, unknown>[];
+        total?: number;
+        page?: number;
+        limit?: number;
+        totalPages?: number;
+        hasNextPage?: boolean;
+        hasPrevPage?: boolean;
       };
-      return (json.items ?? []).map(mapAdminMerchantItem);
+      const items = (json.items ?? []).map(mapAdminMerchantItem);
+      const total = json.total ?? 0;
+      const totalPages = Math.max(1, json.totalPages ?? 1);
+      return {
+        items,
+        total,
+        page: json.page ?? page,
+        limit: json.limit ?? limit,
+        totalPages,
+        hasNextPage: json.hasNextPage ?? false,
+        hasPrevPage: json.hasPrevPage ?? false,
+      };
     },
   });
 }
 
 export function useAdminDropsListQuery(
   enabled: boolean,
-  listParams: { page: number; limit: number },
+  listParams: AdminDropsListParams,
 ) {
-  const { page, limit } = listParams;
+  const { page, limit, search, status, merchantId, active } = listParams;
   return useQuery({
-    queryKey: [...adminQueryKeys.drops, "paged", page, limit] as const,
+    queryKey: [
+      ...adminQueryKeys.drops,
+      "paged",
+      page,
+      limit,
+      search ?? "",
+      status ?? "",
+      merchantId ?? "",
+      active === undefined ? "" : String(active),
+    ] as const,
     enabled,
     queryFn: async (): Promise<AdminDropsListData> => {
       const sp = new URLSearchParams({
         page: String(page),
         limit: String(limit),
       });
+      const q = search?.trim();
+      if (q) sp.set("search", q);
+      if (status && status !== "all") sp.set("status", status);
+      if (merchantId) sp.set("merchantId", merchantId);
+      if (active !== undefined) sp.set("active", String(active));
       const path = `/api/v1/admin/drops?${sp.toString()}`;
       const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
       await throwIfResNotOk(res, path, "admin");
@@ -392,18 +486,157 @@ export function useAdminDropsListQuery(
   });
 }
 
-export function useAdminUsersListQuery(enabled: boolean) {
+export function useAdminUsersListQuery(
+  enabled: boolean,
+  params: AdminUsersListParams,
+) {
+  const { page, limit, search, minClaims } = params;
   return useQuery({
-    queryKey: [...adminQueryKeys.users, ADMIN_LIST_LIMIT] as const,
+    queryKey: [
+      ...adminQueryKeys.users,
+      "paged",
+      page,
+      limit,
+      search ?? "",
+      minClaims ?? "",
+    ] as const,
     enabled,
-    queryFn: async () => {
-      const path = `/api/v1/admin/users?page=1&limit=${ADMIN_LIST_LIMIT}`;
+    queryFn: async (): Promise<AdminUsersListData> => {
+      const sp = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const q = search?.trim();
+      if (q) sp.set("search", q);
+      if (minClaims !== undefined && minClaims > 0) {
+        sp.set("minClaims", String(minClaims));
+      }
+      const path = `/api/v1/admin/users?${sp.toString()}`;
       const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
       await throwIfResNotOk(res, path, "admin");
       const json = (await res.json()) as {
         items?: Record<string, unknown>[];
+        total?: number;
+        page?: number;
+        limit?: number;
+        totalPages?: number;
+        hasNextPage?: boolean;
+        hasPrevPage?: boolean;
       };
-      return (json.items ?? []).map(mapAdminUserItem);
+      const items = (json.items ?? []).map(mapAdminUserItem);
+      const total = json.total ?? 0;
+      const totalPages = Math.max(1, json.totalPages ?? 1);
+      return {
+        items,
+        total,
+        page: json.page ?? page,
+        limit: json.limit ?? limit,
+        totalPages,
+        hasNextPage: json.hasNextPage ?? false,
+        hasPrevPage: json.hasPrevPage ?? false,
+      };
     },
   });
+}
+
+export async function fetchAllAdminMerchantsForExport(filters: {
+  search?: string;
+  isVerified?: boolean;
+}): Promise<ReturnType<typeof mapAdminMerchantItem>[]> {
+  const out: ReturnType<typeof mapAdminMerchantItem>[] = [];
+  let page = 1;
+  for (;;) {
+    const sp = new URLSearchParams({
+      page: String(page),
+      limit: String(ADMIN_EXPORT_PAGE_SIZE),
+    });
+    const q = filters.search?.trim();
+    if (q) sp.set("search", q);
+    if (filters.isVerified !== undefined) {
+      sp.set("isVerified", String(filters.isVerified));
+    }
+    const path = `/api/v1/admin/merchants?${sp.toString()}`;
+    const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+    await throwIfResNotOk(res, path, "admin");
+    const json = (await res.json()) as {
+      items?: Record<string, unknown>[];
+      total?: number;
+    };
+    const batch = (json.items ?? []).map(mapAdminMerchantItem);
+    out.push(...batch);
+    if (batch.length < ADMIN_EXPORT_PAGE_SIZE) break;
+    if (out.length >= (json.total ?? out.length)) break;
+    page += 1;
+    if (page > 200) break;
+  }
+  return out;
+}
+
+export async function fetchAllAdminUsersForExport(filters: {
+  search?: string;
+  minClaims?: number;
+}): Promise<ReturnType<typeof mapAdminUserItem>[]> {
+  const out: ReturnType<typeof mapAdminUserItem>[] = [];
+  let page = 1;
+  for (;;) {
+    const sp = new URLSearchParams({
+      page: String(page),
+      limit: String(ADMIN_EXPORT_PAGE_SIZE),
+    });
+    const q = filters.search?.trim();
+    if (q) sp.set("search", q);
+    if (filters.minClaims !== undefined && filters.minClaims > 0) {
+      sp.set("minClaims", String(filters.minClaims));
+    }
+    const path = `/api/v1/admin/users?${sp.toString()}`;
+    const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+    await throwIfResNotOk(res, path, "admin");
+    const json = (await res.json()) as {
+      items?: Record<string, unknown>[];
+      total?: number;
+    };
+    const batch = (json.items ?? []).map(mapAdminUserItem);
+    out.push(...batch);
+    if (batch.length < ADMIN_EXPORT_PAGE_SIZE) break;
+    if (out.length >= (json.total ?? out.length)) break;
+    page += 1;
+    if (page > 200) break;
+  }
+  return out;
+}
+
+export async function fetchAllAdminDropsForExport(
+  filters: Omit<AdminDropsListParams, "page" | "limit">,
+): Promise<ReturnType<typeof mapAdminDropItem>[]> {
+  const out: ReturnType<typeof mapAdminDropItem>[] = [];
+  let page = 1;
+  for (;;) {
+    const sp = new URLSearchParams({
+      page: String(page),
+      limit: String(ADMIN_EXPORT_PAGE_SIZE),
+    });
+    const q = filters.search?.trim();
+    if (q) sp.set("search", q);
+    if (filters.status && filters.status !== "all") {
+      sp.set("status", filters.status);
+    }
+    if (filters.merchantId) sp.set("merchantId", filters.merchantId);
+    if (filters.active !== undefined) {
+      sp.set("active", String(filters.active));
+    }
+    const path = `/api/v1/admin/drops?${sp.toString()}`;
+    const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+    await throwIfResNotOk(res, path, "admin");
+    const json = (await res.json()) as {
+      items?: Record<string, unknown>[];
+      total?: number;
+    };
+    const batch = (json.items ?? []).map((row) => mapAdminDropItem(row));
+    out.push(...batch);
+    if (batch.length < ADMIN_EXPORT_PAGE_SIZE) break;
+    if (out.length >= (json.total ?? out.length)) break;
+    page += 1;
+    if (page > 200) break;
+  }
+  return out;
 }

@@ -299,10 +299,12 @@ export function useMerchantDropsListQuery(params: {
   limit: number;
   search: string;
   status: MerchantDropsListStatus;
+  enabled?: boolean;
 }) {
-  const { page, limit, search, status } = params;
+  const { page, limit, search, status, enabled = true } = params;
   return useQuery({
     queryKey: merchantQueryKeys.dropsList(page, limit, search, status),
+    enabled,
     queryFn: async () => {
       const sp = new URLSearchParams({
         page: String(page),

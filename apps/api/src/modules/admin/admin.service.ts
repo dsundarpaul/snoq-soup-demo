@@ -4,8 +4,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from "@nestjs/common";
-import { PipelineStage, Types } from "mongoose";
+import { FilterQuery, PipelineStage, Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
+import { DropsService } from "../drops/drops.service";
+import { CreateDropDto } from "../drops/dto/request/create-drop.dto";
+import { UpdateDropDto } from "../drops/dto/request/update-drop.dto";
+import { Drop } from "../../database/schemas/drop.schema";
 import { UpdateMerchantAdminDto } from "./dto/request/update-merchant-admin.dto";
 import { AdminStatsDto } from "./dto/response/admin-stats.dto";
 import {
@@ -39,11 +43,15 @@ export interface DropQuery extends PaginationQuery {
   merchantId?: string;
   active?: boolean;
   search?: string;
+  status?: string;
 }
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly dropsService: DropsService,
+  ) {}
 
   async findByEmail(email: string): Promise<any | null> {
     return this.database.admins.findOne({
@@ -395,7 +403,7 @@ export class AdminService {
   }
 
   async findAllDrops(query: DropQuery): Promise<{
-    items: DropResponseDto[];
+    items: (DropResponseDto & { merchantName: string })[];
     total: number;
     page: number;
     limit: number;
@@ -407,25 +415,27 @@ export class AdminService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = { deletedAt: null };
+    const baseParts: FilterQuery<Drop>[] = [{ deletedAt: null }];
 
     if (query.merchantId) {
       if (!Types.ObjectId.isValid(query.merchantId)) {
         throw new BadRequestException("Invalid merchant ID");
       }
-      filter.merchantId = new Types.ObjectId(query.merchantId);
+      baseParts.push({ merchantId: new Types.ObjectId(query.merchantId) });
     }
 
     if (query.active !== undefined) {
-      filter.active = query.active;
+      baseParts.push({ active: query.active });
     }
 
-    if (query.search) {
-      filter.$or = [
-        { name: { $regex: query.search, $options: "i" } },
-        { description: { $regex: query.search, $options: "i" } },
-      ] as unknown[];
-    }
+    const searchStatusParts = this.dropsService.buildDropSearchAndStatusClauses(
+      query.search,
+      query.status,
+    );
+
+    const allParts = [...baseParts, ...searchStatusParts];
+    const filter: FilterQuery<Drop> =
+      allParts.length === 1 ? allParts[0]! : { $and: allParts };
 
     const [drops, total] = await Promise.all([
       this.database.drops
@@ -437,27 +447,24 @@ export class AdminService {
       this.database.drops.countDocuments(filter),
     ]);
 
-    const items = drops.map((d) => {
-      return {
-        id: d._id.toString(),
-        name: d.name,
-        description: d.description,
-        location: {
-          lat: d.location.coordinates[1],
-          lng: d.location.coordinates[0],
-        },
-        radius: d.radius,
-        rewardValue: d.rewardValue,
-        logoUrl: d.logoUrl,
-        redemption: d.redemption,
-        availability: d.availability,
-        schedule: d.schedule,
-        active: d.active,
-        merchantId: d.merchantId.toString(),
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-      };
-    });
+    const merchantIds = [
+      ...new Set(drops.map((d) => d.merchantId.toString())),
+    ];
+    const merchants = await this.database.merchants
+      .find({
+        _id: { $in: merchantIds.map((id) => new Types.ObjectId(id)) },
+        deletedAt: null,
+      })
+      .select({ businessName: 1 })
+      .lean();
+    const merchantNameById = new Map(
+      merchants.map((m) => [m._id.toString(), m.businessName ?? ""]),
+    );
+
+    const items = drops.map((d) => ({
+      ...this.dropsService.toResponseDto(d as Drop),
+      merchantName: merchantNameById.get(d.merchantId.toString()) ?? "",
+    }));
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -472,93 +479,31 @@ export class AdminService {
     };
   }
 
-  async createDropAsAdmin(dto: any): Promise<any> {
-    if (!Types.ObjectId.isValid(dto.merchantId)) {
-      throw new BadRequestException("Invalid merchant ID");
+  async createDropAsAdmin(body: Record<string, unknown>): Promise<unknown> {
+    const merchantId = body.merchantId;
+    if (typeof merchantId !== "string" || !Types.ObjectId.isValid(merchantId)) {
+      throw new BadRequestException("Valid merchantId is required");
     }
 
     const merchant = await this.database.merchants
-      .findOne({ _id: dto.merchantId, deletedAt: null })
+      .findOne({ _id: merchantId, deletedAt: null })
       .lean();
     if (!merchant) {
       throw new NotFoundException("Merchant not found");
     }
 
-    const drop = await this.database.drops.create({
-      merchantId: new Types.ObjectId(dto.merchantId),
-      name: dto.name,
-      description: dto.description,
-      location: dto.location,
-      radius: dto.radius || 15,
-      rewardValue: dto.rewardValue,
-      logoUrl: dto.logoUrl || null,
-      redemption: dto.redemption || { type: "anytime" },
-      availability: dto.availability || { type: "unlimited" },
-      schedule: dto.schedule || {},
-      active: dto.active !== undefined ? dto.active : true,
-    });
-
-    return {
-      id: drop._id.toString(),
-      merchantId: drop.merchantId.toString(),
-      name: drop.name,
-      description: drop.description,
-      location: drop.location,
-      radius: drop.radius,
-      rewardValue: drop.rewardValue,
-      active: drop.active,
-      createdAt: drop.createdAt,
-    };
+    const { merchantId: _omit, ...rest } = body;
+    return this.dropsService.create(
+      merchantId,
+      rest as unknown as CreateDropDto,
+    );
   }
 
-  async updateDropAsAdmin(id: string, dto: any): Promise<any> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException("Invalid drop ID");
-    }
-
-    const updateData: any = {};
-    if (dto.name !== undefined) updateData.name = dto.name;
-    if (dto.description !== undefined) updateData.description = dto.description;
-    if (dto.location !== undefined) updateData.location = dto.location;
-    if (dto.radius !== undefined) updateData.radius = dto.radius;
-    if (dto.rewardValue !== undefined) updateData.rewardValue = dto.rewardValue;
-    if (dto.logoUrl !== undefined) updateData.logoUrl = dto.logoUrl;
-    if (dto.redemption !== undefined) updateData.redemption = dto.redemption;
-    if (dto.availability !== undefined)
-      updateData.availability = dto.availability;
-    if (dto.schedule !== undefined) updateData.schedule = dto.schedule;
-    if (dto.active !== undefined) updateData.active = dto.active;
-
-    const drop = await this.database.drops
-      .findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true, runValidators: true },
-      )
-      .lean();
-
-    if (!drop) {
-      throw new NotFoundException("Drop not found");
-    }
-
-    const merchant = await this.database.merchants
-      .findOne({ _id: drop.merchantId, deletedAt: null })
-      .lean();
-
-    return {
-      id: drop._id.toString(),
-      merchantId: drop.merchantId.toString(),
-      merchant: merchant
-        ? { id: merchant._id.toString(), businessName: merchant.businessName }
-        : null,
-      name: drop.name,
-      description: drop.description,
-      location: drop.location,
-      radius: drop.radius,
-      rewardValue: drop.rewardValue,
-      active: drop.active,
-      updatedAt: drop.updatedAt,
-    };
+  async updateDropAsAdmin(
+    id: string,
+    dto: Record<string, unknown>,
+  ): Promise<unknown> {
+    return this.dropsService.updateAsAdmin(id, dto as UpdateDropDto);
   }
 
   async deleteDropAsAdmin(

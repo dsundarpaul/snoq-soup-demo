@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Inject,
 } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
@@ -164,16 +165,10 @@ export class DropsService {
     };
   }
 
-  private buildMerchantDropsFilter(
-    merchantId: string,
+  buildDropSearchAndStatusClauses(
     search?: string,
-    status?: string
-  ): FilterQuery<DropDocument> {
-    const base: FilterQuery<DropDocument> = {
-      merchantId: new Types.ObjectId(merchantId),
-      deletedAt: null,
-    };
-
+    status?: string,
+  ): FilterQuery<DropDocument>[] {
     const andParts: FilterQuery<DropDocument>[] = [];
     const trimmed = search?.trim();
 
@@ -221,6 +216,21 @@ export class DropsService {
           );
       }
     }
+
+    return andParts;
+  }
+
+  private buildMerchantDropsFilter(
+    merchantId: string,
+    search?: string,
+    status?: string
+  ): FilterQuery<DropDocument> {
+    const base: FilterQuery<DropDocument> = {
+      merchantId: new Types.ObjectId(merchantId),
+      deletedAt: null,
+    };
+
+    const andParts = this.buildDropSearchAndStatusClauses(search, status);
 
     if (andParts.length === 0) {
       return base;
@@ -421,11 +431,116 @@ export class DropsService {
     return this.toResponseDto(drop);
   }
 
+  async updateAsAdmin(id: string, dto: UpdateDropDto): Promise<DropResponseDto> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException("Invalid drop ID");
+    }
+
+    const drop = await this.database.drops.findOne({
+      _id: new Types.ObjectId(id),
+      deletedAt: null,
+    });
+
+    if (!drop) {
+      throw new NotFoundException("Drop not found");
+    }
+
+    const updateData: Partial<Drop> = {};
+
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.rewardValue !== undefined) updateData.rewardValue = dto.rewardValue;
+    if (dto.logoUrl !== undefined) updateData.logoUrl = dto.logoUrl;
+    if (dto.radius !== undefined) updateData.radius = dto.radius;
+    if (dto.active !== undefined) updateData.active = dto.active;
+
+    if (dto.voucherAbsoluteExpiresAt !== undefined) {
+      const raw = dto.voucherAbsoluteExpiresAt?.trim() ?? "";
+      updateData.voucherAbsoluteExpiresAt =
+        raw.length > 0 ? new Date(raw) : null;
+    }
+    if (dto.voucherTtlHoursAfterClaim !== undefined) {
+      updateData.voucherTtlHoursAfterClaim = dto.voucherTtlHoursAfterClaim;
+    }
+
+    if (dto.redemptionType !== undefined) {
+      updateData.redemption = { type: dto.redemptionType };
+      if (dto.redemptionType === "timer" && dto.redemptionMinutes) {
+        updateData.redemption.minutes = dto.redemptionMinutes;
+      }
+      if (dto.redemptionType === "window" && dto.redemptionDeadline) {
+        updateData.redemption.deadline = new Date(dto.redemptionDeadline);
+      }
+    }
+
+    if (dto.availabilityType !== undefined) {
+      updateData.availability = { type: dto.availabilityType };
+      if (dto.availabilityType === "limited" && dto.availabilityLimit) {
+        updateData.availability.limit = dto.availabilityLimit;
+      }
+    }
+
+    const schedule: Partial<Drop["schedule"]> = {};
+    if (dto.startTime) schedule.start = new Date(dto.startTime);
+    if (dto.endTime) schedule.end = new Date(dto.endTime);
+    if (Object.keys(schedule).length > 0) {
+      updateData.schedule = schedule as Drop["schedule"];
+    }
+
+    if (
+      dto.availabilityType === "limited" &&
+      (!dto.availabilityLimit || dto.availabilityLimit < 1)
+    ) {
+      throw new BadRequestException(
+        "Limited availability requires a valid limit",
+      );
+    }
+
+    if (schedule.start && schedule.end && schedule.end <= schedule.start) {
+      throw new BadRequestException("End time must be after start time");
+    }
+
+    if (dto.latitude !== undefined || dto.longitude !== undefined) {
+      updateData.location = {
+        type: "Point" as const,
+        coordinates: [
+          dto.longitude ?? drop.location.coordinates[0],
+          dto.latitude ?? drop.location.coordinates[1],
+        ],
+      };
+    }
+
+    Object.assign(drop, updateData);
+    await drop.save();
+
+    await this.invalidateActiveDropsCache();
+    return this.toResponseDto(drop);
+  }
+
   async delete(id: string, merchantId: string): Promise<void> {
+    const dropObjectId = new Types.ObjectId(id);
+    const merchantObjectId = new Types.ObjectId(merchantId);
+
+    const existing = await this.database.drops
+      .findOne({
+        _id: dropObjectId,
+        merchantId: merchantObjectId,
+        deletedAt: null,
+      })
+      .lean();
+
+    if (!existing) {
+      throw new NotFoundException(
+        "Drop not found or you do not have permission"
+      );
+    }
+
+    await this.assertDropHasNoBlockingReferences(dropObjectId);
+
     const result = await this.database.drops.updateOne(
       {
-        _id: new Types.ObjectId(id),
-        merchantId: new Types.ObjectId(merchantId),
+        _id: dropObjectId,
+        merchantId: merchantObjectId,
         deletedAt: null,
       },
       { $set: { deletedAt: new Date(), active: false } }
@@ -438,6 +553,35 @@ export class DropsService {
     }
 
     await this.invalidateActiveDropsCache();
+  }
+
+  private async assertDropHasNoBlockingReferences(
+    dropObjectId: Types.ObjectId
+  ): Promise<void> {
+    const [voucherCount, promoCodeCount] = await Promise.all([
+      this.database.vouchers.countDocuments({ dropId: dropObjectId }),
+      this.database.promoCodes.countDocuments({ dropId: dropObjectId }),
+    ]);
+
+    if (voucherCount === 0 && promoCodeCount === 0) {
+      return;
+    }
+
+    const parts: string[] = [];
+    if (voucherCount > 0) {
+      parts.push(
+        `${voucherCount} voucher${voucherCount === 1 ? "" : "s"}`
+      );
+    }
+    if (promoCodeCount > 0) {
+      parts.push(
+        `${promoCodeCount} promo code${promoCodeCount === 1 ? "" : "s"}`
+      );
+    }
+
+    throw new ConflictException(
+      `Cannot delete this drop while linked data exists (${parts.join(", ")}).`
+    );
   }
 
   private async invalidateActiveDropsCache(): Promise<void> {
@@ -593,7 +737,7 @@ export class DropsService {
     return deg * (Math.PI / 180);
   }
 
-  private toResponseDto(drop: Drop | DropDocument): DropResponseDto {
+  toResponseDto(drop: Drop | DropDocument): DropResponseDto {
     // Type-safe refactor: safely convert ObjectId to string
     const id = "_id" in drop && drop._id ? drop._id.toString() : "";
     const merchantIdStr =

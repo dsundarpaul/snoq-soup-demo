@@ -2,19 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useDeviceId } from "@/hooks/use-device-id";
 import { fetchTreasureHunterProfile } from "@/hooks/api/treasure-hunter";
+import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
 
 export function useRedirectIfTreasureHunterLoggedIn(nextPath: string) {
-  const deviceId = useDeviceId();
+  const hasHunterAuth = useHasRoleCredentials("hunter");
   const router = useRouter();
 
   useEffect(() => {
-    if (!deviceId) return;
+    if (!hasHunterAuth) return;
     let cancelled = false;
     (async () => {
       try {
-        const profile = await fetchTreasureHunterProfile(deviceId);
+        const profile = await fetchTreasureHunterProfile();
         if (!profile || cancelled) return;
         if (profile?.email && !cancelled) {
           router.replace(nextPath);
@@ -26,5 +26,5 @@ export function useRedirectIfTreasureHunterLoggedIn(nextPath: string) {
     return () => {
       cancelled = true;
     };
-  }, [deviceId, router, nextPath]);
+  }, [hasHunterAuth, router, nextPath]);
 }

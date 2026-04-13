@@ -9,6 +9,7 @@ interface GeolocationState {
 }
 
 export function useGeolocation(options?: PositionOptions) {
+  const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState<GeolocationState>({
     latitude: null,
     longitude: null,
@@ -16,6 +17,17 @@ export function useGeolocation(options?: PositionOptions) {
     error: null,
     loading: true,
   });
+
+  const retry = useCallback(() => {
+    setState({
+      latitude: null,
+      longitude: null,
+      accuracy: null,
+      error: null,
+      loading: true,
+    });
+    setRetryKey((k) => k + 1);
+  }, []);
 
   const updatePosition = useCallback((position: GeolocationPosition) => {
     setState({
@@ -57,9 +69,9 @@ export function useGeolocation(options?: PositionOptions) {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [updatePosition, handleError, options]);
+  }, [updatePosition, handleError, options, retryKey]);
 
-  return state;
+  return { ...state, retry };
 }
 
 export function calculateDistance(

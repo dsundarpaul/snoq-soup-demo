@@ -151,6 +151,8 @@ const en = {
   "voucher.copied": "Copied!",
   "voucher.share": "Share",
   "voucher.sendToEmail": "Send to Email",
+  "voucher.emailSendSuccess": "Your email has been saved for this voucher.",
+  "voucher.emailSendError": "Could not save your email. Please try again.",
   "voucher.saveViaWhatsApp": "Save via WhatsApp",
   "voucher.timeRemaining": "Time Remaining",
   "voucher.timeUntilDeadline": "Time Until Deadline",
@@ -250,6 +252,11 @@ const en = {
   // AR Game
   "ar.cameraRequired": "Camera Required",
   "ar.cameraDenied": "Camera access denied. Please enable camera permissions.",
+  "ar.locationRequired": "Location needed",
+  "ar.locationRequiredDesc":
+    "This hunt uses your position to find rewards. Allow location access to continue.",
+  "ar.permissionsSettingsHint":
+    "If you chose Block before, open your browser or site settings for this page, allow Camera and Location, then try again.",
   "ar.enableCompass": "Enable Compass",
   "ar.enableArMode": "Enable AR Mode",
   "ar.compassDesc": "Allow compass access to see rewards floating in the real world",

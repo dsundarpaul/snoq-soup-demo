@@ -179,24 +179,27 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
   };
 
   const handleEmailSend = async () => {
-    if (!email) return;
+    if (!email || !voucher.magicToken) return;
 
     setEmailSending(true);
     try {
       const response = await apiFetch("POST", "/api/v1/vouchers/send-email", {
-        auth: "hunter",
         body: {
           voucherId: voucher.id,
-          email,
+          email: email.trim(),
+          magicToken: voucher.magicToken,
           magicLink,
         },
       });
-
-      if (response.ok) {
-        setEmailSent(true);
-      }
+      await throwIfResNotOk(response, "/api/v1/vouchers/send-email");
+      setEmailSent(true);
+      toast({ title: t("voucher.emailSendSuccess") });
     } catch (error) {
       console.error("Failed to send email:", error);
+      toast({
+        title: t("voucher.emailSendError"),
+        variant: "destructive",
+      });
     } finally {
       setEmailSending(false);
     }
@@ -223,7 +226,7 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
             <Gift className="w-8 h-8 text-primary" />
           )}
         </div>
-        <h2 className="text-2xl font-bold text-foreground font-[Poppins]">
+        <h2 className="text-2xl font-bold text-foreground">
           {t("voucher.rewardClaimed")}
         </h2>
         <p className="text-muted-foreground mt-1">{drop.name}</p>
@@ -335,11 +338,12 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="flex-1"
+              disabled={emailSent || emailSending}
               data-testid="input-email"
             />
             <Button
               onClick={handleEmailSend}
-              disabled={!email || emailSending || emailSent}
+              disabled={!email.trim() || emailSending || emailSent}
               size="icon"
               variant={emailSent ? "default" : "outline"}
               data-testid="button-send-email"

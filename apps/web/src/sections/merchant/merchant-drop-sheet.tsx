@@ -13,7 +13,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Plus, Pencil, Eye, X } from "lucide-react";
+import { MapPin, Loader2, Plus, Pencil, Eye, X, Store } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { publicUrls } from "@/lib/app-config";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
@@ -35,6 +35,9 @@ import {
   useMerchantDropForm,
 } from "@/sections/merchant/merchant-drop-form";
 import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-preview-dialog";
+import { adminQueryKeys } from "@/hooks/api/admin/use-admin";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const FIELD_LABELS: Record<string, string> = {
   name: "Drop Name",
@@ -103,18 +106,31 @@ function dropToFormValues(drop: Drop): CreateDropForm {
   };
 }
 
+export type MerchantDropSheetAdminContext = {
+  merchants: { id: string; businessName: string; emailVerified?: boolean }[];
+  merchantSearch: string;
+  onMerchantSearchChange: (value: string) => void;
+  selectedMerchantId: string;
+  onSelectedMerchantIdChange: (id: string) => void;
+};
+
 export interface MerchantDropSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingDrop: Drop | null;
+  adminContext?: MerchantDropSheetAdminContext;
+  onAdminMutationSuccess?: () => void;
 }
 
 export function MerchantDropSheet({
   open,
   onOpenChange,
   editingDrop,
+  adminContext,
+  onAdminMutationSuccess,
 }: MerchantDropSheetProps) {
   const { toast } = useToast();
+  const isAdminMode = Boolean(adminContext);
   const form = useMerchantDropForm();
   const [showPreview, setShowPreview] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -145,6 +161,19 @@ export function MerchantDropSheet({
             : data.redemptionMinutes,
       };
       const payload = createDropFormToNestDto(formData);
+      if (isAdminMode) {
+        const mid = adminContext!.selectedMerchantId;
+        if (!mid) {
+          throw new Error("Select a merchant");
+        }
+        const response = await apiRequest(
+          "POST",
+          "/api/v1/admin/drops",
+          { merchantId: mid, ...payload },
+          { auth: "admin" }
+        );
+        return response.json() as Promise<Record<string, unknown>>;
+      }
       const response = await apiRequest(
         "POST",
         "/api/v1/merchants/me/drops",
@@ -155,7 +184,13 @@ export function MerchantDropSheet({
     },
     onSuccess: (newDropRaw) => {
       const newDrop = mapNestDropToLegacy(newDropRaw);
-      invalidateDropRelatedQueries();
+      if (isAdminMode) {
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.drops });
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.stats });
+        onAdminMutationSuccess?.();
+      } else {
+        invalidateDropRelatedQueries();
+      }
       onOpenChange(false);
       form.reset(getCreateDropEmptyValues());
       const shareableLink = publicUrls.drop(newDrop.id);
@@ -191,6 +226,15 @@ export function MerchantDropSheet({
             : data.redemptionMinutes,
       };
       const payload = createDropFormToNestDto(formData);
+      if (isAdminMode) {
+        const response = await apiRequest(
+          "PATCH",
+          `/api/v1/admin/drops/${dropId}`,
+          payload,
+          { auth: "admin" }
+        );
+        return response.json();
+      }
       const response = await apiRequest(
         "PATCH",
         `/api/v1/merchants/me/drops/${dropId}`,
@@ -200,7 +244,13 @@ export function MerchantDropSheet({
       return response.json();
     },
     onSuccess: () => {
-      invalidateDropRelatedQueries();
+      if (isAdminMode) {
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.drops });
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.stats });
+        onAdminMutationSuccess?.();
+      } else {
+        invalidateDropRelatedQueries();
+      }
       onOpenChange(false);
       form.reset(getCreateDropEmptyValues());
       toast({
@@ -218,6 +268,13 @@ export function MerchantDropSheet({
   });
 
   const onSubmit = (data: CreateDropForm) => {
+    if (isAdminMode && !editingDrop && !adminContext?.selectedMerchantId) {
+      toast({
+        title: "Select a merchant",
+        variant: "destructive",
+      });
+      return;
+    }
     if (editingDrop) {
       updateDropMutation.mutate({ dropId: editingDrop.id, data });
     } else {
@@ -255,11 +312,15 @@ export function MerchantDropSheet({
       formData.append("file", file);
       formData.append("namespace", "drops");
       const uploadRes = await apiFetchMaybeRetry("POST", uploadPath, {
-        auth: "merchant",
+        auth: isAdminMode ? "admin" : "merchant",
         body: formData,
         json: false,
       });
-      await throwIfResNotOk(uploadRes, uploadPath, "merchant");
+      await throwIfResNotOk(
+        uploadRes,
+        uploadPath,
+        isAdminMode ? "admin" : "merchant"
+      );
       const { publicUrl } = (await uploadRes.json()) as { publicUrl: string };
       form.setValue("logoUrl", publicUrl);
       toast({
@@ -368,6 +429,80 @@ export function MerchantDropSheet({
             </div>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            {isAdminMode && adminContext && !editingDrop ? (
+              <div className="mb-6 space-y-2">
+                <Label>Merchant</Label>
+                {adminContext.selectedMerchantId ? (
+                  <div className="flex items-center gap-2 rounded-md bg-muted p-2">
+                    <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 text-sm font-medium">
+                      {
+                        adminContext.merchants.find(
+                          (m) => m.id === adminContext.selectedMerchantId
+                        )?.businessName
+                      }
+                    </span>
+                    <button
+                      type="button"
+                      className="select-none text-xs text-primary hover:underline"
+                      onClick={() => {
+                        adminContext.onSelectedMerchantIdChange("");
+                        adminContext.onMerchantSearchChange("");
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      placeholder="Search merchants…"
+                      value={adminContext.merchantSearch}
+                      onChange={(e) =>
+                        adminContext.onMerchantSearchChange(e.target.value)
+                      }
+                      autoComplete="off"
+                    />
+                    <div className="max-h-40 overflow-y-auto rounded-md border">
+                      {(() => {
+                        const filtered = adminContext.merchants
+                          .filter((m) => m.emailVerified !== false)
+                          .filter(
+                            (m) =>
+                              !adminContext.merchantSearch.trim() ||
+                              m.businessName
+                                .toLowerCase()
+                                .includes(
+                                  adminContext.merchantSearch.toLowerCase()
+                                )
+                          );
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              No merchants found
+                            </div>
+                          );
+                        }
+                        return filtered.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent hover:text-accent-foreground"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              adminContext.onSelectedMerchantIdChange(m.id);
+                              adminContext.onMerchantSearchChange("");
+                            }}
+                          >
+                            {m.businessName}
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
             <MerchantDropForm
               form={form}
               mapPickerRemountKey={mapPickerEpoch}

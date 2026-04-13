@@ -79,7 +79,7 @@ export default function VoucherViewPage() {
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/30">
             <Trophy className="w-8 h-8 text-teal" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground font-[Poppins]">
+          <h1 className="text-2xl font-bold text-foreground">
             Souq-Snap
           </h1>
           <p className="text-muted-foreground mt-1">

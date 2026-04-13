@@ -35,7 +35,7 @@ export function MerchantDashboardHeader({
             className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 object-cover"
           />
           <div className="min-w-0">
-            <h1 className="font-bold text-foreground font-[Poppins] text-sm sm:text-base truncate">
+            <h1 className="font-bold text-foreground text-sm sm:text-base truncate">
               {merchant?.businessName || "Merchant Dashboard"}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">

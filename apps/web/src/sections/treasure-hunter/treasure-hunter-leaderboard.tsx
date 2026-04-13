@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useDeviceId } from "@/hooks/use-device-id";
 import { useLanguage } from "@/contexts/language-context";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Card } from "@/components/ui/card";
@@ -25,7 +24,6 @@ import {
 
 export default function LeaderboardPage() {
   const { t } = useLanguage();
-  const deviceId = useDeviceId();
 
   const {
     data: leaderboard = [],
@@ -33,7 +31,7 @@ export default function LeaderboardPage() {
     isError: leaderboardError,
   } = useLeaderboardQuery(50);
 
-  const { data: profile } = useTreasureHunterProfileQuery(deviceId ?? "");
+  const { data: profile } = useTreasureHunterProfileQuery();
 
   const getRankIcon = (rank: number) => {
     switch (rank) {

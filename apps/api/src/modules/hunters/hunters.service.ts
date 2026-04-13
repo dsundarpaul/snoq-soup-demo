@@ -158,31 +158,25 @@ export class HuntersService {
     return this.toResponseDto(hunter);
   }
 
-  async getHistory(
-    hunterId: string,
-    deviceId?: string,
-  ): Promise<HunterHistoryResponseDto> {
-    // Build query to find vouchers by hunterId or deviceId
-    // Type-safe refactor: use proper query type
+  async getHistory(hunterId: string): Promise<HunterHistoryResponseDto> {
+    const hunter = await this.database.hunters
+      .findOne({ _id: hunterId, deletedAt: null })
+      .select("deviceId")
+      .lean();
+
+    if (!hunter) {
+      throw new NotFoundException("Hunter not found");
+    }
+
     const query: VoucherQuery = {
       deletedAt: null,
-      $or: [],
+      $or: [
+        { "claimedBy.hunterId": new Types.ObjectId(hunterId) },
+      ],
     };
 
-    if (hunterId) {
-      query.$or.push({ "claimedBy.hunterId": new Types.ObjectId(hunterId) });
-    }
-
-    if (deviceId) {
-      query.$or.push({ "claimedBy.deviceId": deviceId });
-    }
-
-    if (query.$or.length === 0) {
-      return {
-        vouchers: [],
-        totalClaims: 0,
-        totalRedemptions: 0,
-      };
+    if (hunter.deviceId) {
+      query.$or.push({ "claimedBy.deviceId": hunter.deviceId });
     }
 
     // Get vouchers with their associated data

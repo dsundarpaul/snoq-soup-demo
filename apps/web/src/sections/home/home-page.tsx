@@ -362,7 +362,7 @@ export default function HomePage() {
   const geo = useGeolocation();
   const { hasClaimedDrop, vouchers } = useVoucherStorage();
 
-  const { data: hunterProfile } = useTreasureHunterProfileQuery(deviceId ?? "");
+  const { data: hunterProfile } = useTreasureHunterProfileQuery();
 
   const hunterSignedIn = Boolean(hunterProfile?.email);
   const [selectedVoucher, setSelectedVoucher] = useState<StoredVoucher | null>(

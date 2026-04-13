@@ -279,7 +279,6 @@ describe("SouqSnap E2E Flows", () => {
       const response = await request(app.getHttpServer())
         .get("/api/v1/hunters/me")
         .set("Authorization", `Bearer ${hunterToken}`)
-        .set("X-Device-ID", deviceId)
         .expect(200);
 
       expect(response.body).toHaveProperty("id");
@@ -318,7 +317,6 @@ describe("SouqSnap E2E Flows", () => {
       const response = await request(app.getHttpServer())
         .get("/api/v1/hunters/me/history")
         .set("Authorization", `Bearer ${hunterToken}`)
-        .set("X-Device-ID", deviceId)
         .expect(200);
 
       expect(response.body).toHaveProperty("vouchers");
@@ -379,7 +377,6 @@ describe("SouqSnap E2E Flows", () => {
       const response = await request(app.getHttpServer())
         .get("/api/v1/hunters/me/vouchers")
         .set("Authorization", `Bearer ${hunterToken}`)
-        .set("X-Device-ID", deviceId)
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
@@ -503,7 +500,7 @@ describe("SouqSnap E2E Flows", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("users");
+      expect(response.body).toHaveProperty("items");
     });
   });
 

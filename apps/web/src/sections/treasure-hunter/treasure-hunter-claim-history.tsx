@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useDeviceId } from "@/hooks/use-device-id";
 import { useLanguage } from "@/contexts/language-context";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Card } from "@/components/ui/card";
@@ -37,15 +36,14 @@ function formatDate(date: Date | string): string {
 
 export default function ClaimHistoryPage() {
   const { t } = useLanguage();
-  const deviceId = useDeviceId();
 
   const {
     data: vouchers = [],
     isLoading,
     isError: vouchersError,
-  } = useTreasureHunterHistoryQuery(deviceId ?? "");
+  } = useTreasureHunterHistoryQuery();
 
-  const { data: profile } = useTreasureHunterProfileQuery(deviceId ?? "");
+  const { data: profile } = useTreasureHunterProfileQuery();
 
   return (
     <RequireTreasureHunterSession>

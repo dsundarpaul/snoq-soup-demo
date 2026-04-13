@@ -34,13 +34,33 @@ interface VoucherFilter {
 export class VouchersService {
   constructor(private readonly database: DatabaseService) {}
 
-  async claim(dto: ClaimVoucherDto): Promise<VoucherResponseDto> {
-    const { dropId, deviceId, hunterId: hunterIdRaw } = dto;
+  async claim(
+    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string },
+  ): Promise<VoucherResponseDto> {
+    const { dropId, deviceId, hunterId: hunterIdRaw, deviceResolvedHunterId } =
+      dto;
 
     let linkedHunterId: Types.ObjectId | undefined;
-    if (hunterIdRaw?.trim()) {
+    if (deviceResolvedHunterId?.trim()) {
       try {
-        const candidate = new Types.ObjectId(hunterIdRaw.trim());
+        linkedHunterId = new Types.ObjectId(deviceResolvedHunterId.trim());
+      } catch {
+        linkedHunterId = undefined;
+      }
+    }
+
+    if (hunterIdRaw?.trim()) {
+      const trimmed = hunterIdRaw.trim();
+      let candidate: Types.ObjectId;
+      try {
+        candidate = new Types.ObjectId(trimmed);
+      } catch {
+        throw new BadRequestException("Invalid hunter ID");
+      }
+      if (linkedHunterId && !linkedHunterId.equals(candidate)) {
+        throw new BadRequestException("Hunter does not match device");
+      }
+      if (!linkedHunterId) {
         const hunter = await this.database.hunters
           .findOne({
             _id: candidate,
@@ -52,8 +72,6 @@ export class VouchersService {
         if (hunter?._id) {
           linkedHunterId = hunter._id as Types.ObjectId;
         }
-      } catch {
-        linkedHunterId = undefined;
       }
     }
 
@@ -285,26 +303,25 @@ export class VouchersService {
     return this.toDetailResponseDto(voucher);
   }
 
-  async findByHunter(
-    hunterId: string,
-    deviceId?: string,
-  ): Promise<VoucherResponseDto[]> {
-    // Type-safe refactor: use proper filter type
+  async findByHunter(hunterId: string): Promise<VoucherResponseDto[]> {
+    const hunter = await this.database.hunters
+      .findOne({ _id: hunterId, deletedAt: null })
+      .select("deviceId")
+      .lean();
+
+    if (!hunter) {
+      return [];
+    }
+
     const filter: VoucherFilter = {
       deletedAt: null,
-      $or: [],
+      $or: [
+        { "claimedBy.hunterId": new Types.ObjectId(hunterId) },
+      ],
     };
 
-    if (hunterId) {
-      filter.$or.push({ "claimedBy.hunterId": new Types.ObjectId(hunterId) });
-    }
-
-    if (deviceId) {
-      filter.$or.push({ "claimedBy.deviceId": deviceId });
-    }
-
-    if (filter.$or.length === 0) {
-      return [];
+    if (hunter.deviceId) {
+      filter.$or.push({ "claimedBy.deviceId": hunter.deviceId });
     }
 
     const vouchers = await this.database.vouchers
@@ -416,10 +433,15 @@ export class VouchersService {
     voucherId: string,
     email: string,
     magicLink: string,
+    magicToken: string,
   ): Promise<void> {
-    const voucher = await this.database.vouchers.findById(voucherId);
+    const voucher = await this.database.vouchers.findOne({
+      _id: new Types.ObjectId(voucherId),
+      magicToken,
+      deletedAt: null,
+    });
 
-    if (!voucher || voucher.deletedAt) {
+    if (!voucher) {
       throw new NotFoundException("Voucher not found");
     }
 

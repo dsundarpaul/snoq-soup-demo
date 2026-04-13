@@ -151,6 +151,8 @@ const ar = {
   "voucher.copied": "تم النسخ!",
   "voucher.share": "مشاركة",
   "voucher.sendToEmail": "إرسال بالبريد",
+  "voucher.emailSendSuccess": "تم حفظ بريدك الإلكتروني لهذه القسيمة.",
+  "voucher.emailSendError": "تعذر حفظ بريدك الإلكتروني. حاول مرة أخرى.",
   "voucher.saveViaWhatsApp": "حفظ عبر واتساب",
   "voucher.timeRemaining": "الوقت المتبقي",
   "voucher.timeUntilDeadline": "الوقت حتى الموعد النهائي",
@@ -249,6 +251,11 @@ const ar = {
   // AR Game
   "ar.cameraRequired": "الكاميرا مطلوبة",
   "ar.cameraDenied": "تم رفض الوصول للكاميرا. يرجى تفعيل الإذن.",
+  "ar.locationRequired": "الموقع مطلوب",
+  "ar.locationRequiredDesc":
+    "البحث يعتمد على موقعك للعثور على المكافآت. اسمح بالوصول إلى الموقع للمتابعة.",
+  "ar.permissionsSettingsHint":
+    "إذا اخترت رفض الإذن سابقاً، افتح إعدادات المتصفح أو الموقع لهذه الصفحة واسمح بالكاميرا والموقع ثم أعد المحاولة.",
   "ar.enableCompass": "تفعيل البوصلة",
   "ar.enableArMode": "تفعيل وضع AR",
   "ar.compassDesc": "اسمح بالوصول للبوصلة لرؤية المكافآت في العالم الحقيقي",

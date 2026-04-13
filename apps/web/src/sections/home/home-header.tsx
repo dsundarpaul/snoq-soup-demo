@@ -58,7 +58,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
   const deviceId = useDeviceId();
   const { toast } = useToast();
 
-  const { data: profile } = useTreasureHunterProfileQuery(deviceId ?? "");
+  const { data: profile } = useTreasureHunterProfileQuery();
 
   const logoutMutation = useTreasureHunterLogoutMutation({
     onSuccess: () => {
@@ -91,7 +91,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-lg text-foreground font-[Poppins]">
+                <h1 className="font-bold text-lg text-foreground">
                   Souq-Snap
                 </h1>
                 {geo.loading ? (

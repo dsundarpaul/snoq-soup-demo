@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDeviceId } from "@/hooks/use-device-id";
+import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ import { isValidHunterDobYmdString } from "@/lib/hunter-dob";
 
 export default function ProfilePage() {
   const deviceId = useDeviceId();
+  const hasHunterAuth = useHasRoleCredentials("hunter");
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -56,16 +58,18 @@ export default function ProfilePage() {
     useState("+966_Saudi Arabia");
   const [editMobileNumber, setEditMobileNumber] = useState("");
 
-  const { data: profile, isLoading } = useTreasureHunterProfileQuery(
-    deviceId ?? ""
-  );
+  const { data: profile, isLoading } = useTreasureHunterProfileQuery();
 
   useEffect(() => {
-    if (!deviceId || isLoading) return;
+    if (!hasHunterAuth) {
+      router.replace(`/login?next=${encodeURIComponent("/profile")}`);
+      return;
+    }
+    if (isLoading) return;
     if (!profile?.email) {
       router.replace(`/login?next=${encodeURIComponent("/profile")}`);
     }
-  }, [deviceId, isLoading, profile?.email, router]);
+  }, [hasHunterAuth, isLoading, profile?.email, router]);
 
   const updateProfileMutation = useTreasureHunterPatchProfileMutation({
     onSuccess: () => {
@@ -99,7 +103,7 @@ export default function ProfilePage() {
 
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deviceId) return;
+    if (!hasHunterAuth) return;
     if (editDateOfBirth && !isValidHunterDobYmdString(editDateOfBirth)) {
       toast({
         title: t("profile.dobInvalidMinAge"),
@@ -155,7 +159,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="container max-w-lg mx-auto p-4">
-        {!deviceId || isLoading || !profile?.email ? (
+        {!hasHunterAuth || isLoading || !profile?.email ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>

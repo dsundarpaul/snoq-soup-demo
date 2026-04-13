@@ -43,9 +43,26 @@ import type { DashboardStats } from "./merchant-dashboard.types";
 
 const DROPS_PAGE_SIZE = 10;
 
+export type MerchantDropsPanelExternalList = {
+  drops: Drop[];
+  total: number;
+  loading: boolean;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  status: MerchantDropsListStatus;
+  onStatusChange: (value: MerchantDropsListStatus) => void;
+  showMerchantColumn?: boolean;
+  getMerchantLabel?: (drop: Drop) => string;
+};
+
 export interface MerchantDropsPanelProps {
-  stats: DashboardStats | undefined;
-  statsLoading: boolean;
+  stats?: DashboardStats | undefined;
+  statsLoading?: boolean;
+  externalList?: MerchantDropsPanelExternalList;
+  hideSummaryCards?: boolean;
   deletePending: boolean;
   onCreateClick: () => void;
   onShareDrop: (dropId: string) => void;
@@ -59,7 +76,9 @@ export interface MerchantDropsPanelProps {
 
 export function MerchantDropsPanel({
   stats,
-  statsLoading,
+  statsLoading = false,
+  externalList,
+  hideSummaryCards = false,
   deletePending,
   onCreateClick,
   onShareDrop,
@@ -70,46 +89,78 @@ export function MerchantDropsPanel({
   dropActiveTogglePending,
   dropActiveTogglingId,
 }: MerchantDropsPanelProps) {
-  const [dropsPage, setDropsPage] = useState(1);
-  const [dropsSearch, setDropsSearch] = useState("");
-  const [dropsStatus, setDropsStatus] =
+  const [internalPage, setInternalPage] = useState(1);
+  const [internalSearch, setInternalSearch] = useState("");
+  const [internalStatus, setInternalStatus] =
     useState<MerchantDropsListStatus>("all");
+
+  const dropsPage = externalList?.page ?? internalPage;
+  const dropsSearch = externalList?.search ?? internalSearch;
+  const setDropsSearch = externalList?.onSearchChange ?? setInternalSearch;
+  const dropsStatus = externalList?.status ?? internalStatus;
+  const setDropsStatus = externalList?.onStatusChange ?? setInternalStatus;
+
   const deferredDropsSearch = useDeferredValue(dropsSearch);
+  const pageSize = externalList?.pageSize ?? DROPS_PAGE_SIZE;
+  const showMerchantColumn = Boolean(
+    externalList?.showMerchantColumn && externalList?.getMerchantLabel,
+  );
+  const getMerchantLabel = externalList?.getMerchantLabel;
 
   useEffect(() => {
-    setDropsPage(1);
-  }, [deferredDropsSearch, dropsStatus]);
+    if (externalList) return;
+    setInternalPage(1);
+  }, [deferredDropsSearch, internalStatus, externalList]);
 
-  const { data: dropsListData, isLoading: dropsLoading } =
+  const { data: dropsListData, isLoading: internalDropsLoading } =
     useMerchantDropsListQuery({
-      page: dropsPage,
+      page: internalPage,
       limit: DROPS_PAGE_SIZE,
-      search: deferredDropsSearch,
-      status: dropsStatus,
+      search: externalList ? "" : deferredDropsSearch,
+      status: externalList ? "all" : internalStatus,
+      enabled: !externalList,
     });
 
-  const drops = dropsListData?.drops ?? [];
-  const dropsTotal = dropsListData?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(dropsTotal / DROPS_PAGE_SIZE));
+  const drops = externalList?.drops ?? dropsListData?.drops ?? [];
+  const dropsTotal = externalList?.total ?? dropsListData?.total ?? 0;
+  const dropsLoading = externalList?.loading ?? internalDropsLoading;
+  const totalPages = Math.max(1, Math.ceil(dropsTotal / pageSize));
+
+  const goPrevPage = () => {
+    if (externalList) {
+      externalList.onPageChange(Math.max(1, externalList.page - 1));
+      return;
+    }
+    setInternalPage((p) => Math.max(1, p - 1));
+  };
+
+  const goNextPage = () => {
+    if (externalList) {
+      externalList.onPageChange(Math.min(totalPages, externalList.page + 1));
+      return;
+    }
+    setInternalPage((p) => Math.min(totalPages, p + 1));
+  };
 
   useEffect(() => {
+    if (externalList) return;
     if (dropsListData === undefined) return;
-    if (dropsPage > totalPages) {
-      setDropsPage(totalPages);
+    if (internalPage > totalPages) {
+      setInternalPage(totalPages);
     }
-  }, [dropsListData, dropsPage, totalPages]);
+  }, [dropsListData, internalPage, totalPages, externalList]);
 
   const hasFilters =
     dropsSearch.trim() !== "" || dropsStatus !== "all";
   const filteredEmpty = !dropsLoading && drops.length === 0 && hasFilters;
   const noDropsAtAll =
     !dropsLoading && drops.length === 0 && !hasFilters;
-  const rangeStart =
-    dropsTotal === 0 ? 0 : (dropsPage - 1) * DROPS_PAGE_SIZE + 1;
-  const rangeEnd = Math.min(dropsPage * DROPS_PAGE_SIZE, dropsTotal);
+  const rangeStart = dropsTotal === 0 ? 0 : (dropsPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(dropsPage * pageSize, dropsTotal);
 
   return (
     <>
+      {!hideSummaryCards ? (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="pt-6">
@@ -175,6 +226,7 @@ export function MerchantDropsPanel({
           </CardContent>
         </Card>
       </div>
+      ) : null}
 
       <Card>
         <CardHeader className="space-y-4">
@@ -268,6 +320,11 @@ export function MerchantDropsPanel({
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                       Name
                     </th>
+                    {showMerchantColumn ? (
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Merchant
+                      </th>
+                    ) : null}
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                       Location
                     </th>
@@ -303,6 +360,11 @@ export function MerchantDropsPanel({
                           {drop.description.slice(0, 50)}...
                         </div>
                       </td>
+                      {showMerchantColumn && getMerchantLabel ? (
+                        <td className="py-3 px-4 text-sm text-foreground">
+                          {getMerchantLabel(drop)}
+                        </td>
+                      ) : null}
                       <td className="py-3 px-4">
                         <div className="text-sm font-mono text-muted-foreground">
                           {drop.latitude.toFixed(4)},{" "}
@@ -404,7 +466,7 @@ export function MerchantDropsPanel({
                     size="sm"
                     className="gap-1"
                     disabled={dropsPage <= 1}
-                    onClick={() => setDropsPage((p) => Math.max(1, p - 1))}
+                    onClick={goPrevPage}
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Previous
@@ -418,9 +480,7 @@ export function MerchantDropsPanel({
                     size="sm"
                     className="gap-1"
                     disabled={dropsPage >= totalPages}
-                    onClick={() =>
-                      setDropsPage((p) => Math.min(totalPages, p + 1))
-                    }
+                    onClick={goNextPage}
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
