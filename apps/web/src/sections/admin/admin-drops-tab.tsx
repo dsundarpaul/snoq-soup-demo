@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Drop } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +55,6 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
   const [dropsStatus, setDropsStatus] =
     useState<MerchantDropsListStatus>("all");
   const [merchantFilterId, setMerchantFilterId] = useState<string>("");
-  const deferredDropsSearch = useDeferredValue(dropsSearch);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingDrop, setEditingDrop] = useState<Drop | null>(null);
@@ -78,10 +77,12 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
   });
   const merchantsForPickers = merchantsPickerQuery.data?.items ?? [];
 
+  const dropsSearchForApi = dropsSearch.trim();
+
   const dropsQuery = useAdminDropsListQuery(hasSession, {
     page: dropsPage,
     limit: ADMIN_DROPS_PAGE_SIZE,
-    search: deferredDropsSearch,
+    search: dropsSearchForApi,
     status: dropsStatus === "all" ? undefined : dropsStatus,
     merchantId: merchantFilterId || undefined,
   });
@@ -101,12 +102,28 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
   const dropsTotal = dropsQuery.data?.total ?? 0;
   const dropsTotalPages = dropsQuery.data?.totalPages ?? 1;
 
-  useEffect(() => {
+  const handleDropsSearchChange = useCallback((value: string) => {
+    setDropsSearch(value);
     setDropsPage(1);
-  }, [deferredDropsSearch, dropsStatus, merchantFilterId]);
+  }, []);
+
+  const handleDropsStatusChange = useCallback(
+    (value: MerchantDropsListStatus) => {
+      setDropsStatus(value);
+      setDropsPage(1);
+    },
+    [],
+  );
+
+  const handleMerchantFilterChange = useCallback((value: string) => {
+    setMerchantFilterId(value);
+    setDropsPage(1);
+  }, []);
 
   useEffect(() => {
-    if (dropsPage > dropsTotalPages) setDropsPage(dropsTotalPages);
+    if (dropsPage > dropsTotalPages) {
+      setDropsPage(dropsTotalPages);
+    }
   }, [dropsPage, dropsTotalPages]);
 
   const adminCodesQuery = useAdminDropCodesQuery(adminCodesDropId);
@@ -200,7 +217,7 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
     setExporting(true);
     try {
       const rows = await fetchAllAdminDropsForExport({
-        search: deferredDropsSearch,
+        search: dropsSearchForApi,
         status: dropsStatus,
         merchantId: merchantFilterId || undefined,
       });
@@ -282,7 +299,7 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
             <select
               className="h-9 w-full max-w-xs rounded-md border border-input bg-background px-3 text-sm"
               value={merchantFilterId}
-              onChange={(e) => setMerchantFilterId(e.target.value)}
+              onChange={(e) => handleMerchantFilterChange(e.target.value)}
               aria-label="Filter by merchant"
             >
               <option value="">All merchants</option>
@@ -298,14 +315,15 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
             externalList={{
               drops: dropsAsDrops,
               total: dropsTotal,
+              totalPages: dropsTotalPages,
               loading: dropsQuery.isLoading && !dropsQuery.data,
               page: dropsPage,
               pageSize: ADMIN_DROPS_PAGE_SIZE,
               onPageChange: setDropsPage,
               search: dropsSearch,
-              onSearchChange: setDropsSearch,
+              onSearchChange: handleDropsSearchChange,
               status: dropsStatus,
-              onStatusChange: setDropsStatus,
+              onStatusChange: handleDropsStatusChange,
               showMerchantColumn: true,
               getMerchantLabel: (d) => merchantNameByDropId.get(d.id) ?? "—",
             }}

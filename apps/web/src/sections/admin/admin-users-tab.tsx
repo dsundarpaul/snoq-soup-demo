@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -39,8 +39,8 @@ export function AdminUsersTab(props: { hasSession: boolean }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [minClaimsInput, setMinClaimsInput] = useState("");
-  const deferredSearch = useDeferredValue(search);
   const [exporting, setExporting] = useState(false);
+  const searchForApi = search.trim();
 
   const minClaimsParsed = minClaimsInput.trim()
     ? parseInt(minClaimsInput, 10)
@@ -53,17 +53,13 @@ export function AdminUsersTab(props: { hasSession: boolean }) {
   const listQuery = useAdminUsersListQuery(hasSession, {
     page,
     limit: ADMIN_TABLE_PAGE_SIZE,
-    search: deferredSearch,
+    search: searchForApi,
     minClaims,
   });
 
   const items = listQuery.data?.items ?? [];
   const total = listQuery.data?.total ?? 0;
   const totalPages = listQuery.data?.totalPages ?? 1;
-
-  useEffect(() => {
-    setPage(1);
-  }, [deferredSearch, minClaims]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -76,7 +72,7 @@ export function AdminUsersTab(props: { hasSession: boolean }) {
     setExporting(true);
     try {
       const rows = await fetchAllAdminUsersForExport({
-        search: deferredSearch,
+        search: searchForApi,
         minClaims,
       });
       downloadCsv(
@@ -117,7 +113,10 @@ export function AdminUsersTab(props: { hasSession: boolean }) {
             <Input
               placeholder="Search nickname, email, device…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="pl-9"
               aria-label="Search users"
             />
@@ -127,7 +126,10 @@ export function AdminUsersTab(props: { hasSession: boolean }) {
             min={0}
             placeholder="Min claims (optional)"
             value={minClaimsInput}
-            onChange={(e) => setMinClaimsInput(e.target.value)}
+            onChange={(e) => {
+              setMinClaimsInput(e.target.value);
+              setPage(1);
+            }}
             className="w-full sm:w-[160px]"
           />
           <Button

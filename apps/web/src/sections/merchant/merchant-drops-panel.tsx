@@ -46,6 +46,8 @@ const DROPS_PAGE_SIZE = 10;
 export type MerchantDropsPanelExternalList = {
   drops: Drop[];
   total: number;
+  /** Server-reported page count (required for correct pagination with filters). */
+  totalPages: number;
   loading: boolean;
   page: number;
   pageSize: number;
@@ -124,7 +126,9 @@ export function MerchantDropsPanel({
   const drops = externalList?.drops ?? dropsListData?.drops ?? [];
   const dropsTotal = externalList?.total ?? dropsListData?.total ?? 0;
   const dropsLoading = externalList?.loading ?? internalDropsLoading;
-  const totalPages = Math.max(1, Math.ceil(dropsTotal / pageSize));
+  const totalPages = externalList
+    ? Math.max(1, externalList.totalPages)
+    : Math.max(1, Math.ceil(dropsTotal / pageSize));
 
   const goPrevPage = () => {
     if (externalList) {

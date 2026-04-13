@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -53,8 +53,8 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
   const [search, setSearch] = useState("");
   const [verifiedFilter, setVerifiedFilter] =
     useState<VerifiedFilter>("all");
-  const deferredSearch = useDeferredValue(search);
   const [exporting, setExporting] = useState(false);
+  const searchForApi = search.trim();
 
   const isVerified =
     verifiedFilter === "all"
@@ -66,17 +66,13 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
   const listQuery = useAdminMerchantsListQuery(hasSession, {
     page,
     limit: ADMIN_TABLE_PAGE_SIZE,
-    search: deferredSearch,
+    search: searchForApi,
     isVerified,
   });
 
   const items = listQuery.data?.items ?? [];
   const total = listQuery.data?.total ?? 0;
   const totalPages = listQuery.data?.totalPages ?? 1;
-
-  useEffect(() => {
-    setPage(1);
-  }, [deferredSearch, verifiedFilter]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -95,7 +91,7 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
     setExporting(true);
     try {
       const rows = await fetchAllAdminMerchantsForExport({
-        search: deferredSearch,
+        search: searchForApi,
         isVerified,
       });
       downloadCsv(
@@ -141,14 +137,20 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
             <Input
               placeholder="Search name, email, username…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="pl-9"
               aria-label="Search merchants"
             />
           </div>
           <Select
             value={verifiedFilter}
-            onValueChange={(v) => setVerifiedFilter(v as VerifiedFilter)}
+            onValueChange={(v) => {
+              setVerifiedFilter(v as VerifiedFilter);
+              setPage(1);
+            }}
           >
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Verification" />
