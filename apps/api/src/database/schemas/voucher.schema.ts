@@ -161,15 +161,15 @@ export const VoucherSchema = SchemaFactory.createForClass(Voucher);
 VoucherSchema.index({ magicToken: 1 }, { unique: true });
 VoucherSchema.index({ dropId: 1 });
 VoucherSchema.index({ merchantId: 1, redeemed: 1 });
-VoucherSchema.index({ "claimedBy.deviceId": 1 });
+// VoucherSchema.index({ "claimedBy.deviceId": 1 });
 VoucherSchema.index({ "claimedBy.hunterId": 1 });
 VoucherSchema.index({ claimedAt: -1 });
 VoucherSchema.index({ deletedAt: 1 });
 VoucherSchema.index({ expiresAt: 1 }, { sparse: true });
-VoucherSchema.index(
-  { dropId: 1, "claimedBy.deviceId": 1 },
-  {
-    unique: true,
-    partialFilterExpression: { "claimedBy.deviceId": { $exists: true } },
-  },
-);
+// VoucherSchema.index(
+//   { dropId: 1, "claimedBy.deviceId": 1 },
+//   {
+//     unique: true,
+//     partialFilterExpression: { "claimedBy.deviceId": { $exists: true } },
+//   },
+// );
