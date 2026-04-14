@@ -44,10 +44,9 @@ export class VouchersService {
   async claim(
     dto: ClaimVoucherDto & { deviceResolvedHunterId?: string }
   ): Promise<VoucherResponseDto> {
-    const { dropId, deviceId, hunterId: bodyHunterId } = dto;
-    const resolvedFromDevice = dto.deviceResolvedHunterId?.trim();
+    const { dropId, deviceId, hunterId } = dto;
 
-    if (!resolvedFromDevice) {
+    if (!hunterId) {
       throw new BadRequestException(
         "Hunter could not be resolved for this device"
       );
@@ -59,7 +58,7 @@ export class VouchersService {
 
     let hunterObjectId: Types.ObjectId;
     try {
-      hunterObjectId = new Types.ObjectId(resolvedFromDevice);
+      hunterObjectId = new Types.ObjectId(hunterId);
     } catch {
       throw new BadRequestException("Invalid hunter ID");
     }
@@ -69,11 +68,16 @@ export class VouchersService {
         _id: hunterObjectId,
         deletedAt: null,
       })
-      .select("_id")
+      .select("_id email")
       .lean();
 
     if (!hunter) {
       throw new BadRequestException("Hunter not found");
+    }
+    console.log(hunter);
+
+    if (!hunter.email) {
+      throw new BadRequestException("Hunter not registered");
     }
 
     // Validate drop exists and is active

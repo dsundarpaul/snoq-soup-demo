@@ -24,7 +24,6 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Public } from "../../common/decorators/public.decorator";
-import { DeviceGuard } from "../../common/guards/device.guard";
 import {
   CurrentUser,
   CurrentUserType,
@@ -46,7 +45,6 @@ export class VouchersController {
 
   @Post("vouchers/claim")
   @Public()
-  @UseGuards(DeviceGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for claims
   @ApiOperation({ summary: "Claim a voucher from a drop" })
   @ApiResponse({ status: 201, type: VoucherResponseDto })
@@ -54,12 +52,12 @@ export class VouchersController {
     status: 400,
     description: "Invalid request or constraints not met",
   })
-  @ApiResponse({ status: 409, description: "Already claimed by this device" })
+  @ApiResponse({ status: 409, description: "Already claimed by this hunter" })
   @HttpCode(HttpStatus.CREATED)
   async claim(
     @Body() dto: ClaimVoucherDto,
     @DeviceId() deviceId: string,
-    @Req() req: Request & { hunterId?: string },
+    @Req() req: Request & { hunterId?: string }
   ): Promise<VoucherResponseDto> {
     return this.vouchersService.claim({
       ...dto,
