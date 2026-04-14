@@ -6,15 +6,8 @@ import { config } from "../../config/app.config";
 import {
   buildPasswordResetEmailContent,
   buildVerificationEmailContent,
+  buildVoucherMagicLinkEmailContent,
 } from "./email-templates";
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 @Injectable()
 export class MailService {
@@ -94,17 +87,18 @@ export class MailService {
     magicLink: string,
     dropName: string,
   ): Promise<void> {
-    const subject = `Your SouqSnap reward — ${dropName}`;
-    const text = `You asked to save your voucher for "${dropName}".\n\nOpen your reward:\n${magicLink}\n`;
-    const href = magicLink.replace(/"/g, "%22");
-    const html = `<p>You asked to save your voucher for <strong>${escapeHtml(
-      dropName,
-    )}</strong>.</p><p><a href="${href}">Open your reward</a></p>`;
+    const base = config.FRONTEND_URL.replace(/\/$/, "");
 
     if (!config.ENABLE_EMAIL || !config.smtp.host) {
       console.log(`[MailService] voucher email to ${to}: ${magicLink}`);
       return;
     }
+
+    const { subject, text, html } = buildVoucherMagicLinkEmailContent(
+      magicLink,
+      dropName,
+      base,
+    );
 
     const transporter = this.createTransporter();
     await transporter.sendMail({

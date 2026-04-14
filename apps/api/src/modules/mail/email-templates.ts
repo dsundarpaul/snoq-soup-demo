@@ -125,6 +125,41 @@ ${frontendBase}`;
   return { subject, text, html };
 }
 
+export function buildVoucherMagicLinkEmailContent(
+  magicLink: string,
+  dropName: string,
+  frontendBase: string,
+): { readonly subject: string; readonly text: string; readonly html: string } {
+  const subject = `Your ${BRAND_NAME} reward — ${dropName}`;
+  const preheader = `Open your reward for ${dropName} in ${BRAND_NAME}.`;
+  const hrefSafe = magicLink.replace(/"/g, "%22");
+
+  const text = `${BRAND_NAME} — your reward
+
+You asked to save your voucher for "${dropName}".
+
+Open your reward:
+${magicLink}
+
+${frontendBase}`;
+
+  const html = layoutBrandedEmail({
+    preheader,
+    title: "Open your reward",
+    lead: `You asked to save your voucher for "${dropName}".`,
+    bodyLines: [
+      `Tap the button below to open your voucher and continue in ${BRAND_NAME}.`,
+    ],
+    ctaUrl: hrefSafe,
+    ctaLabel: "Open your reward",
+    secondaryNote:
+      "If you did not request this email, you can ignore it — no changes will be made to your account.",
+    frontendBase,
+  });
+
+  return { subject, text, html };
+}
+
 export function buildPasswordResetEmailContent(
   resetUrl: string,
   frontendBase: string,
