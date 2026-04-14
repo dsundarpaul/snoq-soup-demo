@@ -466,36 +466,6 @@ export function useMerchantScannerTokenQuery() {
   });
 }
 
-const EXPORT_PAGE_SIZE = 100;
-
-export async function fetchAllMerchantDropsForExport(filters: {
-  search?: string;
-  status?: MerchantDropsListStatus;
-}): Promise<ReturnType<typeof mapNestDropToLegacy>[]> {
-  const out: ReturnType<typeof mapNestDropToLegacy>[] = [];
-  let page = 1;
-  for (;;) {
-    const sp = new URLSearchParams({ page: String(page), limit: String(EXPORT_PAGE_SIZE) });
-    const s = filters.search?.trim();
-    if (s) sp.set("search", s);
-    if (filters.status && filters.status !== "all") sp.set("status", filters.status);
-    const path = `/api/v1/merchants/me/drops?${sp.toString()}`;
-    const res = await apiFetchMaybeRetry("GET", path, { auth: "merchant" });
-    await throwIfResNotOk(res, path, "merchant");
-    const json = (await res.json()) as {
-      drops?: Record<string, unknown>[];
-      total?: number;
-    };
-    const batch = (json.drops ?? []).map((d) => mapNestDropToLegacy(d));
-    out.push(...batch);
-    if (batch.length < EXPORT_PAGE_SIZE) break;
-    if (out.length >= (json.total ?? out.length)) break;
-    page += 1;
-    if (page > 200) break;
-  }
-  return out;
-}
-
 export function useMerchantPublicStoreQuery(username: string | undefined) {
   return useQuery({
     queryKey: username

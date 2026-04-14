@@ -7,12 +7,14 @@ import {
   Body,
   Param,
   Query,
+  Res,
   UseGuards,
   HttpCode,
   HttpStatus,
   DefaultValuePipe,
   ParseIntPipe,
 } from "@nestjs/common";
+import type { Response } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -35,6 +37,7 @@ import { UpdateDropDto } from "./dto/request/update-drop.dto";
 import { DropResponseDto } from "./dto/response/drop-response.dto";
 import { DropDetailResponseDto } from "./dto/response/drop-detail-response.dto";
 import { ActiveDropsResponseDto } from "./dto/response/active-drops-response.dto";
+import { csvAttachmentFilename } from "../../common/utils/csv";
 
 @ApiTags("Drops")
 @Controller()
@@ -100,6 +103,42 @@ export class DropsController {
       search,
       status,
     );
+  }
+
+  @Get("merchants/me/drops/export")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Export merchant drops as CSV" })
+  @ApiQuery({
+    name: "search",
+    type: String,
+    required: false,
+    description: "Same filter as list: drop name or reward",
+  })
+  @ApiQuery({
+    name: "status",
+    type: String,
+    required: false,
+    description:
+      "Same filter as list: all | active | inactive | scheduled | expired",
+  })
+  @ApiResponse({ status: 200, description: "CSV file" })
+  async exportMyDropsCsv(
+    @CurrentUser() user: CurrentUserType,
+    @Res() res: Response,
+    @Query("search") search?: string,
+    @Query("status") status?: string,
+  ): Promise<void> {
+    const body = await this.dropsService.merchantDropsCsv(
+      user.userId,
+      search,
+      status,
+    );
+    const filename = csvAttachmentFilename("drops");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(body);
   }
 
   @Post("merchants/me/drops")

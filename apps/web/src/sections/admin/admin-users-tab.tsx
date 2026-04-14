@@ -20,11 +20,10 @@ import {
 } from "@/components/ui/table";
 import {
   useAdminUsersListQuery,
-  fetchAllAdminUsersForExport,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/hooks/api/admin/use-admin";
 import { useToast } from "@/hooks/use-toast";
-import { downloadCsv } from "@/utils/download-csv";
+import { downloadAuthenticatedCsv } from "@/utils/download-authenticated-csv";
 import {
   Search,
   Download,
@@ -71,22 +70,15 @@ export function AdminUsersTab(props: { hasSession: boolean }) {
   const handleExportCsv = async () => {
     setExporting(true);
     try {
-      const rows = await fetchAllAdminUsersForExport({
-        search: searchForApi,
-        minClaims,
+      await downloadAuthenticatedCsv({
+        path: "/api/v1/admin/users/export",
+        query: {
+          search: searchForApi || undefined,
+          minClaims,
+        },
+        fallbackFilename: `treasure-hunters-${new Date().toISOString().slice(0, 10)}.csv`,
+        auth: "admin",
       });
-      downloadCsv(
-        `treasure-hunters-${new Date().toISOString().slice(0, 10)}.csv`,
-        ["Nickname", "Email", "Device ID", "Claims", "Redemptions", "Joined"],
-        rows.map((u) => [
-          u.nickname ?? "",
-          u.email ?? "",
-          u.deviceId,
-          u.totalClaims,
-          u.totalRedemptions,
-          u.createdAt,
-        ]),
-      );
       toast({ title: "Export ready" });
     } catch {
       toast({

@@ -7,10 +7,12 @@ import {
   Body,
   Param,
   Query,
+  Res,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
+import type { Response } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -35,6 +37,7 @@ import { UserListDto } from "./dto/response/user-list.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { csvAttachmentFilename } from "../../common/utils/csv";
 
 @ApiTags("Admin")
 @Controller("admin")
@@ -130,6 +133,34 @@ export class AdminController {
     return this.adminService.findAllMerchants(query);
   }
 
+  @Get("merchants/export")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Export merchants as CSV",
+    description:
+      "Returns all merchants matching the same filters as the list endpoint (no pagination).",
+  })
+  @ApiQuery({ name: "isVerified", required: false, type: Boolean })
+  @ApiQuery({ name: "search", required: false, type: String })
+  @ApiResponse({ status: 200, description: "CSV file" })
+  async exportMerchantsCsv(
+    @Res() res: Response,
+    @Query("isVerified") isVerified?: string,
+    @Query("search") search?: string,
+  ): Promise<void> {
+    const trimmed = search?.trim();
+    const body = await this.adminService.merchantsCsv({
+      search: trimmed || undefined,
+      isVerified: isVerified === undefined ? undefined : isVerified === "true",
+    });
+    const filename = csvAttachmentFilename("merchants");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(body);
+  }
+
   @Patch("merchants/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
@@ -188,6 +219,39 @@ export class AdminController {
     return this.adminService.findAllUsers(query);
   }
 
+  @Get("users/export")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Export treasure hunters as CSV",
+    description:
+      "Returns all users matching the same filters as the list endpoint (no pagination).",
+  })
+  @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({ name: "minClaims", required: false, type: Number })
+  @ApiResponse({ status: 200, description: "CSV file" })
+  async exportUsersCsv(
+    @Res() res: Response,
+    @Query("search") search?: string,
+    @Query("minClaims") minClaims?: string,
+  ): Promise<void> {
+    const trimmed = search?.trim();
+    const parsed =
+      minClaims !== undefined ? parseInt(minClaims, 10) : undefined;
+    const body = await this.adminService.usersCsv({
+      search: trimmed || undefined,
+      minClaims:
+        parsed !== undefined && Number.isFinite(parsed) && parsed > 0
+          ? parsed
+          : undefined,
+    });
+    const filename = csvAttachmentFilename("treasure-hunters");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(body);
+  }
+
   @Get("drops")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
@@ -232,6 +296,46 @@ export class AdminController {
       query.active = active === "true";
     }
     return this.adminService.findAllDrops(query);
+  }
+
+  @Get("drops/export")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Export drops as CSV",
+    description:
+      "Returns all drops matching the same filters as the list endpoint (no pagination).",
+  })
+  @ApiQuery({ name: "merchantId", required: false, type: String })
+  @ApiQuery({ name: "active", required: false, type: Boolean })
+  @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "all | active | inactive | scheduled | expired",
+  })
+  @ApiResponse({ status: 200, description: "CSV file" })
+  async exportDropsCsv(
+    @Res() res: Response,
+    @Query("merchantId") merchantId?: string,
+    @Query("active") active?: string,
+    @Query("search") search?: string,
+    @Query("status") status?: string,
+  ): Promise<void> {
+    const trimmed = search?.trim();
+    const body = await this.adminService.dropsCsv({
+      merchantId: merchantId?.trim() || undefined,
+      search: trimmed || undefined,
+      status,
+      active:
+        active === undefined ? undefined : active === "true" ? true : false,
+    });
+    const filename = csvAttachmentFilename("drops");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(body);
   }
 
   @Post("drops")

@@ -30,13 +30,12 @@ import {
   useAdminDropCodesQuery,
   useAdminUploadDropCodesMutation,
   ADMIN_DROPS_PAGE_SIZE,
-  fetchAllAdminDropsForExport,
 } from "@/hooks/api/admin/use-admin";
 import type { MerchantDropsListStatus } from "@/hooks/api/merchant/use-merchant";
 import { MerchantDropsPanel } from "@/sections/merchant/merchant-drops-panel";
 import { MerchantDropSheet } from "@/sections/merchant/merchant-drop-sheet";
 import { publicUrls } from "@/lib/app-config";
-import { downloadCsv } from "@/utils/download-csv";
+import { downloadAuthenticatedCsv } from "@/utils/download-authenticated-csv";
 import {
   Plus,
   Download,
@@ -217,34 +216,17 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
   const handleExportCsv = async () => {
     setExporting(true);
     try {
-      const rows = await fetchAllAdminDropsForExport({
-        search: dropsSearchForApi,
-        status: dropsStatus,
-        merchantId: merchantFilterId || undefined,
+      await downloadAuthenticatedCsv({
+        path: "/api/v1/admin/drops/export",
+        query: {
+          search: dropsSearchForApi || undefined,
+          status:
+            dropsStatus === "all" ? undefined : dropsStatus,
+          merchantId: merchantFilterId || undefined,
+        },
+        fallbackFilename: `drops-${new Date().toISOString().slice(0, 10)}.csv`,
+        auth: "admin",
       });
-      downloadCsv(
-        `drops-${new Date().toISOString().slice(0, 10)}.csv`,
-        [
-          "Name",
-          "Merchant",
-          "Reward",
-          "Active",
-          "Latitude",
-          "Longitude",
-          "Radius",
-          "Created",
-        ],
-        rows.map((r) => [
-          r.name,
-          r.merchantName,
-          r.rewardValue,
-          r.active ? "yes" : "no",
-          r.latitude,
-          r.longitude,
-          r.radius,
-          String(r.createdAt),
-        ]),
-      );
       toast({ title: "Export ready" });
     } catch {
       toast({

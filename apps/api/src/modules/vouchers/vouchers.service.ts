@@ -371,9 +371,7 @@ export class VouchersService {
 
     for (const v of vouchersList) {
       const dropIdStr =
-        typeof v.dropId === "string"
-          ? v.dropId
-          : v.dropId?.toString() ?? "";
+        typeof v.dropId === "string" ? v.dropId : (v.dropId?.toString() ?? "");
       const doc = dropMap.get(dropIdStr);
       if (!doc) {
         continue;
@@ -755,7 +753,9 @@ export class VouchersService {
       this.database.promoCodes.findOne({ voucherId: voucher._id }).lean(),
       this.database.merchants
         .findById(voucher.merchantId)
-        .select("businessName username logoUrl storeLocation businessPhone businessHours")
+        .select(
+          "businessName username logoUrl storeLocation businessPhone businessHours",
+        )
         .lean(),
     ]);
 
@@ -809,8 +809,14 @@ export class VouchersService {
                 howToReach: sl.howToReach,
               }
             : null,
-          businessPhone: (merchant as Record<string, unknown>).businessPhone as string | null ?? null,
-          businessHours: (merchant as Record<string, unknown>).businessHours as string | null ?? null,
+          businessPhone:
+            ((merchant as Record<string, unknown>).businessPhone as
+              | string
+              | null) ?? null,
+          businessHours:
+            ((merchant as Record<string, unknown>).businessHours as
+              | string
+              | null) ?? null,
         }
       : {
           id: "",

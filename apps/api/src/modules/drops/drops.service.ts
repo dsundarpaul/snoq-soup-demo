@@ -18,6 +18,7 @@ import {
   ActiveDropsResponseDto,
   ActiveDropDto,
 } from "./dto/response/active-drops-response.dto";
+import { encodeCsv } from "../../common/utils/csv";
 
 const ACTIVE_DROPS_CACHE_KEY = "drops:active:v1";
 const ACTIVE_DROPS_CACHE_TTL_MS = 20_000;
@@ -167,6 +168,48 @@ export class DropsService {
       page: safePage,
       limit: safeLimit,
     };
+  }
+
+  async merchantDropsCsv(
+    merchantId: string,
+    search?: string,
+    status?: string,
+  ): Promise<string> {
+    const filter = this.buildMerchantDropsFilter(merchantId, search, status);
+    const drops = await this.database.drops
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+    const rows = drops.map((d) => {
+      const dto = this.toResponseDto(d as Drop);
+      const created =
+        dto.createdAt instanceof Date
+          ? dto.createdAt.toISOString()
+          : dto.createdAt != null
+            ? String(dto.createdAt)
+            : "";
+      return [
+        dto.name,
+        dto.rewardValue,
+        dto.active ? "yes" : "no",
+        dto.location?.lat ?? "",
+        dto.location?.lng ?? "",
+        dto.radius,
+        created,
+      ];
+    });
+    return encodeCsv(
+      [
+        "Name",
+        "Reward",
+        "Active",
+        "Latitude",
+        "Longitude",
+        "Radius",
+        "Created",
+      ],
+      rows,
+    );
   }
 
   buildDropSearchAndStatusClauses(

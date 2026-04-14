@@ -15,7 +15,7 @@ import {
   useMerchantAnalyticsQuery,
   useMerchantDropCodesQuery,
   useMerchantDropActiveMutation,
-  fetchAllMerchantDropsForExport,
+  type MerchantDropsListStatus,
 } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
@@ -39,7 +39,7 @@ import { filterAnalyticsByRange } from "@/sections/merchant/filter-analytics-by-
 import { MerchantDropSheet } from "@/sections/merchant/merchant-drop-sheet";
 import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
 import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
-import { downloadCsv } from "@/utils/download-csv";
+import { downloadAuthenticatedCsv } from "@/utils/download-authenticated-csv";
 
 export default function MerchantDashboardPage() {
   const router = useRouter();
@@ -58,23 +58,22 @@ export default function MerchantDashboardPage() {
   const [codesText, setCodesText] = useState("");
   const [dropsExporting, setDropsExporting] = useState(false);
 
-  const handleExportDropsCsv = async () => {
+  const handleExportDropsCsv = async (filters: {
+    search: string;
+    status: MerchantDropsListStatus;
+  }) => {
     setDropsExporting(true);
     try {
-      const rows = await fetchAllMerchantDropsForExport({});
-      downloadCsv(
-        `drops-${new Date().toISOString().slice(0, 10)}.csv`,
-        ["Name", "Reward", "Active", "Latitude", "Longitude", "Radius", "Created"],
-        rows.map((r) => [
-          r.name,
-          r.rewardValue,
-          r.active ? "yes" : "no",
-          r.latitude,
-          r.longitude,
-          r.radius,
-          r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "",
-        ]),
-      );
+      await downloadAuthenticatedCsv({
+        path: "/api/v1/merchants/me/drops/export",
+        query: {
+          search: filters.search.trim() || undefined,
+          status:
+            filters.status === "all" ? undefined : filters.status,
+        },
+        fallbackFilename: `drops-${new Date().toISOString().slice(0, 10)}.csv`,
+        auth: "merchant",
+      });
       toast({ title: "Export ready" });
     } catch {
       toast({ title: "Export failed", variant: "destructive" });
@@ -362,7 +361,7 @@ export default function MerchantDashboardPage() {
               dropActiveTogglingId={
                 dropActiveMutation.variables?.dropId ?? null
               }
-              onExportCsv={() => void handleExportDropsCsv()}
+              onExportCsv={(f) => void handleExportDropsCsv(f)}
               exportPending={dropsExporting}
             />
           </TabsContent>

@@ -22,6 +22,7 @@ import {
 } from "./dto/response/merchant-list.dto";
 import { UserListDto, UserListItemDto } from "./dto/response/user-list.dto";
 import { DropResponseDto } from "../drops/dto/response/drop-response.dto";
+import { encodeCsv } from "../../common/utils/csv";
 
 export interface PaginationQuery {
   page?: number;
@@ -52,6 +53,75 @@ export class AdminService {
     private readonly database: DatabaseService,
     private readonly dropsService: DropsService,
   ) {}
+
+  private merchantListFilter(
+    query: Pick<MerchantQuery, "isVerified" | "search">,
+  ): Record<string, unknown> {
+    const filter: Record<string, unknown> = { deletedAt: null };
+    if (query.isVerified !== undefined) {
+      filter.emailVerified = query.isVerified;
+    }
+    if (query.search) {
+      filter.$or = [
+        { businessName: { $regex: query.search, $options: "i" } },
+        { email: { $regex: query.search, $options: "i" } },
+        { username: { $regex: query.search, $options: "i" } },
+      ] as unknown[];
+    }
+    return filter;
+  }
+
+  private hunterListFilter(
+    query: Pick<UserQuery, "search" | "minClaims">,
+  ): Record<string, unknown> {
+    const filter: Record<string, unknown> = { deletedAt: null };
+    if (query.search) {
+      filter.$or = [
+        { deviceId: { $regex: query.search, $options: "i" } },
+        { nickname: { $regex: query.search, $options: "i" } },
+        { email: { $regex: query.search, $options: "i" } },
+      ] as unknown[];
+    }
+    if (query.minClaims !== undefined) {
+      filter["stats.totalClaims"] = { $gte: query.minClaims };
+    }
+    return filter;
+  }
+
+  private buildAdminDropsFilter(
+    query: Pick<DropQuery, "merchantId" | "active" | "search" | "status">,
+  ): FilterQuery<Drop> {
+    const baseParts: FilterQuery<Drop>[] = [{ deletedAt: null }];
+
+    if (query.merchantId) {
+      if (!Types.ObjectId.isValid(query.merchantId)) {
+        throw new BadRequestException("Invalid merchant ID");
+      }
+      baseParts.push({ merchantId: new Types.ObjectId(query.merchantId) });
+    }
+
+    if (query.active !== undefined) {
+      baseParts.push({ active: query.active });
+    }
+
+    const searchStatusParts = this.dropsService.buildDropSearchAndStatusClauses(
+      query.search,
+      query.status,
+    );
+
+    const allParts = [...baseParts, ...searchStatusParts];
+    return allParts.length === 1 ? allParts[0]! : { $and: allParts };
+  }
+
+  private formatCsvDate(value: unknown): string {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (typeof value === "string" || typeof value === "number") {
+      return String(value);
+    }
+    return "";
+  }
 
   async findByEmail(email: string): Promise<any | null> {
     return this.database.admins.findOne({
@@ -339,19 +409,10 @@ export class AdminService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = { deletedAt: null };
-
-    if (query.isVerified !== undefined) {
-      filter.emailVerified = query.isVerified;
-    }
-
-    if (query.search) {
-      filter.$or = [
-        { businessName: { $regex: query.search, $options: "i" } },
-        { email: { $regex: query.search, $options: "i" } },
-        { username: { $regex: query.search, $options: "i" } },
-      ] as unknown[];
-    }
+    const filter = this.merchantListFilter({
+      isVerified: query.isVerified,
+      search: query.search,
+    });
 
     const [merchants, total] = await Promise.all([
       this.database.merchants
@@ -475,19 +536,10 @@ export class AdminService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, unknown> = { deletedAt: null };
-
-    if (query.search) {
-      filter.$or = [
-        { deviceId: { $regex: query.search, $options: "i" } },
-        { nickname: { $regex: query.search, $options: "i" } },
-        { email: { $regex: query.search, $options: "i" } },
-      ] as unknown[];
-    }
-
-    if (query.minClaims !== undefined) {
-      filter["stats.totalClaims"] = { $gte: query.minClaims };
-    }
+    const filter = this.hunterListFilter({
+      search: query.search,
+      minClaims: query.minClaims,
+    });
 
     const [hunters, total] = await Promise.all([
       this.database.hunters
@@ -536,27 +588,12 @@ export class AdminService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const skip = (page - 1) * limit;
 
-    const baseParts: FilterQuery<Drop>[] = [{ deletedAt: null }];
-
-    if (query.merchantId) {
-      if (!Types.ObjectId.isValid(query.merchantId)) {
-        throw new BadRequestException("Invalid merchant ID");
-      }
-      baseParts.push({ merchantId: new Types.ObjectId(query.merchantId) });
-    }
-
-    if (query.active !== undefined) {
-      baseParts.push({ active: query.active });
-    }
-
-    const searchStatusParts = this.dropsService.buildDropSearchAndStatusClauses(
-      query.search,
-      query.status,
-    );
-
-    const allParts = [...baseParts, ...searchStatusParts];
-    const filter: FilterQuery<Drop> =
-      allParts.length === 1 ? allParts[0]! : { $and: allParts };
+    const filter = this.buildAdminDropsFilter({
+      merchantId: query.merchantId,
+      active: query.active,
+      search: query.search,
+      status: query.status,
+    });
 
     const [drops, total] = await Promise.all([
       this.database.drops
@@ -598,6 +635,97 @@ export class AdminService {
     };
   }
 
+  async merchantsCsv(
+    filters: Pick<MerchantQuery, "search" | "isVerified">,
+  ): Promise<string> {
+    const filter = this.merchantListFilter(filters);
+    const merchants = await this.database.merchants
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+    const rows = merchants.map((m) => [
+      m.businessName ?? "",
+      m.email ?? "",
+      m.username ?? "",
+      m.emailVerified ? "yes" : "no",
+      this.formatCsvDate(m.createdAt),
+    ]);
+    return encodeCsv(
+      ["Business Name", "Email", "Username", "Verified", "Created"],
+      rows,
+    );
+  }
+
+  async usersCsv(
+    filters: Pick<UserQuery, "search" | "minClaims">,
+  ): Promise<string> {
+    const filter = this.hunterListFilter(filters);
+    const hunters = await this.database.hunters
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+    const rows = hunters.map((h) => [
+      h.nickname ?? "",
+      h.email ?? "",
+      h.deviceId ?? "",
+      h.stats?.totalClaims ?? 0,
+      h.stats?.totalRedemptions ?? 0,
+      this.formatCsvDate(h.createdAt),
+    ]);
+    return encodeCsv(
+      ["Nickname", "Email", "Device ID", "Claims", "Redemptions", "Joined"],
+      rows,
+    );
+  }
+
+  async dropsCsv(
+    filters: Pick<DropQuery, "merchantId" | "active" | "search" | "status">,
+  ): Promise<string> {
+    const filter = this.buildAdminDropsFilter(filters);
+    const drops = await this.database.drops
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
+    const merchantIds = [...new Set(drops.map((d) => d.merchantId.toString()))];
+    const merchantDocs = await this.database.merchants
+      .find({
+        _id: { $in: merchantIds.map((id) => new Types.ObjectId(id)) },
+        deletedAt: null,
+      })
+      .select({ businessName: 1 })
+      .lean();
+    const merchantNameById = new Map(
+      merchantDocs.map((m) => [m._id.toString(), m.businessName ?? ""]),
+    );
+    const rows = drops.map((d) => {
+      const dto = this.dropsService.toResponseDto(d as Drop);
+      const merchantName = merchantNameById.get(d.merchantId.toString()) ?? "";
+      return [
+        dto.name,
+        merchantName,
+        dto.rewardValue,
+        dto.active ? "yes" : "no",
+        dto.location?.lat ?? "",
+        dto.location?.lng ?? "",
+        dto.radius,
+        this.formatCsvDate(dto.createdAt),
+      ];
+    });
+    return encodeCsv(
+      [
+        "Name",
+        "Merchant",
+        "Reward",
+        "Active",
+        "Latitude",
+        "Longitude",
+        "Radius",
+        "Created",
+      ],
+      rows,
+    );
+  }
+
   async createDropAsAdmin(body: Record<string, unknown>): Promise<unknown> {
     const merchantId = body.merchantId;
     if (typeof merchantId !== "string" || !Types.ObjectId.isValid(merchantId)) {
@@ -611,7 +739,8 @@ export class AdminService {
       throw new NotFoundException("Merchant not found");
     }
 
-    const { merchantId: _omit, ...rest } = body;
+    const rest = { ...body };
+    delete rest.merchantId;
     return this.dropsService.create(
       merchantId,
       rest as unknown as CreateDropDto,

@@ -102,7 +102,7 @@ export class AuthService {
     });
     if (existingEmail) {
       throw new ConflictException(
-        "Seems like you already have a merchant account with this email address"
+        "Seems like you already have a merchant account with this email address",
       );
     }
 

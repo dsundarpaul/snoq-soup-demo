@@ -83,7 +83,10 @@ export interface MerchantDropsPanelProps {
   onDropActiveChange: (dropId: string, active: boolean) => void;
   dropActiveTogglePending: boolean;
   dropActiveTogglingId: string | null;
-  onExportCsv?: () => void;
+  onExportCsv?: (filters: {
+    search: string;
+    status: MerchantDropsListStatus;
+  }) => void;
   exportPending?: boolean;
 }
 
@@ -276,7 +279,12 @@ export function MerchantDropsPanel({
                     size="sm"
                     className="gap-2"
                     disabled={exportPending}
-                    onClick={onExportCsv}
+                    onClick={() =>
+                      onExportCsv({
+                        search: dropsSearch.trim(),
+                        status: dropsStatus,
+                      })
+                    }
                   >
                     {exportPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

@@ -29,11 +29,10 @@ import {
 import {
   useAdminMerchantsListQuery,
   useAdminUpdateMerchantMutation,
-  fetchAllAdminMerchantsForExport,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/hooks/api/admin/use-admin";
 import { useToast } from "@/hooks/use-toast";
-import { downloadCsv } from "@/utils/download-csv";
+import { downloadAuthenticatedCsv } from "@/utils/download-authenticated-csv";
 import {
   CheckCircle,
   Clock,
@@ -90,27 +89,15 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
   const handleExportCsv = async () => {
     setExporting(true);
     try {
-      const rows = await fetchAllAdminMerchantsForExport({
-        search: searchForApi,
-        isVerified,
+      await downloadAuthenticatedCsv({
+        path: "/api/v1/admin/merchants/export",
+        query: {
+          search: searchForApi || undefined,
+          isVerified,
+        },
+        fallbackFilename: `merchants-${new Date().toISOString().slice(0, 10)}.csv`,
+        auth: "admin",
       });
-      downloadCsv(
-        `merchants-${new Date().toISOString().slice(0, 10)}.csv`,
-        [
-          "Business Name",
-          "Email",
-          "Username",
-          "Verified",
-          "Created",
-        ],
-        rows.map((m) => [
-          m.businessName,
-          m.email,
-          m.username,
-          m.emailVerified ? "yes" : "no",
-          m.createdAt,
-        ]),
-      );
       toast({ title: "Export ready" });
     } catch {
       toast({

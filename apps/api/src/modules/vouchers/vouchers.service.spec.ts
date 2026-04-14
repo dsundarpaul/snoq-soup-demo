@@ -22,7 +22,9 @@ describe("VouchersService", () => {
   };
 
   beforeEach(() => {
-    mailService = { sendVoucherMagicLink: jest.fn().mockResolvedValue(undefined) };
+    mailService = {
+      sendVoucherMagicLink: jest.fn().mockResolvedValue(undefined),
+    };
     dropsService = {
       toResponseDto: jest.fn().mockReturnValue({
         id: "drop",
