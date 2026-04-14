@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import { format, parseISO } from "date-fns";
 import {
   Card,
   CardContent,
@@ -8,6 +10,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Activity, BarChart3, TrendingUp } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import type { AdminAnalyticsLegacy } from "@/sections/admin/admin-dashboard.types";
 
 function formatConversionPercent(value: number): string {
@@ -21,6 +32,21 @@ export function AdminAnalyticsTab(props: {
 }) {
   const { analytics } = props;
 
+  const claimsRangeLabel = useMemo(() => {
+    if (!analytics?.claimsOverTime?.length) return "";
+    const rows = analytics.claimsOverTime;
+    const first = rows[0].date;
+    const last = rows[rows.length - 1].date;
+    try {
+      const a = parseISO(first);
+      const b = parseISO(last);
+      if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return "";
+      return `${format(a, "MMM d, yyyy")} – ${format(b, "MMM d, yyyy")}`;
+    } catch {
+      return "";
+    }
+  }, [analytics]);
+
   if (!analytics) {
     return (
       <Card>
@@ -30,6 +56,10 @@ export function AdminAnalyticsTab(props: {
       </Card>
     );
   }
+
+  const hasClaimsOverTimeData = analytics.claimsOverTime.some(
+    (d) => d.claims > 0 || d.redemptions > 0
+  );
 
   return (
     <div className="space-y-6">
@@ -56,13 +86,13 @@ export function AdminAnalyticsTab(props: {
             <div className="text-3xl font-bold">
               {analytics.claimsOverTime.reduce(
                 (sum, day) => sum + day.claims,
-                0,
+                0
               )}
             </div>
             <p className="text-xs text-muted-foreground">
               {analytics.claimsOverTime.reduce(
                 (sum, day) => sum + day.redemptions,
-                0,
+                0
               )}{" "}
               redeemed
             </p>
@@ -77,7 +107,7 @@ export function AdminAnalyticsTab(props: {
             <div className="text-3xl font-bold">
               {analytics.merchantGrowth.reduce(
                 (sum, day) => sum + day.count,
-                0,
+                0
               )}
             </div>
             <p className="text-xs text-muted-foreground">Merchant signups</p>
@@ -117,7 +147,9 @@ export function AdminAnalyticsTab(props: {
                 </div>
               ))}
               {analytics.topMerchants.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No data in this period</p>
+                <p className="text-sm text-muted-foreground">
+                  No data in this period
+                </p>
               ) : null}
             </div>
           </CardContent>
@@ -157,16 +189,94 @@ export function AdminAnalyticsTab(props: {
                 </div>
               ))}
               {analytics.topDrops.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No data in this period</p>
+                <p className="text-sm text-muted-foreground">
+                  No data in this period
+                </p>
               ) : null}
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-1">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Claims over time
+            </CardTitle>
+            <CardDescription>
+              {claimsRangeLabel || "Daily claims and redemptions in the period"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {hasClaimsOverTimeData ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.claimsOverTime}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-muted"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(value) =>
+                        new Date(value).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      className="text-muted-foreground"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10 }}
+                      className="text-muted-foreground"
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelFormatter={(value) =>
+                        new Date(value).toLocaleDateString()
+                      }
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="claims"
+                      stroke="#7C3AED"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Claims"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="redemptions"
+                      stroke="#14B8A6"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Redemptions"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center text-muted-foreground">
+                <p>
+                  No data in this period. Claims will appear here once users
+                  claim drops.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <BarChart3 className="h-4 w-4 text-primary" />
               Claims by hour
             </CardTitle>
             <CardDescription>
@@ -178,7 +288,7 @@ export function AdminAnalyticsTab(props: {
               {analytics.claimsByHour.map((hour) => {
                 const maxClaims = Math.max(
                   ...analytics.claimsByHour.map((h) => h.claims),
-                  1,
+                  1
                 );
                 const percentage = (hour.claims / maxClaims) * 100;
                 return (
@@ -198,46 +308,6 @@ export function AdminAnalyticsTab(props: {
                   </div>
                 );
               })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5" />
-              Recent activity
-            </CardTitle>
-            <CardDescription>
-              Claims and redemptions over the last 7 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {analytics.claimsOverTime.slice(-7).map((day) => (
-                <div
-                  key={day.date}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm">
-                    {new Date(day.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm">
-                      <span className="text-muted-foreground">Claims:</span>{" "}
-                      {day.claims}
-                    </span>
-                    <span className="text-sm">
-                      <span className="text-muted-foreground">Redeemed:</span>{" "}
-                      {day.redemptions}
-                    </span>
-                  </div>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
