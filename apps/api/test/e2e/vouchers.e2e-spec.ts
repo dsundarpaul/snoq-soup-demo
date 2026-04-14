@@ -238,7 +238,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
   });
 
   describe("Claim Validation", () => {
-    it("should prevent same device from claiming twice", async () => {
+    it("should prevent same hunter from claiming the same drop twice", async () => {
       const merchant = await createMerchant();
       const drop = await createDrop(merchant.token);
       const deviceId = generateDeviceId();

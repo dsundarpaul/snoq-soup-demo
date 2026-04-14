@@ -1,4 +1,9 @@
-import { ForbiddenException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { Types } from "mongoose";
 import { VouchersService } from "./vouchers.service";
 import { DatabaseService } from "../../database/database.service";
@@ -56,6 +61,147 @@ describe("VouchersService", () => {
       mailService as unknown as MailService,
       dropsService as unknown as DropsService,
     );
+  });
+
+  describe("claim", () => {
+    const dropId = new Types.ObjectId();
+    const hunterId = new Types.ObjectId();
+    const merchantId = new Types.ObjectId();
+    const voucherId = new Types.ObjectId();
+
+    const baseDrop = {
+      _id: dropId,
+      merchantId,
+      active: true,
+      deletedAt: null,
+      schedule: undefined,
+      availability: { type: "unlimited" as const },
+    };
+
+    it("rejects when deviceResolvedHunterId is missing", async () => {
+      await expect(
+        service.claim({
+          dropId: dropId.toString(),
+          deviceId: "device_a",
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects when body hunterId does not match device-resolved hunter", async () => {
+      const other = new Types.ObjectId();
+      await expect(
+        service.claim({
+          dropId: dropId.toString(),
+          deviceId: "device_a",
+          hunterId: other.toString(),
+          deviceResolvedHunterId: hunterId.toString(),
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects when hunter is not found", async () => {
+      database.hunters.findOne.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(null),
+        }),
+      });
+
+      await expect(
+        service.claim({
+          dropId: dropId.toString(),
+          deviceId: "device_a",
+          deviceResolvedHunterId: hunterId.toString(),
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("rejects when drop is missing", async () => {
+      database.hunters.findOne.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: hunterId }),
+        }),
+      });
+      database.drops.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.claim({
+          dropId: dropId.toString(),
+          deviceId: "device_a",
+          deviceResolvedHunterId: hunterId.toString(),
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("rejects duplicate claim for same hunter and drop", async () => {
+      database.hunters.findOne.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: hunterId }),
+        }),
+      });
+      database.drops.findOne.mockResolvedValue(baseDrop);
+      database.vouchers.findOne.mockResolvedValue({ _id: voucherId });
+
+      await expect(
+        service.claim({
+          dropId: dropId.toString(),
+          deviceId: "device_a",
+          deviceResolvedHunterId: hunterId.toString(),
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("creates voucher scoped to resolved hunter", async () => {
+      const now = new Date();
+      database.hunters.findOne.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({ _id: hunterId }),
+        }),
+      });
+      database.drops.findOne.mockResolvedValue(baseDrop);
+      database.vouchers.findOne.mockResolvedValue(null);
+      database.vouchers.countDocuments.mockResolvedValue(0);
+      database.vouchers.create.mockResolvedValue({
+        _id: voucherId,
+        dropId,
+        merchantId,
+        magicToken: "tok",
+        claimedBy: { deviceId: "device_a", hunterId },
+        claimedAt: now,
+        expiresAt: null,
+        redeemed: false,
+        redeemedAt: null,
+        redeemedBy: {},
+        createdAt: now,
+        updatedAt: now,
+      });
+      database.promoCodes.findOneAndUpdate.mockResolvedValue(null);
+      database.hunters.findByIdAndUpdate.mockResolvedValue(null);
+
+      await service.claim({
+        dropId: dropId.toString(),
+        deviceId: "device_a",
+        hunterId: hunterId.toString(),
+        deviceResolvedHunterId: hunterId.toString(),
+      });
+
+      expect(database.vouchers.findOne).toHaveBeenCalledWith({
+        dropId: new Types.ObjectId(dropId.toString()),
+        "claimedBy.hunterId": hunterId,
+        deletedAt: null,
+      });
+      expect(database.vouchers.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          claimedBy: {
+            deviceId: "device_a",
+            hunterId,
+          },
+        }),
+      );
+      expect(database.hunters.findByIdAndUpdate).toHaveBeenCalledWith(
+        hunterId,
+        { $inc: { "stats.totalClaims": 1 } },
+      );
+    });
   });
 
   describe("redeem", () => {
