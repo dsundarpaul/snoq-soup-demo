@@ -3,6 +3,7 @@
 import {
   useMutation,
   useQuery,
+  keepPreviousData,
   type UseMutationOptions,
 } from "@tanstack/react-query";
 import { clearSessionsExcept } from "@/lib/auth-session";
@@ -27,13 +28,10 @@ import {
 } from "@/lib/nest-mappers";
 
 export const ADMIN_TABLE_PAGE_SIZE = 20;
-
 export const ADMIN_DROPS_PAGE_SIZE = ADMIN_TABLE_PAGE_SIZE;
 
-const ADMIN_EXPORT_PAGE_SIZE = 100;
-
-export type AdminDropsListData = {
-  items: ReturnType<typeof mapAdminDropItem>[];
+type PagedResult<T> = {
+  items: T[];
   total: number;
   page: number;
   limit: number;
@@ -42,25 +40,15 @@ export type AdminDropsListData = {
   hasPrevPage: boolean;
 };
 
-export type AdminMerchantsListData = {
-  items: ReturnType<typeof mapAdminMerchantItem>[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-};
-
-export type AdminUsersListData = {
-  items: ReturnType<typeof mapAdminUserItem>[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-};
+export type AdminDropsListData = PagedResult<
+  ReturnType<typeof mapAdminDropItem>
+>;
+export type AdminMerchantsListData = PagedResult<
+  ReturnType<typeof mapAdminMerchantItem>
+>;
+export type AdminUsersListData = PagedResult<
+  ReturnType<typeof mapAdminUserItem>
+>;
 
 export type AdminDropsListParams = {
   page: number;
@@ -68,7 +56,6 @@ export type AdminDropsListParams = {
   search?: string;
   status?: string;
   merchantId?: string;
-  active?: boolean;
 };
 
 export type AdminMerchantsListParams = {
@@ -96,6 +83,52 @@ export const adminQueryKeys = {
     ["/api/v1/admin/drops", dropId, "codes"] as const,
 };
 
+async function adminGet<T>(path: string): Promise<T> {
+  const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
+  await throwIfResNotOk(res, path, "admin");
+  return (await res.json()) as T;
+}
+
+type RawPagedJson = {
+  items?: Record<string, unknown>[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
+};
+
+function toPagedResult<T>(
+  raw: RawPagedJson,
+  mapItem: (r: Record<string, unknown>) => T
+): PagedResult<T> {
+  const total = raw.total ?? 0;
+  const totalPages = Math.max(1, raw.totalPages ?? 1);
+  return {
+    items: (raw.items ?? []).map(mapItem),
+    total,
+    page: raw.page ?? 1,
+    limit: raw.limit ?? 20,
+    totalPages,
+    hasNextPage: raw.hasNextPage ?? false,
+    hasPrevPage: raw.hasPrevPage ?? false,
+  };
+}
+
+function buildQueryString(
+  params: Record<string, string | number | boolean | undefined>
+): string {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "")
+      searchParams.set(key, String(value));
+  }
+  return searchParams.toString();
+}
+
+// ── Auth ──
+
 export function useAdminLoginMutation(
   options?: Omit<
     UseMutationOptions<unknown, Error, AdminLoginInput>,
@@ -109,7 +142,9 @@ export function useAdminLoginMutation(
         "POST",
         "/api/v1/auth/admin/login",
         data,
-        { auth: undefined }
+        {
+          auth: undefined,
+        }
       );
       const body = (await response.json()) as {
         accessToken: string;
@@ -147,7 +182,9 @@ export function useAdminLogoutMutation(
             "POST",
             "/api/v1/auth/logout",
             { refreshToken: refresh },
-            { auth: "admin" }
+            {
+              auth: "admin",
+            }
           );
         } catch {
           clearTokenBundle("admin");
@@ -163,31 +200,25 @@ export function useAdminLogoutMutation(
 }
 
 export function useAdminSessionQuery(enabled = true) {
-  return useQuery<{ admin: { id: string; email: string; name: string } } | null>(
-    {
-      queryKey: adminQueryKeys.session,
-      retry: false,
-      enabled,
-      queryFn: async () => {
-        const token = getAccessToken("admin");
-        if (!token) return null;
-        const user = getStoredUser<{
-          id: string;
-          email: string;
-          name: string;
-        }>("admin");
-        if (!user) return null;
-        return {
-          admin: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-          },
-        };
-      },
-    }
-  );
+  return useQuery<{
+    admin: { id: string; email: string; name: string };
+  } | null>({
+    queryKey: adminQueryKeys.session,
+    retry: false,
+    enabled,
+    queryFn: async () => {
+      const token = getAccessToken("admin");
+      if (!token) return null;
+      const user = getStoredUser<{ id: string; email: string; name: string }>(
+        "admin"
+      );
+      if (!user) return null;
+      return { admin: { id: user.id, email: user.email, name: user.name } };
+    },
+  });
 }
+
+// ── Mutations ──
 
 export function useAdminUpdateMerchantMutation(
   options?: Omit<
@@ -198,13 +229,15 @@ export function useAdminUpdateMerchantMutation(
   return useMutation({
     ...options,
     mutationFn: async ({ id, emailVerified }) => {
-      const response = await apiRequest(
+      const res = await apiRequest(
         "PATCH",
         `/api/v1/admin/merchants/${id}`,
-        { isVerified: emailVerified },
+        {
+          isVerified: emailVerified,
+        },
         { auth: "admin" }
       );
-      return response.json();
+      return res.json();
     },
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.merchants });
@@ -227,13 +260,15 @@ export function useAdminUpdateDropMutation(
   return useMutation({
     ...options,
     mutationFn: async ({ id, ...updates }) => {
-      const response = await apiRequest(
+      const res = await apiRequest(
         "PATCH",
         `/api/v1/admin/drops/${id}`,
         updates,
-        { auth: "admin" }
+        {
+          auth: "admin",
+        }
       );
-      return response.json();
+      return res.json();
     },
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.drops });
@@ -252,13 +287,10 @@ export function useAdminCreateDropMutation(
   return useMutation({
     ...options,
     mutationFn: async (data: Record<string, unknown>) => {
-      const response = await apiRequest(
-        "POST",
-        "/api/v1/admin/drops",
-        data,
-        { auth: "admin" }
-      );
-      return response.json();
+      const res = await apiRequest("POST", "/api/v1/admin/drops", data, {
+        auth: "admin",
+      });
+      return res.json();
     },
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.drops });
@@ -274,14 +306,16 @@ export function useAdminDeleteDropMutation(
   return useMutation({
     ...options,
     mutationFn: async (id: string) => {
-      const response = await apiRequest(
+      const res = await apiRequest(
         "DELETE",
         `/api/v1/admin/drops/${id}`,
         undefined,
-        { auth: "admin" }
+        {
+          auth: "admin",
+        }
       );
-      if (response.status === 204) return { ok: true };
-      return response.json();
+      if (res.status === 204) return { ok: true };
+      return res.json();
     },
     onSuccess: (...args) => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.drops });
@@ -306,8 +340,9 @@ export function useAdminDropCodesQuery(dropId: string | null) {
         };
       }
       await throwIfResNotOk(res, path, "admin");
-      const json = (await res.json()) as Record<string, unknown>;
-      return mapPromoListToLegacy(json);
+      return mapPromoListToLegacy(
+        (await res.json()) as Record<string, unknown>
+      );
     },
     enabled: !!dropId,
   });
@@ -327,7 +362,9 @@ export function useAdminUploadDropCodesMutation(
         "POST",
         `/api/v1/admin/drops/${dropId}/codes`,
         { codes },
-        { auth: "admin" }
+        {
+          auth: "admin",
+        }
       );
       return res.json();
     },
@@ -342,18 +379,16 @@ export function useAdminUploadDropCodesMutation(
   });
 }
 
+// ── Stats & Analytics ──
+
 export function useAdminStatsQuery(enabled: boolean) {
   return useQuery({
     queryKey: adminQueryKeys.stats,
     enabled,
-    queryFn: async () => {
-      const path = "/api/v1/admin/stats";
-      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-      await throwIfResNotOk(res, path, "admin");
-      return mapAdminStatsToPlatform(
-        (await res.json()) as Record<string, unknown>
-      );
-    },
+    queryFn: () =>
+      adminGet<Record<string, unknown>>("/api/v1/admin/stats").then(
+        mapAdminStatsToPlatform
+      ),
   });
 }
 
@@ -365,278 +400,169 @@ export function useAdminAnalyticsQuery(
   return useQuery({
     queryKey: [...adminQueryKeys.analytics, days, granularity] as const,
     enabled,
-    queryFn: async () => {
-      const qs = new URLSearchParams({
-        days: String(days),
-        granularity,
-      });
-      const path = `/api/v1/admin/analytics?${qs.toString()}`;
-      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-      await throwIfResNotOk(res, path, "admin");
-      return mapAdminAnalyticsToLegacy(
-        (await res.json()) as Record<string, unknown>
-      );
+    queryFn: () => {
+      const queryString = buildQueryString({ days, granularity });
+      return adminGet<Record<string, unknown>>(
+        `/api/v1/admin/analytics?${queryString}`
+      ).then(mapAdminAnalyticsToLegacy);
     },
   });
 }
 
+// ── Paginated lists ──
+//
+// Key design decisions for server-side pagination:
+// - staleTime: 0  → cached data is always "stale", so React Query refetches on mount
+// - gcTime: 0     → old page data is garbage-collected immediately when key changes
+//   (this is the critical one — without it, going page 1→2→1→2 serves stale cache)
+// - placeholderData: keepPreviousData → shows old page while new one loads (no flash)
+
 export function useAdminMerchantsListQuery(
   enabled: boolean,
-  params: AdminMerchantsListParams,
+  params: AdminMerchantsListParams
 ) {
   const { page, limit, search, isVerified } = params;
+  const queryString = buildQueryString({ page, limit, search, isVerified });
+
   return useQuery({
     queryKey: [
       ...adminQueryKeys.merchants,
-      "paged",
+      "list",
       page,
       limit,
       search ?? "",
-      isVerified === undefined ? "all" : String(isVerified),
+      String(isVerified ?? "all"),
     ] as const,
     enabled,
+    staleTime: 0,
+    gcTime: 0,
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<AdminMerchantsListData> => {
-      const sp = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      const q = search?.trim();
-      if (q) sp.set("search", q);
-      if (isVerified !== undefined) sp.set("isVerified", String(isVerified));
-      const path = `/api/v1/admin/merchants?${sp.toString()}`;
-      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-      await throwIfResNotOk(res, path, "admin");
-      const json = (await res.json()) as {
-        items?: Record<string, unknown>[];
-        total?: number;
-        page?: number;
-        limit?: number;
-        totalPages?: number;
-        hasNextPage?: boolean;
-        hasPrevPage?: boolean;
-      };
-      const items = (json.items ?? []).map(mapAdminMerchantItem);
-      const total = json.total ?? 0;
-      const totalPages = Math.max(1, json.totalPages ?? 1);
-      return {
-        items,
-        total,
-        page: json.page ?? page,
-        limit: json.limit ?? limit,
-        totalPages,
-        hasNextPage: json.hasNextPage ?? false,
-        hasPrevPage: json.hasPrevPage ?? false,
-      };
+      const raw = await adminGet<RawPagedJson>(`/api/v1/admin/merchants?${queryString}`);
+      return toPagedResult(raw, mapAdminMerchantItem);
     },
   });
 }
 
 export function useAdminDropsListQuery(
   enabled: boolean,
-  listParams: AdminDropsListParams,
+  params: AdminDropsListParams
 ) {
-  const { page, limit, search, status, merchantId, active } = listParams;
+  const { page, limit, search, status, merchantId } = params;
+  const queryString = buildQueryString({
+    page,
+    limit,
+    search,
+    status: status && status !== "all" ? status : undefined,
+    merchantId,
+  });
+
   return useQuery({
     queryKey: [
       ...adminQueryKeys.drops,
-      "paged",
+      "list",
       page,
       limit,
       search ?? "",
       status ?? "",
       merchantId ?? "",
-      active === undefined ? "" : String(active),
     ] as const,
     enabled,
+    staleTime: 0,
+    gcTime: 0,
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<AdminDropsListData> => {
-      const sp = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      const q = search?.trim();
-      if (q) sp.set("search", q);
-      if (status && status !== "all") sp.set("status", status);
-      if (merchantId) sp.set("merchantId", merchantId);
-      if (active !== undefined) sp.set("active", String(active));
-      const path = `/api/v1/admin/drops?${sp.toString()}`;
-      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-      await throwIfResNotOk(res, path, "admin");
-      const json = (await res.json()) as {
-        items?: Record<string, unknown>[];
-        total?: number;
-        page?: number;
-        limit?: number;
-        totalPages?: number;
-        hasNextPage?: boolean;
-        hasPrevPage?: boolean;
-      };
-      const items = (json.items ?? []).map((row) => mapAdminDropItem(row));
-      const total = json.total ?? 0;
-      const totalPages = Math.max(1, json.totalPages ?? 1);
-      return {
-        items,
-        total,
-        page: json.page ?? page,
-        limit: json.limit ?? limit,
-        totalPages,
-        hasNextPage: json.hasNextPage ?? false,
-        hasPrevPage: json.hasPrevPage ?? false,
-      };
+      const raw = await adminGet<RawPagedJson>(`/api/v1/admin/drops?${queryString}`);
+      return toPagedResult(raw, mapAdminDropItem);
     },
   });
 }
 
 export function useAdminUsersListQuery(
   enabled: boolean,
-  params: AdminUsersListParams,
+  params: AdminUsersListParams
 ) {
   const { page, limit, search, minClaims } = params;
+  const queryString = buildQueryString({
+    page,
+    limit,
+    search,
+    minClaims: minClaims !== undefined && minClaims > 0 ? minClaims : undefined,
+  });
+
   return useQuery({
     queryKey: [
       ...adminQueryKeys.users,
-      "paged",
+      "list",
       page,
       limit,
       search ?? "",
-      minClaims ?? "",
+      String(minClaims ?? ""),
     ] as const,
     enabled,
+    staleTime: 0,
+    gcTime: 0,
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<AdminUsersListData> => {
-      const sp = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      const q = search?.trim();
-      if (q) sp.set("search", q);
-      if (minClaims !== undefined && minClaims > 0) {
-        sp.set("minClaims", String(minClaims));
-      }
-      const path = `/api/v1/admin/users?${sp.toString()}`;
-      const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-      await throwIfResNotOk(res, path, "admin");
-      const json = (await res.json()) as {
-        items?: Record<string, unknown>[];
-        total?: number;
-        page?: number;
-        limit?: number;
-        totalPages?: number;
-        hasNextPage?: boolean;
-        hasPrevPage?: boolean;
-      };
-      const items = (json.items ?? []).map(mapAdminUserItem);
-      const total = json.total ?? 0;
-      const totalPages = Math.max(1, json.totalPages ?? 1);
-      return {
-        items,
-        total,
-        page: json.page ?? page,
-        limit: json.limit ?? limit,
-        totalPages,
-        hasNextPage: json.hasNextPage ?? false,
-        hasPrevPage: json.hasPrevPage ?? false,
-      };
+      const raw = await adminGet<RawPagedJson>(`/api/v1/admin/users?${queryString}`);
+      return toPagedResult(raw, mapAdminUserItem);
     },
   });
 }
 
-export async function fetchAllAdminMerchantsForExport(filters: {
+// ── CSV Export (fetch all pages) ──
+
+const EXPORT_PAGE_SIZE = 100;
+
+async function fetchAllPages<T>(
+  basePath: string,
+  extraQs: Record<string, string | number | boolean | undefined>,
+  mapItem: (r: Record<string, unknown>) => T
+): Promise<T[]> {
+  const out: T[] = [];
+  let page = 1;
+  for (;;) {
+    const queryString = buildQueryString({ ...extraQs, page, limit: EXPORT_PAGE_SIZE });
+    const raw = await adminGet<RawPagedJson>(`${basePath}?${queryString}`);
+    const batch = (raw.items ?? []).map(mapItem);
+    out.push(...batch);
+    if (batch.length < EXPORT_PAGE_SIZE) break;
+    if (out.length >= (raw.total ?? out.length)) break;
+    page += 1;
+    if (page > 200) break;
+  }
+  return out;
+}
+
+export function fetchAllAdminMerchantsForExport(filters: {
   search?: string;
   isVerified?: boolean;
-}): Promise<ReturnType<typeof mapAdminMerchantItem>[]> {
-  const out: ReturnType<typeof mapAdminMerchantItem>[] = [];
-  let page = 1;
-  for (;;) {
-    const sp = new URLSearchParams({
-      page: String(page),
-      limit: String(ADMIN_EXPORT_PAGE_SIZE),
-    });
-    const q = filters.search?.trim();
-    if (q) sp.set("search", q);
-    if (filters.isVerified !== undefined) {
-      sp.set("isVerified", String(filters.isVerified));
-    }
-    const path = `/api/v1/admin/merchants?${sp.toString()}`;
-    const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-    await throwIfResNotOk(res, path, "admin");
-    const json = (await res.json()) as {
-      items?: Record<string, unknown>[];
-      total?: number;
-    };
-    const batch = (json.items ?? []).map(mapAdminMerchantItem);
-    out.push(...batch);
-    if (batch.length < ADMIN_EXPORT_PAGE_SIZE) break;
-    if (out.length >= (json.total ?? out.length)) break;
-    page += 1;
-    if (page > 200) break;
-  }
-  return out;
+}) {
+  return fetchAllPages(
+    "/api/v1/admin/merchants",
+    filters,
+    mapAdminMerchantItem
+  );
 }
 
-export async function fetchAllAdminUsersForExport(filters: {
+export function fetchAllAdminUsersForExport(filters: {
   search?: string;
   minClaims?: number;
-}): Promise<ReturnType<typeof mapAdminUserItem>[]> {
-  const out: ReturnType<typeof mapAdminUserItem>[] = [];
-  let page = 1;
-  for (;;) {
-    const sp = new URLSearchParams({
-      page: String(page),
-      limit: String(ADMIN_EXPORT_PAGE_SIZE),
-    });
-    const q = filters.search?.trim();
-    if (q) sp.set("search", q);
-    if (filters.minClaims !== undefined && filters.minClaims > 0) {
-      sp.set("minClaims", String(filters.minClaims));
-    }
-    const path = `/api/v1/admin/users?${sp.toString()}`;
-    const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-    await throwIfResNotOk(res, path, "admin");
-    const json = (await res.json()) as {
-      items?: Record<string, unknown>[];
-      total?: number;
-    };
-    const batch = (json.items ?? []).map(mapAdminUserItem);
-    out.push(...batch);
-    if (batch.length < ADMIN_EXPORT_PAGE_SIZE) break;
-    if (out.length >= (json.total ?? out.length)) break;
-    page += 1;
-    if (page > 200) break;
-  }
-  return out;
+}) {
+  return fetchAllPages("/api/v1/admin/users", filters, mapAdminUserItem);
 }
 
-export async function fetchAllAdminDropsForExport(
-  filters: Omit<AdminDropsListParams, "page" | "limit">,
-): Promise<ReturnType<typeof mapAdminDropItem>[]> {
-  const out: ReturnType<typeof mapAdminDropItem>[] = [];
-  let page = 1;
-  for (;;) {
-    const sp = new URLSearchParams({
-      page: String(page),
-      limit: String(ADMIN_EXPORT_PAGE_SIZE),
-    });
-    const q = filters.search?.trim();
-    if (q) sp.set("search", q);
-    if (filters.status && filters.status !== "all") {
-      sp.set("status", filters.status);
-    }
-    if (filters.merchantId) sp.set("merchantId", filters.merchantId);
-    if (filters.active !== undefined) {
-      sp.set("active", String(filters.active));
-    }
-    const path = `/api/v1/admin/drops?${sp.toString()}`;
-    const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
-    await throwIfResNotOk(res, path, "admin");
-    const json = (await res.json()) as {
-      items?: Record<string, unknown>[];
-      total?: number;
-    };
-    const batch = (json.items ?? []).map((row) => mapAdminDropItem(row));
-    out.push(...batch);
-    if (batch.length < ADMIN_EXPORT_PAGE_SIZE) break;
-    if (out.length >= (json.total ?? out.length)) break;
-    page += 1;
-    if (page > 200) break;
-  }
-  return out;
+export function fetchAllAdminDropsForExport(
+  filters: Omit<AdminDropsListParams, "page" | "limit">
+) {
+  return fetchAllPages(
+    "/api/v1/admin/drops",
+    {
+      search: filters.search,
+      status:
+        filters.status && filters.status !== "all" ? filters.status : undefined,
+      merchantId: filters.merchantId,
+    },
+    mapAdminDropItem
+  );
 }
