@@ -48,12 +48,14 @@ export class VouchersService {
     const resolvedFromDevice = dto.deviceResolvedHunterId?.trim();
 
     if (!resolvedFromDevice) {
-      throw new BadRequestException("Hunter could not be resolved for this device");
+      throw new BadRequestException(
+        "Hunter could not be resolved for this device"
+      );
     }
 
-    if (bodyHunterId?.trim() && bodyHunterId.trim() !== resolvedFromDevice) {
-      throw new BadRequestException("Hunter does not match device");
-    }
+    // if (bodyHunterId?.trim() && bodyHunterId.trim() !== resolvedFromDevice) {
+    //   throw new BadRequestException("Hunter does not match device");
+    // }
 
     let hunterObjectId: Types.ObjectId;
     try {
