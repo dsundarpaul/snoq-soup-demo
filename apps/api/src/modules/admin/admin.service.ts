@@ -447,9 +447,7 @@ export class AdminService {
       this.database.drops.countDocuments(filter),
     ]);
 
-    const merchantIds = [
-      ...new Set(drops.map((d) => d.merchantId.toString())),
-    ];
+    const merchantIds = [...new Set(drops.map((d) => d.merchantId.toString()))];
     const merchants = await this.database.merchants
       .find({
         _id: { $in: merchantIds.map((id) => new Types.ObjectId(id)) },

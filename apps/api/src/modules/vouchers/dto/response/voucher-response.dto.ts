@@ -22,6 +22,13 @@ export class DropInfoDto {
     nullable: true,
   })
   logoUrl!: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Drop terms and conditions",
+    required: false,
+  })
+  termsAndConditions?: string | null;
 }
 
 export class ClaimedByDto {

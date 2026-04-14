@@ -89,6 +89,7 @@ export const drops = pgTable("drops", {
   longitude: real("longitude").notNull(),
   radius: real("radius").notNull().default(15),
   rewardValue: text("reward_value").notNull(),
+  termsAndConditions: text("terms_and_conditions"),
   logoUrl: text("logo_url"),
   redemptionType: text("redemption_type").notNull().default("anytime"),
   redemptionMinutes: real("redemption_minutes"),

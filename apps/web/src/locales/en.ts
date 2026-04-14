@@ -24,6 +24,12 @@ const en = {
   "home.readyToClaim": "Ready to Claim!",
   "home.nearbyDrops": "Nearby Treasures",
   "home.alreadyClaimed": "Already Claimed",
+  "home.activeDropsSection": "Active hunts",
+  "home.startingSoon": "Starting soon",
+  "home.claimedDrops": "Claimed rewards",
+  "home.redeemedRewards": "Redeemed rewards",
+  "home.timeToRedeem": "Time to redeem",
+  "home.redeemAnytime": "Redeem anytime",
   "home.loadingDrops": "Loading treasures...",
   "home.noDrops": "No Treasures Available",
   "home.noDropsDesc": "Check back soon for new rewards to hunt!",
@@ -151,6 +157,10 @@ const en = {
   "voucher.copied": "Copied!",
   "voucher.share": "Share",
   "voucher.sendToEmail": "Send to Email",
+  "voucher.invalidEmail": "Enter a valid email address",
+  "voucher.countryCode": "Country code",
+  "voucher.phoneNational": "Mobile number",
+  "voucher.phoneInvalid": "Enter a valid mobile number for this country",
   "voucher.emailSendSuccess": "Your email has been saved for this voucher.",
   "voucher.emailSendError": "Could not save your email. Please try again.",
   "voucher.saveViaWhatsApp": "Save via WhatsApp",
@@ -162,6 +172,9 @@ const en = {
   "voucher.left": "left",
   "voucher.starts": "Starts",
   "voucher.ends": "Ends",
+  "voucher.termsTitle": "Terms and conditions",
+  "voucher.termsToggleShow": "Show terms",
+  "voucher.termsToggleHide": "Hide terms",
   "voucher.rewardValue": "Reward Value",
   "voucher.openMagicLink": "Open Magic Link",
   "voucher.viewVoucher": "View Voucher",
@@ -226,7 +239,6 @@ const en = {
   "merchantVouchers.drop": "Drop",
   "merchantVouchers.claimedBy": "Claimed by",
   "merchantVouchers.claimed": "Claimed",
-  "merchantVouchers.expires": "Expires",
   "merchantVouchers.status": "Status",
   "merchantVouchers.redeemed": "Redeemed",
   "merchantVouchers.active": "Active",
@@ -409,6 +421,56 @@ const en = {
   "toast.fillAllFields": "Please fill all required fields",
   "toast.failedToSendEmail": "Failed to send email",
 
+  "merchant.form.tooltip.name":
+    "Short title shown on cards and in the AR hunt.",
+  "merchant.form.tooltip.description":
+    "What hunters see before they claim; keep it clear and exciting.",
+  "merchant.form.tooltip.reward":
+    "The offer text (e.g. discount or free item); max 20 characters.",
+  "merchant.form.tooltip.logo":
+    "Optional image shown on the drop card and voucher; upload a square logo.",
+  "merchant.form.tooltip.radius":
+    "How close (in meters) a hunter must be to claim; 5–1000.",
+  "merchant.form.tooltip.redemption":
+    "Rules for how long after claim the voucher stays valid.",
+  "merchant.form.tooltip.availability":
+    "Unlimited or cap how many people can claim this drop.",
+  "merchant.form.tooltip.schedule":
+    "When the drop is visible; leave empty for always-on (within app rules).",
+  "merchant.form.tooltip.terms":
+    "Optional legal or usage text shown when viewing or redeeming the voucher.",
+  "merchant.form.location.sectionTitle": "Set drop location",
+  "merchant.form.location.searchTitle": "1. Search address",
+  "merchant.form.location.searchDesc":
+    "Pick a place from Google; the pin and coordinates update.",
+  "merchant.form.location.searchInputLabel": "Search address",
+  "merchant.form.location.gpsTitle": "2. Use my GPS",
+  "merchant.form.location.gpsDesc":
+    "Sets the pin to your current position (browser will ask permission).",
+  "merchant.form.location.arTitle": "3. AR placement",
+  "merchant.form.location.arDesc":
+    "Place the reward in augmented reality; saves that spot as the drop.",
+  "merchant.form.location.advancedToggle": "Fine-tune coordinates",
+  "merchant.form.location.mapHint":
+    "Drag the map pin or use the options above; radius ring updates below.",
+  "merchant.form.datetime.saudiIntent":
+    "Schedule is intended for Saudi Arabia (AST, UTC+3).",
+  "merchant.form.datetime.localInputNote":
+    "The date/time controls use your device local timezone.",
+  "merchant.form.schedule.clearStart": "Clear start",
+  "merchant.form.schedule.clearEnd": "Clear end",
+  "merchant.form.logo.remove": "Remove logo",
+  "merchant.form.logo.uploadHint": "Upload an image file (no URL paste).",
+  "merchant.form.terms.label": "Terms and conditions (optional)",
+  "merchant.form.terms.placeholder":
+    "Shown to users when they view or redeem the voucher…",
+  "merchant.form.validation.toastTitle": "Check highlighted fields",
+  "merchant.form.validation.toastDesc":
+    "Fix the errors below and try again.",
+  "merchant.sheet.deleteDrop": "Delete drop",
+  "merchant.sheet.deleteConfirm":
+    "Delete this drop permanently? This cannot be undone.",
+
   // PWA Install
   "pwa.huntClaimReward": "Hunt. Claim. Reward.",
   "pwa.addToHomeScreen": "Add to Home Screen",
@@ -420,6 +482,7 @@ const en = {
   "drop.browseAll": "Browse All Treasures",
   "drop.rewardDrop": "Reward Treasure",
   "drop.claimYourReward": "Claim your reward",
+  "drop.claimReward": "Claim Reward",
   "drop.getWithinRange": "Get within {radius}m to claim this reward",
   "drop.getDirections": "Get Directions",
   "drop.huntThisDrop": "Hunt This Treasure",

@@ -3,6 +3,7 @@
 import {
   useMutation,
   useQuery,
+  keepPreviousData,
   type UseMutationOptions,
 } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -56,6 +57,9 @@ export function useClaimVoucherMutation(
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.history,
       });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.vouchers,
+      });
       options?.onSuccess?.(data, variables, onMutateResult, context);
     },
   });
@@ -96,6 +100,9 @@ export function useRedeemVoucherMutation(
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.history,
       });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.vouchers,
+      });
       options?.onSuccess?.(...args);
     },
   });
@@ -116,45 +123,105 @@ export function useVoucherByMagicTokenQuery(token: string) {
   });
 }
 
-export const merchantVouchersQueryKeys = {
-  list: (page: number, limit: number) =>
-    ["/api/v1/merchants/me/vouchers", page, limit] as const,
+export type MerchantVoucherStatus = "all" | "active" | "redeemed";
+
+export const MERCHANT_VOUCHERS_PAGE_SIZE = 20;
+
+export type MerchantVouchersListParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: MerchantVoucherStatus;
 };
 
-export function useMerchantVouchersQuery(page = 1, limit = 20) {
+export const merchantVouchersQueryKeys = {
+  list: (page: number, limit: number, search: string, status: string) =>
+    ["/api/v1/merchants/me/vouchers", "list", page, limit, search, status] as const,
+};
+
+export type MerchantVoucherRow = {
+  voucher: ReturnType<typeof mapNestVoucherToLegacy>;
+  dropName: string;
+  claimerName: string | null;
+  claimerEmail: string | null;
+};
+
+function mapVoucherRow(v: Record<string, unknown>): MerchantVoucherRow {
+  const drop = v.drop as { name?: string } | undefined;
+  const claimedBy = v.claimedBy as
+    | { name?: string | null; email?: string | null }
+    | undefined;
+  return {
+    voucher: mapNestVoucherToLegacy(v),
+    dropName: String(drop?.name ?? ""),
+    claimerName:
+      claimedBy?.name != null && String(claimedBy.name).trim() !== ""
+        ? String(claimedBy.name).trim()
+        : null,
+    claimerEmail:
+      claimedBy?.email != null && String(claimedBy.email).trim() !== ""
+        ? String(claimedBy.email).trim()
+        : null,
+  };
+}
+
+export function useMerchantVouchersQuery(params: MerchantVouchersListParams) {
+  const { page, limit, search, status } = params;
+  const searchTrimmed = search?.trim() ?? "";
+  const statusKey = status ?? "all";
+
   return useQuery({
-    queryKey: merchantVouchersQueryKeys.list(page, limit),
+    queryKey: merchantVouchersQueryKeys.list(page, limit, searchTrimmed, statusKey),
+    staleTime: 0,
+    gcTime: 0,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
-      const qs = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      const path = `/api/v1/merchants/me/vouchers?${qs.toString()}`;
+      const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (searchTrimmed) sp.set("search", searchTrimmed);
+      if (statusKey !== "all") sp.set("status", statusKey);
+      const path = `/api/v1/merchants/me/vouchers?${sp.toString()}`;
       const res = await apiFetchMaybeRetry("GET", path, { auth: "merchant" });
       await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as {
         vouchers?: Record<string, unknown>[];
         total?: number;
+        totalPages?: number;
       };
-      const vouchers = (json.vouchers ?? []).map((v) => {
-        const drop = v.drop as { name?: string } | undefined;
-        const claimedBy = v.claimedBy as
-          | { name?: string | null; email?: string | null }
-          | undefined;
-        return {
-          voucher: mapNestVoucherToLegacy(v),
-          dropName: String(drop?.name ?? ""),
-          claimerName:
-            claimedBy?.name != null && String(claimedBy.name).trim() !== ""
-              ? String(claimedBy.name).trim()
-              : null,
-          claimerEmail:
-            claimedBy?.email != null && String(claimedBy.email).trim() !== ""
-              ? String(claimedBy.email).trim()
-              : null,
-        };
-      });
-      return { vouchers, total: Number(json.total ?? 0) };
+      return {
+        vouchers: (json.vouchers ?? []).map(mapVoucherRow),
+        total: Number(json.total ?? 0),
+        totalPages: Math.max(1, json.totalPages ?? 1),
+      };
     },
   });
+}
+
+const EXPORT_PAGE_SIZE = 100;
+
+export async function fetchAllMerchantVouchersForExport(filters: {
+  search?: string;
+  status?: MerchantVoucherStatus;
+}): Promise<MerchantVoucherRow[]> {
+  const out: MerchantVoucherRow[] = [];
+  let page = 1;
+  for (;;) {
+    const sp = new URLSearchParams({ page: String(page), limit: String(EXPORT_PAGE_SIZE) });
+    const s = filters.search?.trim();
+    if (s) sp.set("search", s);
+    if (filters.status && filters.status !== "all") sp.set("status", filters.status);
+    const path = `/api/v1/merchants/me/vouchers?${sp.toString()}`;
+    const res = await apiFetchMaybeRetry("GET", path, { auth: "merchant" });
+    await throwIfResNotOk(res, path, "merchant");
+    const json = (await res.json()) as {
+      vouchers?: Record<string, unknown>[];
+      total?: number;
+    };
+    const batch = (json.vouchers ?? []).map(mapVoucherRow);
+    out.push(...batch);
+    if (batch.length < EXPORT_PAGE_SIZE) break;
+    if (out.length >= (json.total ?? out.length)) break;
+    page += 1;
+    if (page > 200) break;
+  }
+  return out;
 }

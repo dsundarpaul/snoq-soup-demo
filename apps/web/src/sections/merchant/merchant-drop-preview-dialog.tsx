@@ -144,6 +144,17 @@ export function MerchantDropPreviewDialog({
             </div>
           </div>
 
+          {form.watch("termsAndConditions")?.trim() ? (
+            <div className="rounded-lg border border-border p-3 text-sm">
+              <p className="font-medium text-foreground mb-1">
+                Terms and conditions
+              </p>
+              <p className="text-muted-foreground whitespace-pre-wrap line-clamp-6">
+                {form.watch("termsAndConditions")}
+              </p>
+            </div>
+          ) : null}
+
           <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Redemption:</span>

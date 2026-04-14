@@ -37,6 +37,7 @@ import { SendWhatsAppDto } from "./dto/request/send-whatsapp.dto";
 import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
 import { VoucherDetailResponseDto } from "./dto/response/voucher-detail-response.dto";
 import { RedeemResultDto } from "./dto/response/redeem-result.dto";
+import { HunterVouchersBucketsDto } from "./dto/response/hunter-vouchers-buckets.dto";
 
 @ApiTags("Vouchers")
 @Controller()
@@ -173,16 +174,32 @@ export class VouchersController {
   @ApiOperation({ summary: "Get current merchant's vouchers (paginated)" })
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    enum: ["all", "active", "redeemed"],
+  })
   @ApiResponse({ status: 200, type: [VoucherResponseDto] })
   async findByMerchant(
     @CurrentUser() user: CurrentUserType,
     @Query("page") page = 1,
     @Query("limit") limit = 20,
-  ): Promise<{ vouchers: VoucherResponseDto[]; total: number }> {
+    @Query("search") search?: string,
+    @Query("status") status?: string,
+  ): Promise<{
+    vouchers: VoucherResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     return this.vouchersService.findByMerchant(
       user.userId,
       Number(page),
       Number(limit),
+      search?.trim(),
+      status,
     );
   }
 
@@ -190,11 +207,13 @@ export class VouchersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("hunter")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get current hunter's vouchers" })
-  @ApiResponse({ status: 200, type: [VoucherResponseDto] })
+  @ApiOperation({
+    summary: "Get current hunter's vouchers (unredeemed and redeemed)",
+  })
+  @ApiResponse({ status: 200, type: HunterVouchersBucketsDto })
   async findByHunter(
     @CurrentUser() user: CurrentUserType,
-  ): Promise<VoucherResponseDto[]> {
+  ): Promise<HunterVouchersBucketsDto> {
     return this.vouchersService.findByHunter(user.userId);
   }
 }

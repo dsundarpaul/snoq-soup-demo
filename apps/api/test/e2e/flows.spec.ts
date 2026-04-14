@@ -379,7 +379,10 @@ describe("SouqSnap E2E Flows", () => {
         .set("Authorization", `Bearer ${hunterToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveProperty("unredeemed");
+      expect(response.body).toHaveProperty("redeemed");
+      expect(Array.isArray(response.body.unredeemed)).toBe(true);
+      expect(Array.isArray(response.body.redeemed)).toBe(true);
     });
   });
 

@@ -143,6 +143,7 @@ export class ScannerService {
     );
 
     const rewardFromVoucher = result.voucher?.drop?.rewardValue;
+    const termsFromDrop = result.voucher?.drop?.termsAndConditions ?? null;
 
     return {
       success: result.success,
@@ -154,6 +155,7 @@ export class ScannerService {
         ? {
             dropName: result.dropName,
             rewardValue: rewardFromVoucher ?? "",
+            termsAndConditions: termsFromDrop,
           }
         : null,
     };

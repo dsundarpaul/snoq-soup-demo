@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
+import { DropsModule } from "../drops/drops.module";
+import { MailModule } from "../mail/mail.module";
 import { VouchersService } from "./vouchers.service";
 import { VouchersController } from "./vouchers.controller";
 import { Voucher, VoucherSchema } from "../../database/schemas/voucher.schema";
@@ -12,6 +14,8 @@ import { Hunter, HunterSchema } from "../../database/schemas/hunter.schema";
 
 @Module({
   imports: [
+    MailModule,
+    DropsModule,
     MongooseModule.forFeature([
       { name: Voucher.name, schema: VoucherSchema },
       { name: Drop.name, schema: DropSchema },

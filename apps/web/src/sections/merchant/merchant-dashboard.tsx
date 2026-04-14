@@ -15,6 +15,7 @@ import {
   useMerchantAnalyticsQuery,
   useMerchantDropCodesQuery,
   useMerchantDropActiveMutation,
+  fetchAllMerchantDropsForExport,
 } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
@@ -38,6 +39,8 @@ import { filterAnalyticsByRange } from "@/sections/merchant/filter-analytics-by-
 import { MerchantDropSheet } from "@/sections/merchant/merchant-drop-sheet";
 import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
 import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
+import { downloadCsv } from "@/utils/download-csv";
+
 export default function MerchantDashboardPage() {
   const router = useRouter();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -53,6 +56,32 @@ export default function MerchantDashboardPage() {
 
   const [codesDropId, setCodesDropId] = useState<string | null>(null);
   const [codesText, setCodesText] = useState("");
+  const [dropsExporting, setDropsExporting] = useState(false);
+
+  const handleExportDropsCsv = async () => {
+    setDropsExporting(true);
+    try {
+      const rows = await fetchAllMerchantDropsForExport({});
+      downloadCsv(
+        `drops-${new Date().toISOString().slice(0, 10)}.csv`,
+        ["Name", "Reward", "Active", "Latitude", "Longitude", "Radius", "Created"],
+        rows.map((r) => [
+          r.name,
+          r.rewardValue,
+          r.active ? "yes" : "no",
+          r.latitude,
+          r.longitude,
+          r.radius,
+          r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "",
+        ]),
+      );
+      toast({ title: "Export ready" });
+    } catch {
+      toast({ title: "Export failed", variant: "destructive" });
+    } finally {
+      setDropsExporting(false);
+    }
+  };
   const [analyticsDateFrom, setAnalyticsDateFrom] = useState(() =>
     format(subDays(new Date(), 29), "yyyy-MM-dd")
   );
@@ -108,6 +137,8 @@ export default function MerchantDashboardPage() {
     },
     onSuccess: () => {
       invalidateDropRelatedQueries();
+      setShowCreateDialog(false);
+      setEditingDrop(null);
       toast({
         title: "Drop Deleted",
         description: "The drop has been removed successfully.",
@@ -313,7 +344,6 @@ export default function MerchantDashboardPage() {
             <MerchantDropsPanel
               stats={stats}
               statsLoading={statsLoading}
-              deletePending={deleteDropMutation.isPending}
               onCreateClick={openCreateDropDialog}
               onShareDrop={(dropId) => {
                 const shareableLink = publicUrls.drop(dropId);
@@ -325,7 +355,6 @@ export default function MerchantDashboardPage() {
               }}
               onCodesClick={setCodesDropId}
               onEditDrop={handleEditDrop}
-              onDeleteDrop={(id) => deleteDropMutation.mutate(id)}
               onDropActiveChange={(dropId, active) =>
                 dropActiveMutation.mutate({ dropId, active })
               }
@@ -333,6 +362,8 @@ export default function MerchantDashboardPage() {
               dropActiveTogglingId={
                 dropActiveMutation.variables?.dropId ?? null
               }
+              onExportCsv={() => void handleExportDropsCsv()}
+              exportPending={dropsExporting}
             />
           </TabsContent>
 
@@ -357,6 +388,8 @@ export default function MerchantDashboardPage() {
           if (!nextOpen) closeDropDialog();
         }}
         editingDrop={editingDrop}
+        onDeleteDrop={(id) => deleteDropMutation.mutate(id)}
+        deletePending={deleteDropMutation.isPending}
       />
 
       <MerchantPromoCodesDialog

@@ -36,7 +36,9 @@ export class S3Controller {
   @Post("signed-url")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Generate presigned URL for file upload (S3/MinIO)" })
+  @ApiOperation({
+    summary: "Generate presigned URL for file upload (S3/MinIO)",
+  })
   @ApiResponse({ status: 201, type: SignedUrlResponseDto })
   @ApiResponse({ status: 400, description: "Invalid file type or size" })
   @HttpCode(HttpStatus.CREATED)
@@ -54,7 +56,9 @@ export class S3Controller {
   @Post("upload")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   @ApiConsumes("multipart/form-data")
   @ApiOperation({ summary: "Upload file to Vercel Blob storage" })
   @ApiBody({
@@ -67,7 +71,10 @@ export class S3Controller {
       },
     },
   })
-  @ApiResponse({ status: 201, schema: { properties: { publicUrl: { type: "string" } } } })
+  @ApiResponse({
+    status: 201,
+    schema: { properties: { publicUrl: { type: "string" } } },
+  })
   @ApiResponse({ status: 400, description: "Invalid file type or size" })
   @HttpCode(HttpStatus.CREATED)
   async uploadFile(

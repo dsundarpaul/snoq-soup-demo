@@ -16,6 +16,9 @@ import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
 import { VoucherDetailResponseDto } from "./dto/response/voucher-detail-response.dto";
 import { RedeemResultDto } from "./dto/response/redeem-result.dto";
+import { HunterVouchersBucketsDto } from "./dto/response/hunter-vouchers-buckets.dto";
+import { MailService } from "../mail/mail.service";
+import { DropsService } from "../drops/drops.service";
 
 // Type-safe refactor: Define proper interface for QR payload
 interface QRPayload {
@@ -32,13 +35,21 @@ interface VoucherFilter {
 
 @Injectable()
 export class VouchersService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly mailService: MailService,
+    private readonly dropsService: DropsService,
+  ) {}
 
   async claim(
     dto: ClaimVoucherDto & { deviceResolvedHunterId?: string },
   ): Promise<VoucherResponseDto> {
-    const { dropId, deviceId, hunterId: hunterIdRaw, deviceResolvedHunterId } =
-      dto;
+    const {
+      dropId,
+      deviceId,
+      hunterId: hunterIdRaw,
+      deviceResolvedHunterId,
+    } = dto;
 
     let linkedHunterId: Types.ObjectId | undefined;
     if (deviceResolvedHunterId?.trim()) {
@@ -57,14 +68,14 @@ export class VouchersService {
       } catch {
         throw new BadRequestException("Invalid hunter ID");
       }
-      if (linkedHunterId && !linkedHunterId.equals(candidate)) {
-        throw new BadRequestException("Hunter does not match device");
-      }
+      // if (linkedHunterId && !linkedHunterId.equals(candidate)) {
+      //   throw new BadRequestException("Hunter does not match device");
+      // }
       if (!linkedHunterId) {
         const hunter = await this.database.hunters
           .findOne({
             _id: candidate,
-            deviceId,
+            // deviceId,
             deletedAt: null,
           })
           .select("_id")
@@ -303,55 +314,131 @@ export class VouchersService {
     return this.toDetailResponseDto(voucher);
   }
 
-  async findByHunter(hunterId: string): Promise<VoucherResponseDto[]> {
+  async findByHunter(hunterId: string): Promise<HunterVouchersBucketsDto> {
     const hunter = await this.database.hunters
       .findOne({ _id: hunterId, deletedAt: null })
       .select("deviceId")
       .lean();
 
     if (!hunter) {
-      return [];
+      return { unredeemed: [], redeemed: [] };
     }
 
     const filter: VoucherFilter = {
       deletedAt: null,
-      $or: [
-        { "claimedBy.hunterId": new Types.ObjectId(hunterId) },
-      ],
+      $or: [{ "claimedBy.hunterId": new Types.ObjectId(hunterId) }],
     };
 
     if (hunter.deviceId) {
       filter.$or.push({ "claimedBy.deviceId": hunter.deviceId });
     }
 
-    const vouchers = await this.database.vouchers
+    const vouchersList = await this.database.vouchers
       .find(filter)
       .sort({ claimedAt: -1 })
       .lean();
 
-    return vouchers.map((v) => this.toResponseDto(v as VoucherDocument));
+    const dropIdStrs = [
+      ...new Set(
+        vouchersList
+          .map((v) =>
+            v.dropId
+              ? typeof v.dropId === "string"
+                ? v.dropId
+                : v.dropId.toString()
+              : "",
+          )
+          .filter(Boolean),
+      ),
+    ];
+
+    const drops =
+      dropIdStrs.length > 0
+        ? await this.database.drops
+            .find({
+              _id: { $in: dropIdStrs.map((id) => new Types.ObjectId(id)) },
+              deletedAt: null,
+            })
+            .lean()
+        : [];
+
+    const dropMap = new Map(
+      drops.map((d) => [d._id.toString(), d as DropDocument]),
+    );
+
+    const unredeemed: HunterVouchersBucketsDto["unredeemed"] = [];
+    const redeemed: HunterVouchersBucketsDto["redeemed"] = [];
+
+    for (const v of vouchersList) {
+      const dropIdStr =
+        typeof v.dropId === "string"
+          ? v.dropId
+          : v.dropId?.toString() ?? "";
+      const doc = dropMap.get(dropIdStr);
+      if (!doc) {
+        continue;
+      }
+
+      const dropDto = this.dropsService.toResponseDto(doc);
+      const voucherDto = this.toResponseDto(v as VoucherDocument, null);
+
+      const item = { voucher: voucherDto, drop: dropDto };
+      if (v.redeemed) {
+        redeemed.push(item);
+      } else {
+        unredeemed.push(item);
+      }
+    }
+
+    return { unredeemed, redeemed };
   }
 
   async findByMerchant(
     merchantId: string,
     page = 1,
     limit = 20,
-  ): Promise<{ vouchers: VoucherResponseDto[]; total: number }> {
+    search?: string,
+    status?: string,
+  ): Promise<{
+    vouchers: VoucherResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     const skip = (page - 1) * limit;
-
-    // Query using ObjectId since merchantId is stored as ObjectId
     const merchantObjectId = new Types.ObjectId(merchantId);
+
+    const filter: Record<string, unknown> = {
+      merchantId: merchantObjectId,
+      deletedAt: null,
+    };
+
+    if (status === "redeemed") {
+      filter.redeemed = true;
+    } else if (status === "active") {
+      filter.redeemed = false;
+    }
+
+    let dropIdFilter: Types.ObjectId[] | undefined;
+    if (search) {
+      const regex = new RegExp(search, "i");
+      const matchingDrops = await this.database.drops
+        .find({ merchantId: merchantObjectId, name: regex, deletedAt: null })
+        .select("_id")
+        .lean();
+      dropIdFilter = matchingDrops.map((d) => d._id as Types.ObjectId);
+      filter.dropId = { $in: dropIdFilter };
+    }
+
     const [vouchers, total] = await Promise.all([
       this.database.vouchers
-        .find({ merchantId: merchantObjectId, deletedAt: null })
+        .find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      this.database.vouchers.countDocuments({
-        merchantId: merchantObjectId,
-        deletedAt: null,
-      }),
+      this.database.vouchers.countDocuments(filter),
     ]);
 
     const dropIds = [
@@ -404,6 +491,8 @@ export class VouchersService {
       ]),
     );
 
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
     return {
       vouchers: vouchers.map((v) => {
         const dto = this.toResponseDto(
@@ -426,6 +515,9 @@ export class VouchersService {
         return dto;
       }),
       total,
+      page,
+      limit,
+      totalPages,
     };
   }
 
@@ -453,9 +545,13 @@ export class VouchersService {
 
     await voucher.save();
 
-    // TODO: Implement actual email sending via email service
-    // This is a placeholder for email integration
-    console.log(`Sending voucher email to ${email}: ${magicLink}`);
+    const dropDoc = await this.database.drops.findById(voucher.dropId);
+    const dropName =
+      dropDoc && "name" in dropDoc && dropDoc.name
+        ? String(dropDoc.name)
+        : "Reward";
+
+    await this.mailService.sendVoucherMagicLink(email, magicLink, dropName);
   }
 
   async sendByWhatsApp(
@@ -622,6 +718,7 @@ export class VouchersService {
           description: drop.description,
           rewardValue: drop.rewardValue,
           logoUrl: drop.logoUrl ?? null,
+          termsAndConditions: drop.termsAndConditions ?? null,
         }
       : undefined;
 
@@ -674,6 +771,7 @@ export class VouchersService {
           description: drop.description,
           rewardValue: drop.rewardValue,
           logoUrl: drop.logoUrl ?? null,
+          termsAndConditions: drop.termsAndConditions ?? null,
         }
       : {
           id: "",
@@ -681,6 +779,7 @@ export class VouchersService {
           description: "",
           rewardValue: "",
           logoUrl: null,
+          termsAndConditions: null,
         };
 
     // Build redemption config

@@ -1,19 +1,56 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gift, Share2, Mail, Check, Copy, ExternalLink, Phone, Timer, AlertTriangle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Gift,
+  Share2,
+  Mail,
+  Check,
+  Copy,
+  ExternalLink,
+  Phone,
+  Timer,
+  AlertTriangle,
+  ChevronDown,
+} from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import type { Voucher, Drop } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { publicUrls, getPublicSiteUrl } from "@/lib/app-config";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import {
+  apiFetch,
+  apiFetchMaybeRetry,
+  throwIfResNotOk,
+} from "@/lib/api-client";
+import {
+  PHONE_DIAL_CODE_CHOICES,
+  getHunterNationalNumberBounds,
+  hunterMobileLengthHint,
+} from "@/lib/hunter-phone-bounds";
+
+function isValidVoucherEmail(value: string): boolean {
+  const s = value.trim();
+  return s.length > 4 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 function formatTimeRemaining(seconds: number, expiredLabel: string): string {
   if (seconds <= 0) return expiredLabel;
@@ -81,10 +118,12 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
     }
   };
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [dialCode, setDialCode] = useState("+966");
+  const [nationalNumber, setNationalNumber] = useState("");
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   const appUrl = getPublicSiteUrl();
   const magicLink = publicUrls.voucher(voucher.magicToken);
@@ -92,7 +131,8 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
 
   const hasTimer = drop.redemptionType === "timer" && drop.redemptionMinutes;
-  const hasWindow = drop.redemptionType === "window" && (drop as any).redemptionDeadline;
+  const hasWindow =
+    drop.redemptionType === "window" && Boolean(drop.redemptionDeadline);
   const hasVoucherExpiresAt = Boolean(voucher.expiresAt);
   const hasTimeLimit = hasVoucherExpiresAt || hasTimer || hasWindow;
   const isExpired = hasTimeLimit && timeRemaining !== null && timeRemaining <= 0;
@@ -122,8 +162,8 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
       if (hasTimer && voucher.claimedAt) {
         const claimedTime = new Date(voucher.claimedAt).getTime();
         expiryTime = claimedTime + drop.redemptionMinutes! * 60 * 1000;
-      } else if (hasWindow) {
-        expiryTime = new Date((drop as any).redemptionDeadline).getTime();
+      } else if (hasWindow && drop.redemptionDeadline) {
+        expiryTime = new Date(drop.redemptionDeadline).getTime();
       } else {
         return;
       }
@@ -143,7 +183,7 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
     voucher.claimedAt,
     voucher.expiresAt,
     drop.redemptionMinutes,
-    (drop as any).redemptionDeadline,
+    drop.redemptionDeadline,
   ]);
 
   useEffect(() => {
@@ -178,19 +218,29 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
     }
   };
 
+  const phoneBounds = getHunterNationalNumberBounds(dialCode);
+  const phoneValid =
+    nationalNumber.length >= phoneBounds.min &&
+    nationalNumber.length <= phoneBounds.max;
+  const emailValid = isValidVoucherEmail(email);
+
   const handleEmailSend = async () => {
-    if (!email || !voucher.magicToken) return;
+    if (!emailValid || !voucher.magicToken) return;
 
     setEmailSending(true);
     try {
-      const response = await apiFetch("POST", "/api/v1/vouchers/send-email", {
-        body: {
-          voucherId: voucher.id,
-          email: email.trim(),
-          magicToken: voucher.magicToken,
-          magicLink,
-        },
-      });
+      const response = await apiFetchMaybeRetry(
+        "POST",
+        "/api/v1/vouchers/send-email",
+        {
+          body: {
+            voucherId: voucher.id,
+            email: email.trim(),
+            magicToken: voucher.magicToken,
+            magicLink,
+          },
+        }
+      );
       await throwIfResNotOk(response, "/api/v1/vouchers/send-email");
       setEmailSent(true);
       toast({ title: t("voucher.emailSendSuccess") });
@@ -206,8 +256,18 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
   };
 
   const handleWhatsAppSave = () => {
+    if (!phoneValid) {
+      toast({
+        title: t("voucher.phoneInvalid"),
+        variant: "destructive",
+      });
+      return;
+    }
+    const digits =
+      dialCode.replace(/\D/g, "") +
+      nationalNumber.replace(/\D/g, "");
     const message = `Your Souq-Snap voucher is ready! Use this link to view your reward: ${magicLink}`;
-    const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
 
@@ -263,6 +323,32 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
         )}
       </div>
 
+      {drop.termsAndConditions?.trim() ? (
+        <Collapsible
+          open={termsOpen}
+          onOpenChange={setTermsOpen}
+          className="mb-6 rounded-lg border border-border"
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="flex w-full items-center justify-between px-4 py-3 h-auto font-medium text-foreground hover:bg-muted/80"
+            >
+              <span>{t("voucher.termsTitle")}</span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 transition-transform ${
+                  termsOpen ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pb-4 text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-3">
+            {drop.termsAndConditions}
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+
       {promoCodeData?.promoCode && (
         <div className="mb-6" data-testid="section-partner-code">
           <p className="text-sm font-medium text-muted-foreground mb-2 text-center">
@@ -308,9 +394,10 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
               <p className={`text-2xl font-mono font-bold ${isExpired ? 'text-destructive' : hasTimer ? 'text-primary' : 'text-amber-600'}`}>
                 {timeRemaining !== null ? formatTimeRemaining(timeRemaining, t("status.expired")) : `${t("common.loading")}`}
               </p>
-              {hasWindow && !isExpired && (drop as any).redemptionDeadline && (
+              {hasWindow && !isExpired && drop.redemptionDeadline && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t("voucher.deadline")}: {new Date((drop as any).redemptionDeadline).toLocaleString()}
+                  {t("voucher.deadline")}:{" "}
+                  {new Date(drop.redemptionDeadline).toLocaleString()}
                 </p>
               )}
             </div>
@@ -343,7 +430,7 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
             />
             <Button
               onClick={handleEmailSend}
-              disabled={!email.trim() || emailSending || emailSent}
+              disabled={!emailValid || emailSending || emailSent}
               size="icon"
               variant={emailSent ? "default" : "outline"}
               data-testid="button-send-email"
@@ -351,32 +438,65 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
               {emailSent ? <Check className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
             </Button>
           </div>
+          {email.trim().length > 0 && !emailValid && (
+            <p className="text-xs text-destructive">{t("voucher.invalidEmail")}</p>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-sm text-muted-foreground">
+          <Label htmlFor="phone-national" className="text-sm text-muted-foreground">
             {t("voucher.saveViaWhatsApp")}
           </Label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+            <Select
+              value={dialCode}
+              onValueChange={(v) => {
+                setDialCode(v);
+                setNationalNumber("");
+              }}
+            >
+              <SelectTrigger
+                className="h-10 w-[118px] shrink-0"
+                aria-label={t("voucher.countryCode")}
+                data-testid="select-phone-dial"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {PHONE_DIAL_CODE_CHOICES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
-              id="phone"
+              id="phone-national"
               type="tel"
-              placeholder="+966 5XX XXX XXXX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="flex-1"
-              data-testid="input-phone"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder={`${t("voucher.phoneNational")} (${hunterMobileLengthHint(phoneBounds)})`}
+              value={nationalNumber}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "");
+                setNationalNumber(digits.slice(0, phoneBounds.max));
+              }}
+              className="flex-1 min-w-[140px]"
+              data-testid="input-phone-national"
             />
             <Button
               onClick={handleWhatsAppSave}
-              disabled={!phone}
+              disabled={!phoneValid}
               size="icon"
-              className="bg-[#25D366] hover:bg-[#25D366]/90"
+              className="bg-[#25D366] hover:bg-[#25D366]/90 shrink-0"
               data-testid="button-whatsapp-save"
             >
               <Phone className="w-4 h-4 text-white" />
             </Button>
           </div>
+          {nationalNumber.length > 0 && !phoneValid && (
+            <p className="text-xs text-destructive">{t("voucher.phoneInvalid")}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 pt-2">

@@ -8,6 +8,14 @@ import {
   buildVerificationEmailContent,
 } from "./email-templates";
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 @Injectable()
 export class MailService {
   private createTransporter(): nodemailer.Transporter<SMTPTransport.SentMessageInfo> {
@@ -75,6 +83,33 @@ export class MailService {
     await transporter.sendMail({
       from: config.smtp.from,
       to: email,
+      subject,
+      text,
+      html,
+    });
+  }
+
+  async sendVoucherMagicLink(
+    to: string,
+    magicLink: string,
+    dropName: string,
+  ): Promise<void> {
+    const subject = `Your SouqSnap reward — ${dropName}`;
+    const text = `You asked to save your voucher for "${dropName}".\n\nOpen your reward:\n${magicLink}\n`;
+    const href = magicLink.replace(/"/g, "%22");
+    const html = `<p>You asked to save your voucher for <strong>${escapeHtml(
+      dropName,
+    )}</strong>.</p><p><a href="${href}">Open your reward</a></p>`;
+
+    if (!config.ENABLE_EMAIL || !config.smtp.host) {
+      console.log(`[MailService] voucher email to ${to}: ${magicLink}`);
+      return;
+    }
+
+    const transporter = this.createTransporter();
+    await transporter.sendMail({
+      from: config.smtp.from,
+      to,
       subject,
       text,
       html,

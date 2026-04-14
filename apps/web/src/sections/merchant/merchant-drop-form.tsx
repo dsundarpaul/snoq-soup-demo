@@ -1,6 +1,7 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import type {
   SubmitErrorHandler,
   SubmitHandler,
@@ -27,7 +28,20 @@ import {
   Timer,
   Target,
   Calendar,
+  Info,
+  ChevronDown,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MapPickerLazy } from "@/components/map-picker-lazy";
 import { DatetimePicker } from "@/components/datetime-picker";
 import { GooglePlacesAutocomplete } from "@/components/google-places-autocomplete";
@@ -37,6 +51,8 @@ import {
   type CreateDropForm,
 } from "./create-drop-schema";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/upload-validation";
+import { useLanguage } from "@/contexts/language-context";
+import { cn } from "@/lib/utils";
 
 export const MERCHANT_DROP_FORM_ID = "merchant-drop-form";
 
@@ -45,6 +61,25 @@ export function useMerchantDropForm(): UseFormReturn<CreateDropForm> {
     resolver: zodResolver(createDropSchema),
     defaultValues: getCreateDropEmptyValues(),
   });
+}
+
+function FieldTip({ text }: { text: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex shrink-0 text-muted-foreground hover:text-foreground"
+          aria-label="Info"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-left">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export interface MerchantDropFormProps {
@@ -72,10 +107,14 @@ export function MerchantDropForm({
   onSubmitValid,
   onSubmitInvalid,
 }: MerchantDropFormProps) {
+  const { t } = useLanguage();
+  const [coordsOpen, setCoordsOpen] = useState(false);
   const redemptionType = form.watch("redemptionType");
   const availabilityTypeRaw = form.watch("availabilityType");
   const availabilitySelectValue =
     availabilityTypeRaw === "captureLimit" ? "captureLimit" : "unlimited";
+  const err = form.formState.errors;
+  const logoUrl = form.watch("logoUrl");
 
   return (
     <form
@@ -84,68 +123,70 @@ export function MerchantDropForm({
       className="space-y-4"
     >
       <div className="space-y-2">
-        <Label htmlFor="name">Drop Name</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="name">Drop Name</Label>
+          <FieldTip text={t("merchant.form.tooltip.name")} />
+        </div>
         <Input
           id="name"
           placeholder="e.g., Golden Cup Challenge"
           maxLength={100}
+          className={cn(err.name && "border-destructive")}
           {...form.register("name")}
           data-testid="input-drop-name"
         />
-        {form.formState.errors.name && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.name.message}
-          </p>
+        {err.name && (
+          <p className="text-sm text-destructive">{err.name.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="description">Description</Label>
+          <FieldTip text={t("merchant.form.tooltip.description")} />
+        </div>
         <Textarea
           id="description"
           placeholder="Describe what users will find..."
           maxLength={250}
+          className={cn(err.description && "border-destructive")}
           {...form.register("description")}
           data-testid="input-drop-description"
         />
-        {form.formState.errors.description && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.description.message}
-          </p>
+        {err.description && (
+          <p className="text-sm text-destructive">{err.description.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="rewardValue">Reward Value</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="rewardValue">Reward Value</Label>
+          <FieldTip text={t("merchant.form.tooltip.reward")} />
+        </div>
         <Input
           id="rewardValue"
-          placeholder="e.g., 50% OFF, Free Coffee"
-          maxLength={50}
+          placeholder="e.g., 50% OFF"
+          maxLength={20}
+          className={cn(err.rewardValue && "border-destructive")}
           {...form.register("rewardValue")}
           data-testid="input-drop-reward"
         />
-        {form.formState.errors.rewardValue && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.rewardValue.message}
-          </p>
+        {err.rewardValue && (
+          <p className="text-sm text-destructive">{err.rewardValue.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="logoUrl" className="flex items-center gap-2">
-          <ImageIcon className="w-4 h-4" />
-          Merchant Logo (Optional)
-        </Label>
-        <div className="flex gap-2">
-          <Input
-            id="logoUrl"
-            placeholder="https://example.com/your-logo.png"
-            {...form.register("logoUrl")}
-            data-testid="input-drop-logo"
-            className="flex-1"
-          />
+        <div className="flex items-center gap-2">
+          <Label className="flex items-center gap-2">
+            <ImageIcon className="w-4 h-4" />
+            Drop Logo (Optional)
+          </Label>
+          <FieldTip text={t("merchant.form.tooltip.logo")} />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <label
-            className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer"
+            className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer gap-2 text-sm"
             data-testid="button-upload-logo"
           >
             {isUploadingLogo ? (
@@ -153,6 +194,7 @@ export function MerchantDropForm({
             ) : (
               <Upload className="w-4 h-4" />
             )}
+            Upload image
             <input
               type="file"
               accept={ACCEPTED_IMAGE_TYPES}
@@ -166,119 +208,227 @@ export function MerchantDropForm({
               data-testid="input-logo-file"
             />
           </label>
+          {logoUrl?.startsWith("http") ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                form.setValue("logoUrl", "");
+                form.clearErrors("logoUrl");
+              }}
+            >
+              {t("merchant.form.logo.remove")}
+            </Button>
+          ) : null}
         </div>
         <p className="text-xs text-muted-foreground">
-          Click upload icon to select an image, or paste a URL
+          {t("merchant.form.logo.uploadHint")}
         </p>
-        {form.watch("logoUrl") &&
-          form.watch("logoUrl")?.startsWith("http") && (
-            <div className="flex items-center gap-2 p-2 bg-muted rounded">
-              <img
-                src={form.watch("logoUrl")}
-                alt=""
-                className="w-8 h-8 object-cover rounded"
-              />
-              <span className="text-xs text-muted-foreground truncate flex-1">
-                {form.watch("logoUrl")}
-              </span>
-            </div>
-          )}
-        {form.formState.errors.logoUrl && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.logoUrl.message}
-          </p>
+        {logoUrl?.startsWith("http") ? (
+          <div className="flex items-center gap-2 p-2 bg-muted rounded w-fit">
+            <img
+              src={logoUrl}
+              alt=""
+              className="w-10 h-10 object-cover rounded"
+            />
+          </div>
+        ) : null}
+        {err.logoUrl && (
+          <p className="text-sm text-destructive">{err.logoUrl.message}</p>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="latitude">Latitude</Label>
-          <Input
-            id="latitude"
-            type="number"
-            step="any"
-            {...form.register("latitude")}
-            data-testid="input-drop-latitude"
-          />
-          {form.formState.errors.latitude && (
-            <p className="text-sm text-destructive">
-              Valid latitude required (-90 to 90)
-            </p>
-          )}
+      <div className="space-y-3 rounded-lg border border-border p-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground">
+            {t("merchant.form.location.sectionTitle")}
+          </h3>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="longitude">Longitude</Label>
-          <Input
-            id="longitude"
-            type="number"
-            step="any"
-            {...form.register("longitude")}
-            data-testid="input-drop-longitude"
-          />
-          {form.formState.errors.longitude && (
-            <p className="text-sm text-destructive">
-              Valid longitude required (-180 to 180)
+        <p className="text-xs text-muted-foreground">
+          {t("merchant.form.location.mapHint")}
+        </p>
+
+        <Card className="shadow-none">
+          <CardHeader className="py-3 px-4 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t("merchant.form.location.searchTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              {t("merchant.form.location.searchDesc")}
             </p>
-          )}
-        </div>
+            <GooglePlacesAutocomplete
+              apiKey={googleMapsApiKey}
+              onPlaceSelect={(lat, lng) => {
+                form.setValue("latitude", parseFloat(lat.toFixed(6)));
+                form.setValue("longitude", parseFloat(lng.toFixed(6)));
+              }}
+              label={t("merchant.form.location.searchInputLabel")}
+              placeholder="Type an address to move the pin…"
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader className="py-3 px-4 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t("merchant.form.location.gpsTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              {t("merchant.form.location.gpsDesc")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={onUseCurrentLocation}
+              disabled={isGettingLocation}
+            >
+              {isGettingLocation ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Getting...
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Use My GPS
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader className="py-3 px-4 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t("merchant.form.location.arTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              {t("merchant.form.location.arDesc")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={onOpenArPlacer}
+              data-testid="button-ar-placement"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              AR Placement
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onUseCurrentLocation}
-          disabled={isGettingLocation}
-        >
-          {isGettingLocation ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Getting...
-            </>
-          ) : (
-            <>
-              <MapPin className="w-4 h-4 mr-2" />
-              Use My GPS
-            </>
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onOpenArPlacer}
-          data-testid="button-ar-placement"
-        >
-          <Camera className="w-4 h-4 mr-2" />
-          AR Placement
-        </Button>
-      </div>
-
-      <GooglePlacesAutocomplete
-        apiKey={googleMapsApiKey}
-        onPlaceSelect={(lat, lng) => {
-          form.setValue("latitude", parseFloat(lat.toFixed(6)));
-          form.setValue("longitude", parseFloat(lng.toFixed(6)));
-        }}
-        label="Find address (Google)"
-        placeholder="Type an address to move the pin…"
-      />
+      <Collapsible open={coordsOpen} onOpenChange={setCoordsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-1 px-0 text-muted-foreground"
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform",
+                coordsOpen && "rotate-180"
+              )}
+            />
+            {t("merchant.form.location.advancedToggle")}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-3 pt-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="latitude">Latitude</Label>
+              <Input
+                id="latitude"
+                type="number"
+                step="any"
+                className={cn(err.latitude && "border-destructive")}
+                {...form.register("latitude")}
+                data-testid="input-drop-latitude"
+              />
+              {err.latitude && (
+                <p className="text-sm text-destructive">
+                  {err.latitude.message ??
+                    "Valid latitude required (-90 to 90)"}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longitude">Longitude</Label>
+              <Input
+                id="longitude"
+                type="number"
+                step="any"
+                className={cn(err.longitude && "border-destructive")}
+                {...form.register("longitude")}
+                data-testid="input-drop-longitude"
+              />
+              {err.longitude && (
+                <p className="text-sm text-destructive">
+                  {err.longitude.message ??
+                    "Valid longitude required (-180 to 180)"}
+                </p>
+              )}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="space-y-2">
-        <Label htmlFor="radius">Claim Radius (meters)</Label>
-        <Input
-          id="radius"
-          type="number"
-          min={5}
-          max={2000}
-          {...form.register("radius")}
-          data-testid="input-drop-radius"
+        <div className="flex items-center gap-2">
+          <Label htmlFor="radius">Claim Radius (meters)</Label>
+          <FieldTip text={t("merchant.form.tooltip.radius")} />
+        </div>
+        <Controller
+          control={form.control}
+          name="radius"
+          render={({ field, fieldState }) => {
+            const n = field.value;
+            const display =
+              typeof n === "number" && Number.isFinite(n) ? String(n) : "";
+            return (
+              <>
+                <Input
+                  id="radius"
+                  inputMode="numeric"
+                  maxLength={4}
+                  autoComplete="off"
+                  value={display}
+                  onChange={(e) => {
+                    const digits = e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 4);
+                    if (digits === "") {
+                      field.onChange(15);
+                      return;
+                    }
+                    field.onChange(Number(digits));
+                  }}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  ref={field.ref}
+                  className={cn(fieldState.error && "border-destructive")}
+                  data-testid="input-drop-radius"
+                />
+                {fieldState.error && (
+                  <p className="text-sm text-destructive">
+                    {fieldState.error.message}
+                  </p>
+                )}
+              </>
+            );
+          }}
         />
-        {form.formState.errors.radius && (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.radius.message ??
-              "Radius must be between 5 and 2000 meters"}
-          </p>
-        )}
       </div>
 
       <MapPickerLazy
@@ -294,27 +444,49 @@ export function MerchantDropForm({
       />
 
       <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Timer className="w-4 h-4" />
-          Redemption Rules
-        </Label>
-        <Select
-          value={form.watch("redemptionType")}
-          onValueChange={(value: "anytime" | "timer" | "window") =>
-            form.setValue("redemptionType", value)
-          }
-        >
-          <SelectTrigger data-testid="select-redemption-type">
-            <SelectValue placeholder="Select redemption type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="anytime">Anytime (within drop dates)</SelectItem>
-            <SelectItem value="timer">Timed (short countdown)</SelectItem>
-            <SelectItem value="window">
-              Redemption Window (hours/days)
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Label className="flex items-center gap-2">
+            <Timer className="w-4 h-4" />
+            Redemption Rules
+          </Label>
+          <FieldTip text={t("merchant.form.tooltip.redemption")} />
+        </div>
+        <Controller
+          control={form.control}
+          name="redemptionType"
+          render={({ field, fieldState }) => (
+            <>
+              <Select
+                value={field.value}
+                onValueChange={(value: "anytime" | "timer" | "window") => {
+                  field.onChange(value);
+                  form.clearErrors("redemptionType");
+                }}
+              >
+                <SelectTrigger
+                  className={cn(fieldState.error && "border-destructive")}
+                  data-testid="select-redemption-type"
+                >
+                  <SelectValue placeholder="Select redemption type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="anytime">
+                    Anytime (within drop dates)
+                  </SelectItem>
+                  <SelectItem value="timer">Timed (short countdown)</SelectItem>
+                  <SelectItem value="window">
+                    Redemption Window (hours/days)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {fieldState.error && (
+                <p className="text-sm text-destructive">
+                  {fieldState.error.message}
+                </p>
+              )}
+            </>
+          )}
+        />
         <p className="text-xs text-muted-foreground">
           {redemptionType === "anytime" &&
             "Users can redeem anytime within the drop's start and end dates"}
@@ -357,34 +529,60 @@ export function MerchantDropForm({
             data-testid="input-redemption-deadline"
           />
           <p className="text-xs text-muted-foreground">
+            {t("merchant.form.datetime.saudiIntent")}{" "}
+            {t("merchant.form.datetime.localInputNote")}
+          </p>
+          <p className="text-xs text-muted-foreground">
             All vouchers must be redeemed by this date and time
           </p>
         </div>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="availabilityType" className="flex items-center gap-2">
-          <Target className="w-4 h-4" />
-          Availability Type
-        </Label>
-        <Select
-          value={availabilitySelectValue}
-          onValueChange={(value: "unlimited" | "captureLimit") => {
-            form.setValue("availabilityType", value);
-            if (value !== "captureLimit") {
-              form.setValue("captureLimit", undefined);
-              form.clearErrors("captureLimit");
-            }
-          }}
-        >
-          <SelectTrigger data-testid="select-availability-type">
-            <SelectValue placeholder="Select availability type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unlimited">Unlimited</SelectItem>
-            <SelectItem value="captureLimit">Capture Limit</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="availabilityType" className="flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            Availability Type
+          </Label>
+          <FieldTip text={t("merchant.form.tooltip.availability")} />
+        </div>
+        <Controller
+          control={form.control}
+          name="availabilityType"
+          render={({ field, fieldState }) => (
+            <>
+              <Select
+                value={
+                  field.value === "captureLimit" ? "captureLimit" : "unlimited"
+                }
+                onValueChange={(value: "unlimited" | "captureLimit") => {
+                  field.onChange(value);
+                  if (value !== "captureLimit") {
+                    form.setValue("captureLimit", undefined);
+                    form.clearErrors("captureLimit");
+                  }
+                  form.clearErrors("availabilityType");
+                }}
+              >
+                <SelectTrigger
+                  className={cn(fieldState.error && "border-destructive")}
+                  data-testid="select-availability-type"
+                >
+                  <SelectValue placeholder="Select availability type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unlimited">Unlimited</SelectItem>
+                  <SelectItem value="captureLimit">Capture Limit</SelectItem>
+                </SelectContent>
+              </Select>
+              {fieldState.error && (
+                <p className="text-sm text-destructive">
+                  {fieldState.error.message}
+                </p>
+              )}
+            </>
+          )}
+        />
         <p className="text-xs text-muted-foreground">
           {availabilitySelectValue === "unlimited" &&
             "Anyone can claim this drop at any time"}
@@ -402,36 +600,108 @@ export function MerchantDropForm({
             min={1}
             max={99999}
             placeholder="Enter limit"
-            {...form.register("captureLimit", { valueAsNumber: true })}
+            className={cn(err.captureLimit && "border-destructive")}
+            {...form.register("captureLimit")}
             data-testid="input-capture-limit"
           />
+          {err.captureLimit && (
+            <p className="text-sm text-destructive">
+              {err.captureLimit.message as string}
+            </p>
+          )}
         </div>
       )}
 
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Label htmlFor="termsAndConditions">
+            {t("merchant.form.terms.label")}
+          </Label>
+          <FieldTip text={t("merchant.form.tooltip.terms")} />
+        </div>
+        <Textarea
+          id="termsAndConditions"
+          placeholder={t("merchant.form.terms.placeholder")}
+          maxLength={4000}
+          rows={4}
+          className={cn(err.termsAndConditions && "border-destructive")}
+          {...form.register("termsAndConditions")}
+          data-testid="input-drop-terms"
+        />
+        {err.termsAndConditions && (
+          <p className="text-sm text-destructive">
+            {err.termsAndConditions.message}
+          </p>
+        )}
+      </div>
+
       <div className="space-y-4 border-t pt-4">
-        <Label className="flex items-center gap-2 text-base font-medium">
-          <Calendar className="w-4 h-4" />
-          Drop Schedule (Optional)
-        </Label>
+        <div className="flex items-center gap-2">
+          <Label className="flex items-center gap-2 text-base font-medium">
+            <Calendar className="w-4 h-4" />
+            Drop Schedule (Optional)
+          </Label>
+          <FieldTip text={t("merchant.form.tooltip.schedule")} />
+        </div>
         <p className="text-xs text-muted-foreground">
           Set when this drop becomes available and expires. Leave empty for no
           time restrictions.
         </p>
+        <p className="text-xs text-muted-foreground">
+          {t("merchant.form.datetime.saudiIntent")}{" "}
+          {t("merchant.form.datetime.localInputNote")}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <DatetimePicker
-            label="Start Date/Time"
-            id="startTime"
-            value={form.watch("startTime") || ""}
-            onChange={(v) => form.setValue("startTime", v)}
-            data-testid="input-start-time"
-          />
-          <DatetimePicker
-            label="End Date/Time"
-            id="endTime"
-            value={form.watch("endTime") || ""}
-            onChange={(v) => form.setValue("endTime", v)}
-            data-testid="input-end-time"
-          />
+          <div className="space-y-2">
+            <DatetimePicker
+              label="Start Date/Time"
+              id="startTime"
+              value={form.watch("startTime") || ""}
+              onChange={(v) => form.setValue("startTime", v)}
+              data-testid="input-start-time"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                form.setValue("startTime", "");
+                form.clearErrors("startTime");
+              }}
+            >
+              {t("merchant.form.schedule.clearStart")}
+            </Button>
+            {err.startTime && (
+              <p className="text-sm text-destructive">
+                {err.startTime.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <DatetimePicker
+              label="End Date/Time"
+              id="endTime"
+              value={form.watch("endTime") || ""}
+              onChange={(v) => form.setValue("endTime", v)}
+              data-testid="input-end-time"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                form.setValue("endTime", "");
+                form.clearErrors("endTime");
+              }}
+            >
+              {t("merchant.form.schedule.clearEnd")}
+            </Button>
+            {err.endTime && (
+              <p className="text-sm text-destructive">{err.endTime.message}</p>
+            )}
+          </div>
         </div>
       </div>
     </form>

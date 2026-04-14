@@ -17,7 +17,8 @@ export class SendEmailDto {
   voucherId!: string;
 
   @ApiProperty({
-    description: "Magic token proving access to this voucher (same as in the magic link)",
+    description:
+      "Magic token proving access to this voucher (same as in the magic link)",
   })
   @IsString()
   magicToken!: string;

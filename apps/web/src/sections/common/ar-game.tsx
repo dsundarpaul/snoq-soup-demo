@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useGeolocation, calculateDistance } from "@/hooks/use-geolocation";
@@ -9,7 +9,6 @@ import {
   calculateBearing,
   getAngleDifference,
 } from "@/hooks/use-device-orientation";
-import { useVoucherStorage } from "@/hooks/use-voucher-storage";
 import { useDeviceId } from "@/hooks/use-device-id";
 import { useLanguage } from "@/contexts/language-context";
 import { VoucherDisplay } from "@/components/voucher-display";
@@ -31,7 +30,10 @@ import {
 import type { Drop, Voucher } from "@shared/schema";
 import { useActiveDropsQuery } from "@/hooks/api/drop/use-drop";
 import { useClaimVoucherMutation } from "@/hooks/api/voucher/use-voucher";
-import { useTreasureHunterProfileQuery } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import {
+  useHunterVouchersQuery,
+  useTreasureHunterProfileQuery,
+} from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 
 const DEFAULT_DROP = {
   id: "default-drop",
@@ -43,6 +45,7 @@ const DEFAULT_DROP = {
   radius: 15,
   rewardValue: "50% OFF",
   logoUrl: null,
+  termsAndConditions: null,
   redemptionType: "anytime" as const,
   redemptionMinutes: null,
   active: true,
@@ -505,7 +508,8 @@ function CaptureAnimationInner({ onComplete }: { onComplete: () => void }) {
         />
       ))}
 
-      <div className="relative text-center animate-bounce">
+      <div className="relative flex flex-col items-center text-center animate-bounce">
+        <div className="relative w-32 h-32 shrink-0">
         <div
           className="w-32 h-32 rounded-full bg-teal/30 absolute inset-0 animate-ping"
           style={{ animationDuration: "1s" }}
@@ -519,6 +523,7 @@ function CaptureAnimationInner({ onComplete }: { onComplete: () => void }) {
             <path d="M5 3h14c.5 0 1 .5 1 1l-2 8H6L4 4c0-.5.5-1 1-1z" />
             <path d="M7 12h10l-1.5 6c-.1.5-.5.8-1 .8H9.5c-.5 0-.9-.3-1-.8L7 12z" />
           </svg>
+        </div>
         </div>
         <h2 className="text-3xl font-bold text-teal mt-6 animate-pulse">
           {t("ar.captured")}
@@ -543,8 +548,27 @@ export default function ARGamePage() {
   const targetDropId = searchParams.get("drop");
 
   const { data: hunterProfile } = useTreasureHunterProfileQuery();
+  const { data: hunterVoucherBuckets } = useHunterVouchersQuery();
 
-  const { vouchers, saveVoucher, hasClaimedDrop } = useVoucherStorage();
+  const unredeemedRows = hunterVoucherBuckets?.unredeemed ?? [];
+  const redeemedRows = hunterVoucherBuckets?.redeemed ?? [];
+  const allVoucherRows = useMemo(
+    () => [...unredeemedRows, ...redeemedRows],
+    [unredeemedRows, redeemedRows],
+  );
+
+  const claimedDropIdSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const row of allVoucherRows) {
+      s.add(row.voucher.dropId);
+    }
+    return s;
+  }, [allVoucherRows]);
+
+  const hasClaimedDrop = useCallback(
+    (dropId: string) => claimedDropIdSet.has(dropId),
+    [claimedDropIdSet],
+  );
   const [dismissedClaimDropId, setDismissedClaimDropId] = useState<
     string | null
   >(null);
@@ -604,7 +628,6 @@ export default function ARGamePage() {
 
   const claimMutation = useClaimVoucherMutation({
     onSuccess: (data) => {
-      saveVoucher(data.voucher, data.drop);
       setPendingVoucher(data);
       setShowCaptureAnimation(true);
     },
@@ -641,8 +664,8 @@ export default function ARGamePage() {
   }, [activeDrop?.id]);
 
   useEffect(() => {
-    const existingVoucher = vouchers.find(
-      (v) => v.voucher.dropId === activeDrop?.id
+    const existingVoucher = allVoucherRows.find(
+      (v) => v.voucher.dropId === activeDrop?.id,
     );
     if (
       existingVoucher &&
@@ -655,7 +678,7 @@ export default function ARGamePage() {
         drop: existingVoucher.drop,
       });
     }
-  }, [vouchers, activeDrop, claimedVoucher, dismissedClaimDropId]);
+  }, [allVoucherRows, activeDrop, claimedVoucher, dismissedClaimDropId]);
 
   const handleBackFromClaimedVoucher = () => {
     if (activeDrop) {
@@ -837,12 +860,23 @@ export default function ARGamePage() {
             </div>
           </div>
 
+          {activeDrop?.termsAndConditions?.trim() ? (
+            <div className="mb-3 max-h-24 overflow-y-auto rounded-md border border-white/10 bg-black/50 p-2 text-left">
+              <p className="text-xs font-semibold text-teal mb-1">
+                {t("voucher.termsTitle")}
+              </p>
+              <p className="text-xs text-slate-300 whitespace-pre-wrap">
+                {activeDrop.termsAndConditions}
+              </p>
+            </div>
+          ) : null}
+
           {alreadyClaimed ? (
             <Button
               className="w-full bg-primary text-primary-foreground"
               onClick={() => {
-                const v = vouchers.find(
-                  (v) => v.voucher.dropId === activeDrop?.id
+                const v = allVoucherRows.find(
+                  (row) => row.voucher.dropId === activeDrop?.id,
                 );
                 if (v) setClaimedVoucher({ voucher: v.voucher, drop: v.drop });
               }}
@@ -866,7 +900,7 @@ export default function ARGamePage() {
               ) : (
                 <>
                   <Trophy className="w-5 h-5 mr-2" />
-                  {t("voucher.rewardClaimed")}
+                  {t("drop.claimReward")}
                 </>
               )}
             </Button>

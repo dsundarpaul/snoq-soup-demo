@@ -9,6 +9,7 @@ export class ActiveDropDto {
   radius!: number;
   rewardValue!: number;
   logoUrl?: string;
+  termsAndConditions?: string | null;
   distance?: number;
   merchantId!: string;
   merchantName!: string;

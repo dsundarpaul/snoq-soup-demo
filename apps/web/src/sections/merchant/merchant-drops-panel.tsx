@@ -15,10 +15,10 @@ import {
   Share2,
   Tag,
   Pencil,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   Search,
+  Download,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -65,15 +65,15 @@ export interface MerchantDropsPanelProps {
   statsLoading?: boolean;
   externalList?: MerchantDropsPanelExternalList;
   hideSummaryCards?: boolean;
-  deletePending: boolean;
   onCreateClick: () => void;
   onShareDrop: (dropId: string) => void;
   onCodesClick: (dropId: string) => void;
   onEditDrop: (drop: Drop) => void;
-  onDeleteDrop: (dropId: string) => void;
   onDropActiveChange: (dropId: string, active: boolean) => void;
   dropActiveTogglePending: boolean;
   dropActiveTogglingId: string | null;
+  onExportCsv?: () => void;
+  exportPending?: boolean;
 }
 
 export function MerchantDropsPanel({
@@ -81,15 +81,15 @@ export function MerchantDropsPanel({
   statsLoading = false,
   externalList,
   hideSummaryCards = false,
-  deletePending,
   onCreateClick,
   onShareDrop,
   onCodesClick,
   onEditDrop,
-  onDeleteDrop,
   onDropActiveChange,
   dropActiveTogglePending,
   dropActiveTogglingId,
+  onExportCsv,
+  exportPending = false,
 }: MerchantDropsPanelProps) {
   const [internalPage, setInternalPage] = useState(1);
   const [internalSearch, setInternalSearch] = useState("");
@@ -239,15 +239,34 @@ export function MerchantDropsPanel({
               <MapPin className="w-5 h-5 text-primary" />
               Drops
             </CardTitle>
-            <Button
-              size="sm"
-              className="gap-2 shrink-0"
-              onClick={onCreateClick}
-              data-testid="button-create-drop"
-            >
-              <Plus className="w-4 h-4" />
-              New Drop
-            </Button>
+            <div className="flex items-center gap-2">
+              {onExportCsv ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={exportPending}
+                  onClick={onExportCsv}
+                >
+                  {exportPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Export CSV
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                className="gap-2 shrink-0"
+                onClick={onCreateClick}
+                data-testid="button-create-drop"
+              >
+                <Plus className="w-4 h-4" />
+                New Drop
+              </Button>
+            </div>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="relative flex-1 min-w-[200px] sm:max-w-xs">
@@ -429,27 +448,6 @@ export function MerchantDropsPanel({
                             data-testid={`button-edit-drop-${drop.id}`}
                           >
                             <Pencil className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this drop? This action cannot be undone."
-                                )
-                              ) {
-                                onDeleteDrop(drop.id);
-                              }
-                            }}
-                            disabled={deletePending}
-                            data-testid={`button-delete-drop-${drop.id}`}
-                          >
-                            {deletePending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            )}
                           </Button>
                         </div>
                       </td>

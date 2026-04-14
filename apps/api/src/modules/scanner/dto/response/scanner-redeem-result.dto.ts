@@ -33,5 +33,6 @@ export class ScannerRedeemResultDto {
   voucher!: {
     dropName: string;
     rewardValue: string;
+    termsAndConditions?: string | null;
   } | null;
 }

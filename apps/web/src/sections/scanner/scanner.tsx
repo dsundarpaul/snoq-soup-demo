@@ -248,6 +248,16 @@ export default function ScannerPage() {
                         </span>
                       </div>
                     </div>
+                    {scanResult.drop.termsAndConditions?.trim() ? (
+                      <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 text-left">
+                        <p className="text-xs font-semibold text-foreground mb-1">
+                          {t("voucher.termsTitle")}
+                        </p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {scanResult.drop.termsAndConditions}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>

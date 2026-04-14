@@ -13,7 +13,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Plus, Pencil, Eye, X, Store } from "lucide-react";
+import {
+  MapPin,
+  Loader2,
+  Plus,
+  Pencil,
+  Eye,
+  X,
+  Store,
+  Trash2,
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { publicUrls } from "@/lib/app-config";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
@@ -38,19 +47,7 @@ import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-pre
 import { adminQueryKeys } from "@/hooks/api/admin/use-admin";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const FIELD_LABELS: Record<string, string> = {
-  name: "Drop Name",
-  description: "Description",
-  latitude: "Latitude",
-  longitude: "Longitude",
-  radius: "Radius",
-  rewardValue: "Reward Value",
-  logoUrl: "Logo URL",
-  captureLimit: "Capture Limit",
-  startTime: "Start Time",
-  endTime: "End Time",
-};
+import { useLanguage } from "@/contexts/language-context";
 
 function invalidateDropRelatedQueries(): void {
   void queryClient.invalidateQueries({ queryKey: merchantQueryKeys.drops });
@@ -103,6 +100,7 @@ function dropToFormValues(drop: Drop): CreateDropForm {
       drop.voucherAbsoluteExpiresAt
     ),
     voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? undefined,
+    termsAndConditions: drop.termsAndConditions ?? "",
   };
 }
 
@@ -120,6 +118,8 @@ export interface MerchantDropSheetProps {
   editingDrop: Drop | null;
   adminContext?: MerchantDropSheetAdminContext;
   onAdminMutationSuccess?: () => void;
+  onDeleteDrop?: (dropId: string) => void;
+  deletePending?: boolean;
 }
 
 export function MerchantDropSheet({
@@ -128,8 +128,11 @@ export function MerchantDropSheet({
   editingDrop,
   adminContext,
   onAdminMutationSuccess,
+  onDeleteDrop,
+  deletePending = false,
 }: MerchantDropSheetProps) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const isAdminMode = Boolean(adminContext);
   const form = useMerchantDropForm();
   const [showPreview, setShowPreview] = useState(false);
@@ -285,12 +288,14 @@ export function MerchantDropSheet({
   const handleValidationError: SubmitErrorHandler<CreateDropForm> = (
     errors
   ) => {
-    const errorFields = Object.keys(errors).map(
-      (key) => FIELD_LABELS[key] || key
-    );
+    const keys = Object.keys(errors) as (keyof CreateDropForm)[];
+    const first = keys[0];
+    if (first) {
+      form.setFocus(first);
+    }
     toast({
-      title: "Please fix the following fields",
-      description: errorFields.join(", "),
+      title: t("merchant.form.validation.toastTitle"),
+      description: t("merchant.form.validation.toastDesc"),
       variant: "destructive",
     });
   };
@@ -524,6 +529,26 @@ export function MerchantDropSheet({
             >
               Cancel
             </Button>
+            {editingDrop && onDeleteDrop ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deletePending || isSubmitting}
+                onClick={() => {
+                  if (window.confirm(t("merchant.sheet.deleteConfirm"))) {
+                    onDeleteDrop(editingDrop.id);
+                  }
+                }}
+                data-testid="button-delete-drop-sheet"
+              >
+                {deletePending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                {t("merchant.sheet.deleteDrop")}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="secondary"

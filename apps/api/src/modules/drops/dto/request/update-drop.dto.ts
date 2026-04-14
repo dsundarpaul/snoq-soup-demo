@@ -8,6 +8,7 @@ import {
   Min,
   Max,
   Matches,
+  MaxLength,
 } from "class-validator";
 
 enum RedemptionType {
@@ -80,7 +81,17 @@ export class UpdateDropDto {
   })
   @IsString()
   @IsOptional()
+  @MaxLength(20)
   rewardValue?: string;
+
+  @ApiProperty({
+    description: "Terms and conditions for redeemers",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(4000)
+  termsAndConditions?: string;
 
   @ApiProperty({
     example: "https://example.com/logo.png",

@@ -23,7 +23,9 @@ import {
 import {
   mapHunterProfileToLegacy,
   mapHunterHistoryToVoucherRows,
+  mapHunterVouchersBucketsToLegacy,
 } from "@/lib/nest-mappers";
+import type { Drop, Voucher } from "@shared/schema";
 import type {
   HunterLoginInput,
   HunterSignupInput,
@@ -32,9 +34,35 @@ import type {
 export const treasureHunterQueryKeys = {
   profile: ["hunter-profile-v1"] as const,
   history: ["hunter-history-v1"] as const,
+  vouchers: ["hunter-vouchers-v1"] as const,
   leaderboard: (limit: number) =>
     ["/api/v1/leaderboard", limit] as const,
 };
+
+export type HunterVoucherRow = { voucher: Voucher; drop: Drop };
+
+export function useHunterVouchersQuery() {
+  const hasHunterAuth = useHasRoleCredentials("hunter");
+  return useQuery({
+    queryKey: treasureHunterQueryKeys.vouchers,
+    queryFn: async () => {
+      const path = "/api/v1/hunters/me/vouchers";
+      const res = await apiFetchMaybeRetry("GET", path, {
+        auth: "hunter",
+      });
+      if (res.status === 401) {
+        if (hadAuthCredentials("hunter")) {
+          invalidateAuthSession("hunter");
+        }
+        return { unredeemed: [], redeemed: [] };
+      }
+      await throwIfResNotOk(res, path, "hunter");
+      const json = (await res.json()) as Record<string, unknown>;
+      return mapHunterVouchersBucketsToLegacy(json);
+    },
+    enabled: hasHunterAuth,
+  });
+}
 
 export function useTreasureHunterProfileQuery() {
   const hasHunterAuth = useHasRoleCredentials("hunter");
@@ -90,6 +118,9 @@ export function useTreasureHunterLoginMutation(
       clearSessionsExcept("hunter");
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
+      });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.vouchers,
       });
       options?.onSuccess?.(...args);
     },
@@ -151,6 +182,9 @@ export function useTreasureHunterSignupMutation(
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
       });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.vouchers,
+      });
       options?.onSuccess?.(...args);
     },
   });
@@ -185,6 +219,9 @@ export function useTreasureHunterLogoutMutation(
     onSuccess: (...args) => {
       queryClient.invalidateQueries({
         queryKey: treasureHunterQueryKeys.profile,
+      });
+      queryClient.invalidateQueries({
+        queryKey: treasureHunterQueryKeys.vouchers,
       });
       options?.onSuccess?.(...args);
     },

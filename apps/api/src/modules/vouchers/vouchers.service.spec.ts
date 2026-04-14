@@ -2,9 +2,13 @@ import { ForbiddenException } from "@nestjs/common";
 import { Types } from "mongoose";
 import { VouchersService } from "./vouchers.service";
 import { DatabaseService } from "../../database/database.service";
+import { MailService } from "../mail/mail.service";
+import { DropsService } from "../drops/drops.service";
 
 describe("VouchersService", () => {
   let service: VouchersService;
+  let mailService: { sendVoucherMagicLink: jest.Mock };
+  let dropsService: { toResponseDto: jest.Mock };
   let database: {
     vouchers: {
       findOne: jest.Mock;
@@ -18,6 +22,22 @@ describe("VouchersService", () => {
   };
 
   beforeEach(() => {
+    mailService = { sendVoucherMagicLink: jest.fn().mockResolvedValue(undefined) };
+    dropsService = {
+      toResponseDto: jest.fn().mockReturnValue({
+        id: "drop",
+        name: "Drop",
+        location: { lat: 0, lng: 0 },
+        radius: 15,
+        rewardValue: "",
+        redemption: { type: "anytime" },
+        availability: { type: "unlimited" },
+        active: true,
+        merchantId: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
     database = {
       vouchers: {
         findOne: jest.fn(),
@@ -29,7 +49,11 @@ describe("VouchersService", () => {
       promoCodes: { findOne: jest.fn(), findOneAndUpdate: jest.fn() },
       hunters: { findByIdAndUpdate: jest.fn(), findOne: jest.fn() },
     };
-    service = new VouchersService(database as unknown as DatabaseService);
+    service = new VouchersService(
+      database as unknown as DatabaseService,
+      mailService as unknown as MailService,
+      dropsService as unknown as DropsService,
+    );
   });
 
   describe("redeem", () => {

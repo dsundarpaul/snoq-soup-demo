@@ -8,6 +8,7 @@ import {
   IsOptional,
   Min,
   Max,
+  MaxLength,
 } from "class-validator";
 import { HydratedDocument, Types } from "mongoose";
 
@@ -115,6 +116,17 @@ export class Drop {
   @IsString()
   @Prop({ type: String, required: true, trim: true })
   rewardValue!: string;
+
+  @ApiProperty({
+    nullable: true,
+    description: "Terms and conditions shown when redeeming",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(4000)
+  @Prop({ type: String, default: null })
+  termsAndConditions!: string | null;
 
   @ApiProperty({ nullable: true, description: "Drop logo URL" })
   @IsString()

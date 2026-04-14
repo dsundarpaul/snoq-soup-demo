@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { API_ORIGIN } from "@/lib/app-config";
 import { useDeviceId } from "@/hooks/use-device-id";
+import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import { queryClient } from "@/lib/queryClient";
 import { isHunterDeviceLoginSuppressed } from "@/lib/auth-session";
 import { getAccessToken, setTokenBundle } from "@/lib/auth-tokens";
 
@@ -37,6 +39,15 @@ export function HunterApiSessionSync() {
           setTokenBundle("hunter", {
             accessToken: body.accessToken,
             refreshToken: body.refreshToken,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: treasureHunterQueryKeys.profile,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: treasureHunterQueryKeys.vouchers,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: treasureHunterQueryKeys.history,
           });
         } catch {
           /* ignore */

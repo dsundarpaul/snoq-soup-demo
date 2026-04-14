@@ -8,6 +8,7 @@ import {
   Max,
   IsBoolean,
   Matches,
+  MaxLength,
 } from "class-validator";
 
 enum RedemptionType {
@@ -70,7 +71,17 @@ export class CreateDropDto {
 
   @ApiProperty({ example: "50% Discount", description: "Reward value" })
   @IsString()
+  @MaxLength(20)
   rewardValue!: string;
+
+  @ApiProperty({
+    description: "Terms and conditions for redeemers",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(4000)
+  termsAndConditions?: string;
 
   @ApiProperty({
     example: "https://example.com/logo.png",

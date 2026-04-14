@@ -25,6 +25,7 @@ export class DropResponseDto {
   radius!: number;
   rewardValue!: string;
   logoUrl?: string | null;
+  termsAndConditions?: string | null;
   redemption!: RedemptionConfigDto;
   availability!: AvailabilityDto;
   schedule?: ScheduleDto;

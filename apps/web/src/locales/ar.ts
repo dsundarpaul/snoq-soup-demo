@@ -24,6 +24,12 @@ const ar = {
   "home.readyToClaim": "جاهز للاقتناص!",
   "home.nearbyDrops": "كنوز قريبة",
   "home.alreadyClaimed": "تم الاقتناص",
+  "home.activeDropsSection": "صيد نشط",
+  "home.startingSoon": "يبدأ قريباً",
+  "home.claimedDrops": "مكافآت مُقتَنصة",
+  "home.redeemedRewards": "مكافآت مُستَردّة",
+  "home.timeToRedeem": "الوقت للاسترداد",
+  "home.redeemAnytime": "استرداد في أي وقت",
   "home.loadingDrops": "جاري تحميل الكنوز...",
   "home.noDrops": "لا توجد كنوز متاحة",
   "home.noDropsDesc": "تحقق لاحقاً لمكافآت جديدة!",
@@ -151,6 +157,10 @@ const ar = {
   "voucher.copied": "تم النسخ!",
   "voucher.share": "مشاركة",
   "voucher.sendToEmail": "إرسال بالبريد",
+  "voucher.invalidEmail": "أدخل بريداً إلكترونياً صالحاً",
+  "voucher.countryCode": "رمز الدولة",
+  "voucher.phoneNational": "رقم الجوال",
+  "voucher.phoneInvalid": "أدخل رقماً صالحاً لهذه الدولة",
   "voucher.emailSendSuccess": "تم حفظ بريدك الإلكتروني لهذه القسيمة.",
   "voucher.emailSendError": "تعذر حفظ بريدك الإلكتروني. حاول مرة أخرى.",
   "voucher.saveViaWhatsApp": "حفظ عبر واتساب",
@@ -162,6 +172,9 @@ const ar = {
   "voucher.left": "متبقي",
   "voucher.starts": "يبدأ",
   "voucher.ends": "ينتهي",
+  "voucher.termsTitle": "الشروط والأحكام",
+  "voucher.termsToggleShow": "عرض الشروط",
+  "voucher.termsToggleHide": "إخفاء الشروط",
   "voucher.rewardValue": "قيمة المكافأة",
   "voucher.openMagicLink": "فتح الرابط السحري",
   "voucher.viewVoucher": "عرض القسيمة",
@@ -226,7 +239,6 @@ const ar = {
   "merchantVouchers.drop": "الكنز",
   "merchantVouchers.claimedBy": "اقتُنص بواسطة",
   "merchantVouchers.claimed": "تاريخ الاقتناص",
-  "merchantVouchers.expires": "ينتهي",
   "merchantVouchers.status": "الحالة",
   "merchantVouchers.redeemed": "مسترد",
   "merchantVouchers.active": "نشط",
@@ -408,6 +420,50 @@ const ar = {
   "toast.fillAllFields": "يرجى ملء جميع الحقول المطلوبة",
   "toast.failedToSendEmail": "فشل إرسال البريد",
 
+  "merchant.form.tooltip.name": "عنوان قصير يظهر على البطاقات وفي صيد الواقع المعزز.",
+  "merchant.form.tooltip.description":
+    "ما يراه الصيادون قبل الاقتناص؛ اجعله واضحاً ومثيراً.",
+  "merchant.form.tooltip.reward":
+    "نص العرض (خصم أو هدية مجانية)؛ بحد أقصى ٢٠ حرفاً.",
+  "merchant.form.tooltip.logo":
+    "صورة اختيارية على بطاقة الكنز والقسيمة؛ ارفع شعاراً مربعاً.",
+  "merchant.form.tooltip.radius":
+    "مدى القرب بالمتر (٥–١٠٠٠) المطلوب للاقتناص.",
+  "merchant.form.tooltip.redemption": "قواعد صلاحية القسيمة بعد الاقتناص.",
+  "merchant.form.tooltip.availability":
+    "غير محدود أو حد أقصى لعدد من يمكنهم الاقتناص.",
+  "merchant.form.tooltip.schedule": "متى يظهر الكنز؛ اتركه فارغاً للاستمرار.",
+  "merchant.form.tooltip.terms":
+    "نص قانوني أو استخدام اختياري يظهر عند عرض القسيمة أو استبدالها.",
+  "merchant.form.location.sectionTitle": "تحديد موقع الكنز",
+  "merchant.form.location.searchTitle": "١. بحث عنوان",
+  "merchant.form.location.searchDesc":
+    "اختر مكاناً من جوجل؛ يتحدث الدبوس والإحداثيات.",
+  "merchant.form.location.searchInputLabel": "بحث عنوان",
+  "merchant.form.location.gpsTitle": "٢. استخدام موقعي GPS",
+  "merchant.form.location.gpsDesc":
+    "يضع الدبوس على موقعك الحالي (المتصفح يطلب الإذن).",
+  "merchant.form.location.arTitle": "٣. وضع بالواقع المعزز",
+  "merchant.form.location.arDesc":
+    "ضع المكافأة في الواقع المعزز؛ يُحفظ ذلك كموقع الكنز.",
+  "merchant.form.location.advancedToggle": "ضبط الإحداثيات يدوياً",
+  "merchant.form.location.mapHint":
+    "اسحب الدبوس على الخريطة أو استخدم الخيارات أعلاه.",
+  "merchant.form.datetime.saudiIntent": "الجدول يُقصد به توقيت السعودية (٣+ توقيت عالمي).",
+  "merchant.form.datetime.localInputNote": "حقول التاريخ والوقت تستخدم توقيت جهازك.",
+  "merchant.form.schedule.clearStart": "مسح البداية",
+  "merchant.form.schedule.clearEnd": "مسح النهاية",
+  "merchant.form.logo.remove": "إزالة الشعار",
+  "merchant.form.logo.uploadHint": "ارفع ملف صورة (بدون لصق رابط).",
+  "merchant.form.terms.label": "الشروط والأحكام (اختياري)",
+  "merchant.form.terms.placeholder":
+    "يُعرض للمستخدمين عند عرض القسيمة أو استبدالها…",
+  "merchant.form.validation.toastTitle": "راجع الحقول المحددة",
+  "merchant.form.validation.toastDesc": "صحح الأخطاء أدناه ثم أعد المحاولة.",
+  "merchant.sheet.deleteDrop": "حذف الكنز",
+  "merchant.sheet.deleteConfirm":
+    "حذف هذا الكنز نهائياً؟ لا يمكن التراجع.",
+
   // PWA Install
   "pwa.huntClaimReward": "اكتشف. اقتنص. استرد.",
   "pwa.addToHomeScreen": "أضف إلى الشاشة الرئيسية",
@@ -419,6 +475,7 @@ const ar = {
   "drop.browseAll": "تصفح جميع الكنوز",
   "drop.rewardDrop": "كنز مكافأة",
   "drop.claimYourReward": "اقتنص مكافأتك",
+  "drop.claimReward": "استلم المكافأة",
   "drop.getWithinRange": "اقترب إلى {radius}م لاقتناص المكافأة",
   "drop.getDirections": "احصل على الاتجاهات",
   "drop.huntThisDrop": "اكتشف هذا الكنز",

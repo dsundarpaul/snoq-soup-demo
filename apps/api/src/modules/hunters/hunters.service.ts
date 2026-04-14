@@ -170,9 +170,7 @@ export class HuntersService {
 
     const query: VoucherQuery = {
       deletedAt: null,
-      $or: [
-        { "claimedBy.hunterId": new Types.ObjectId(hunterId) },
-      ],
+      $or: [{ "claimedBy.hunterId": new Types.ObjectId(hunterId) }],
     };
 
     if (hunter.deviceId) {

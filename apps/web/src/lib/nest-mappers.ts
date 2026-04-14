@@ -52,6 +52,8 @@ export function mapNestDropToLegacy(
     radius: Number(raw.radius ?? 15),
     rewardValue,
     logoUrl: (raw.logoUrl as string | null) ?? null,
+    termsAndConditions:
+      (raw.termsAndConditions as string | null | undefined) ?? null,
     redemptionType: (redemption?.type as Drop["redemptionType"]) ?? "anytime",
     redemptionMinutes: redemption?.minutes ?? null,
     redemptionDeadline: redemption?.deadline
@@ -211,6 +213,8 @@ export function mapRedeemResultToLegacy(raw: Record<string, unknown>): {
     description: String(dropInfo?.description ?? ""),
     rewardValue: String(dropInfo?.rewardValue ?? ""),
     logoUrl: (dropInfo?.logoUrl as string | null) ?? null,
+    termsAndConditions:
+      (dropInfo?.termsAndConditions as string | null | undefined) ?? null,
     location: { lat: 0, lng: 0 },
     radius: 15,
   });
@@ -227,7 +231,11 @@ export function mapStaffScannerRedeemToLegacy(raw: Record<string, unknown>): {
   const redeemedAt =
     redeemedAtRaw != null ? new Date(String(redeemedAtRaw)) : new Date();
   const vInfo = raw.voucher as
-    | { dropName?: string; rewardValue?: string }
+    | {
+        dropName?: string;
+        rewardValue?: string;
+        termsAndConditions?: string | null;
+      }
     | null
     | undefined;
   const voucher = {
@@ -251,6 +259,7 @@ export function mapStaffScannerRedeemToLegacy(raw: Record<string, unknown>): {
     description: "",
     rewardValue: String(vInfo?.rewardValue ?? ""),
     logoUrl: null,
+    termsAndConditions: vInfo?.termsAndConditions ?? null,
     location: { lat: 0, lng: 0 },
     radius: 15,
   });
@@ -313,6 +322,8 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
     description: String(dropInfo?.description ?? ""),
     rewardValue: String(dropInfo?.rewardValue ?? ""),
     logoUrl: dropInfo?.logoUrl ?? null,
+    termsAndConditions:
+      (dropInfo?.termsAndConditions as string | null | undefined) ?? null,
     location: { lat: 0, lng: 0 },
     radius: 15,
     redemption: redemptionConfig
@@ -352,6 +363,40 @@ export function mapClaimResponseToLegacy(raw: Record<string, unknown>): {
         rewardValue: "",
       });
   return { voucher, drop };
+}
+
+export function mapHunterVoucherBundleToLegacy(row: {
+  voucher: Record<string, unknown>;
+  drop: Record<string, unknown>;
+}): { voucher: Voucher; drop: Drop } {
+  const voucher = mapNestVoucherToLegacy(row.voucher);
+  const dropRaw = row.drop;
+  const drop = mapNestDropToLegacy({
+    ...dropRaw,
+    id: dropRaw.id ?? voucher.dropId,
+    merchantId: (dropRaw.merchantId as string) ?? voucher.merchantId,
+  });
+  return { voucher, drop };
+}
+
+export function mapHunterVouchersBucketsToLegacy(json: Record<string, unknown>): {
+  unredeemed: { voucher: Voucher; drop: Drop }[];
+  redeemed: { voucher: Voucher; drop: Drop }[];
+} {
+  const u = (json.unredeemed as Record<string, unknown>[] | undefined) ?? [];
+  const r = (json.redeemed as Record<string, unknown>[] | undefined) ?? [];
+  return {
+    unredeemed: u.map((row) =>
+      mapHunterVoucherBundleToLegacy(
+        row as { voucher: Record<string, unknown>; drop: Record<string, unknown> },
+      ),
+    ),
+    redeemed: r.map((row) =>
+      mapHunterVoucherBundleToLegacy(
+        row as { voucher: Record<string, unknown>; drop: Record<string, unknown> },
+      ),
+    ),
+  };
 }
 
 export function mapHunterProfileToLegacy(raw: Record<string, unknown>): {
@@ -410,6 +455,7 @@ export function mapHunterHistoryToVoucherRows(
       radius: 15,
       rewardValue: String(row.rewardValue ?? ""),
       logoUrl: null,
+      termsAndConditions: null,
       redemptionType: "anytime",
       redemptionMinutes: null,
       redemptionDeadline: null,
@@ -590,6 +636,7 @@ export function createDropFormToNestDto(data: {
   radius: number;
   rewardValue: string;
   logoUrl?: string | null;
+  termsAndConditions?: string;
   redemptionType: "anytime" | "timer" | "window";
   redemptionMinutes?: number;
   redemptionDeadline?: string;
@@ -614,6 +661,9 @@ export function createDropFormToNestDto(data: {
     radius: data.radius,
     rewardValue: data.rewardValue,
     logoUrl: data.logoUrl || undefined,
+    termsAndConditions: data.termsAndConditions?.trim()
+      ? data.termsAndConditions.trim()
+      : undefined,
     redemptionType: data.redemptionType,
     redemptionMinutes:
       data.redemptionType === "timer" ? data.redemptionMinutes : undefined,

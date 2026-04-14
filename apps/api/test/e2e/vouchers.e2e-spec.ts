@@ -638,11 +638,19 @@ describe("Voucher Lifecycle E2E Tests", () => {
         .set("Authorization", `Bearer ${hunterRes.body.accessToken}`)
         .expect(200);
 
-      expect(Array.isArray(vouchersRes.body)).toBe(true);
-      expect(vouchersRes.body.length).toBeGreaterThan(0);
-      expect(vouchersRes.body.some((v: any) => v.id === claimRes.body.id)).toBe(
-        true,
-      );
+      expect(vouchersRes.body).toHaveProperty("unredeemed");
+      expect(vouchersRes.body).toHaveProperty("redeemed");
+      expect(Array.isArray(vouchersRes.body.unredeemed)).toBe(true);
+      expect(Array.isArray(vouchersRes.body.redeemed)).toBe(true);
+      const all = [
+        ...vouchersRes.body.unredeemed,
+        ...vouchersRes.body.redeemed,
+      ];
+      expect(
+        all.some((row: { voucher?: { id?: string } }) => {
+          return row.voucher?.id === claimRes.body.id;
+        }),
+      ).toBe(true);
     });
 
     it("should list vouchers for merchant", async () => {

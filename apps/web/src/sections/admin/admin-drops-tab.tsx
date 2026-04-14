@@ -58,7 +58,6 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingDrop, setEditingDrop] = useState<Drop | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [adminCodesDropId, setAdminCodesDropId] = useState<string | null>(
     null,
   );
@@ -137,6 +136,8 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
   const deleteDropMutation = useAdminDeleteDropMutation({
     onSuccess: () => {
       toast({ title: "Drop deleted" });
+      setSheetOpen(false);
+      setEditingDrop(null);
     },
   });
 
@@ -327,12 +328,10 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
               showMerchantColumn: true,
               getMerchantLabel: (d) => merchantNameByDropId.get(d.id) ?? "—",
             }}
-            deletePending={deleteDropMutation.isPending}
             onCreateClick={openCreateSheet}
             onShareDrop={handleShareDrop}
             onCodesClick={(id) => setAdminCodesDropId(id)}
             onEditDrop={openEditSheet}
-            onDeleteDrop={(id) => setDeleteConfirmId(id)}
             onDropActiveChange={handleDropActiveChange}
             dropActiveTogglePending={updateDropMutation.isPending}
             dropActiveTogglingId={dropActiveTogglingId}
@@ -352,6 +351,8 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
         }}
         editingDrop={editingDrop}
         onAdminMutationSuccess={() => setDropsPage(1)}
+        onDeleteDrop={(id) => deleteDropMutation.mutate(id)}
+        deletePending={deleteDropMutation.isPending}
         adminContext={{
           merchants: merchantsForPickers.map((m) => ({
             id: m.id,
@@ -365,38 +366,6 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
         }}
       />
 
-      <Dialog
-        open={!!deleteConfirmId}
-        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Drop</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this drop? This will also remove
-              all associated vouchers. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (deleteConfirmId) {
-                  deleteDropMutation.mutate(deleteConfirmId);
-                  setDeleteConfirmId(null);
-                }
-              }}
-              disabled={deleteDropMutation.isPending}
-              data-testid="button-confirm-delete"
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         open={!!adminCodesDropId}
