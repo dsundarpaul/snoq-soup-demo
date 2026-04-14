@@ -107,15 +107,15 @@ export class VouchersService {
     }
 
     // Check if already claimed by this device
-    const existingClaim = await this.database.vouchers.findOne({
-      dropId: new Types.ObjectId(dropId),
-      "claimedBy.deviceId": deviceId,
-      deletedAt: null,
-    });
+    // const existingClaim = await this.database.vouchers.findOne({
+    //   dropId: new Types.ObjectId(dropId),
+    //   "claimedBy.deviceId": deviceId,
+    //   deletedAt: null,
+    // });
 
-    if (existingClaim) {
-      throw new ConflictException("Voucher already claimed by this device");
-    }
+    // if (existingClaim) {
+    //   throw new ConflictException("Voucher already claimed by this device");
+    // }
 
     // Check capture limit (availability)
     if (drop.availability?.type === "limited") {
@@ -153,7 +153,7 @@ export class VouchersService {
     // Assign promo code if available
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
-      drop._id as Types.ObjectId,
+      drop._id as Types.ObjectId
     );
 
     if (linkedHunterId) {
