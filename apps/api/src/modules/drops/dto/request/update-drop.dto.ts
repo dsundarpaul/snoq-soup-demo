@@ -90,7 +90,7 @@ export class UpdateDropDto {
   })
   @IsString()
   @IsOptional()
-  @MaxLength(4000)
+  @MaxLength(300)
   termsAndConditions?: string;
 
   @ApiProperty({

@@ -442,21 +442,22 @@ const en = {
   "merchant.form.tooltip.schedule":
     "When the drop is visible; leave empty for always-on (within app rules).",
   "merchant.form.tooltip.terms":
-    "Optional legal or usage text shown when viewing or redeeming the voucher.",
+    "Optional legal or usage text shown when viewing or redeeming the voucher (max 300 characters).",
   "merchant.form.location.sectionTitle": "Set drop location",
-  "merchant.form.location.searchTitle": "1. Search address",
+  "merchant.form.location.searchTitle": "Search address",
   "merchant.form.location.searchDesc":
     "Pick a place from Google; the pin and coordinates update.",
   "merchant.form.location.searchInputLabel": "Search address",
-  "merchant.form.location.gpsTitle": "2. Use my GPS",
+  "merchant.form.location.gpsTitle": "Use my GPS",
   "merchant.form.location.gpsDesc":
     "Sets the pin to your current position (browser will ask permission).",
-  "merchant.form.location.arTitle": "3. AR placement",
+  "merchant.form.location.arTitle": "AR placement",
   "merchant.form.location.arDesc":
     "Place the reward in augmented reality; saves that spot as the drop.",
   "merchant.form.location.advancedToggle": "Fine-tune coordinates",
   "merchant.form.location.mapHint":
     "Drag the map pin or use the options above; radius ring updates below.",
+  "merchant.form.location.or": "OR",
   "merchant.form.datetime.saudiIntent":
     "Schedule is intended for Saudi Arabia (AST, UTC+3).",
   "merchant.form.datetime.localInputNote":

@@ -158,12 +158,22 @@ export class AdminService {
       }));
     };
 
+    const voucherClaimedInPeriod: FilterQuery<unknown> = {
+      deletedAt: null,
+      claimedAt: { $gte: startDate, $lte: endDate },
+    };
+
     const [
       merchantsOverTime,
       dropsOverTime,
       claimsOverTime,
       redemptionsOverTime,
       huntersOverTime,
+      claimsByHourAgg,
+      topMerchantsAgg,
+      topDropsAgg,
+      totalClaimsPeriod,
+      totalRedemptionsPeriod,
     ] = await Promise.all([
       aggregateTimeSeries(this.database.merchants, "createdAt"),
       aggregateTimeSeries(this.database.drops, "createdAt"),
@@ -198,7 +208,114 @@ export class AdminService {
           })),
         ),
       aggregateTimeSeries(this.database.hunters, "createdAt"),
+      this.database.vouchers.aggregate<{ _id: number; claims: number }>([
+        { $match: voucherClaimedInPeriod },
+        { $group: { _id: { $hour: "$claimedAt" }, claims: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      this.database.vouchers.aggregate<{
+        id: string;
+        businessName: string;
+        voucherCount: number;
+        redemptionCount: number;
+      }>([
+        { $match: voucherClaimedInPeriod },
+        {
+          $group: {
+            _id: "$merchantId",
+            voucherCount: { $sum: 1 },
+            redemptionCount: { $sum: { $cond: ["$redeemed", 1, 0] } },
+          },
+        },
+        { $sort: { voucherCount: -1 } },
+        { $limit: 10 },
+        {
+          $lookup: {
+            from: "merchants",
+            localField: "_id",
+            foreignField: "_id",
+            as: "merchant",
+          },
+        },
+        { $unwind: { path: "$merchant", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 0,
+            id: { $toString: "$_id" },
+            businessName: {
+              $ifNull: ["$merchant.businessName", "Unknown"],
+            },
+            voucherCount: 1,
+            redemptionCount: 1,
+          },
+        },
+      ]),
+      this.database.vouchers.aggregate<{
+        id: string;
+        name: string;
+        merchantName: string;
+        voucherCount: number;
+        redemptionCount: number;
+      }>([
+        { $match: voucherClaimedInPeriod },
+        {
+          $group: {
+            _id: "$dropId",
+            voucherCount: { $sum: 1 },
+            redemptionCount: { $sum: { $cond: ["$redeemed", 1, 0] } },
+          },
+        },
+        { $sort: { voucherCount: -1 } },
+        { $limit: 10 },
+        {
+          $lookup: {
+            from: "drops",
+            localField: "_id",
+            foreignField: "_id",
+            as: "drop",
+          },
+        },
+        { $unwind: { path: "$drop", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "merchants",
+            localField: "drop.merchantId",
+            foreignField: "_id",
+            as: "merchant",
+          },
+        },
+        { $unwind: { path: "$merchant", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 0,
+            id: { $toString: "$_id" },
+            name: { $ifNull: ["$drop.name", "Unknown"] },
+            merchantName: { $ifNull: ["$merchant.businessName", "—"] },
+            voucherCount: 1,
+            redemptionCount: 1,
+          },
+        },
+      ]),
+      this.database.vouchers.countDocuments(voucherClaimedInPeriod),
+      this.database.vouchers.countDocuments({
+        deletedAt: null,
+        redeemed: true,
+        redeemedAt: { $gte: startDate, $lte: endDate },
+      }),
     ]);
+
+    const hourToClaims = new Map(
+      claimsByHourAgg.map((r) => [r._id as number, r.claims as number]),
+    );
+    const claimsByHour = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      claims: hourToClaims.get(hour) ?? 0,
+    }));
+
+    const conversionRate =
+      totalClaimsPeriod > 0
+        ? Math.round((totalRedemptionsPeriod / totalClaimsPeriod) * 1000) / 10
+        : 0;
 
     return {
       merchantsOverTime,
@@ -206,6 +323,10 @@ export class AdminService {
       claimsOverTime,
       redemptionsOverTime,
       huntersOverTime,
+      claimsByHour,
+      topMerchants: topMerchantsAgg,
+      topDrops: topDropsAgg,
+      conversionRate,
       periodStart: formatDate(startDate),
       periodEnd: formatDate(endDate),
       granularity,

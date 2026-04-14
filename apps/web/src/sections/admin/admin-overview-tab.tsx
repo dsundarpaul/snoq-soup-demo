@@ -100,24 +100,29 @@ export function AdminOverviewTab(props: {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <TrendingUp className="h-5 w-5" />
-                Top Merchants
+                Top merchants
               </CardTitle>
+              <CardDescription>
+                Most vouchers claimed in the analytics period
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {analytics.topMerchants.slice(0, 5).map((merchant, index) => (
                   <div
                     key={merchant.id}
-                    className="flex items-center justify-between"
+                    className="flex items-center justify-between gap-2"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 text-sm text-muted-foreground">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="w-4 shrink-0 text-sm text-muted-foreground tabular-nums">
                         {index + 1}.
                       </span>
-                      <span className="font-medium">{merchant.businessName}</span>
+                      <span className="truncate font-medium">
+                        {merchant.businessName}
+                      </span>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {merchant.claims} claims / {merchant.redemptions} redeemed
+                    <div className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                      {merchant.claims} vouchers · {merchant.redemptions} redeemed
                     </div>
                   </div>
                 ))}
@@ -132,29 +137,32 @@ export function AdminOverviewTab(props: {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Activity className="h-5 w-5" />
-                Top Drops
+                Top drops
               </CardTitle>
+              <CardDescription>
+                Most vouchers claimed per drop in the period
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {analytics.topDrops.slice(0, 5).map((drop, index) => (
                   <div
                     key={drop.id}
-                    className="flex items-center justify-between"
+                    className="flex items-start justify-between gap-2"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 text-sm text-muted-foreground">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className="w-4 shrink-0 text-sm text-muted-foreground tabular-nums">
                         {index + 1}.
                       </span>
-                      <div>
-                        <span className="font-medium">{drop.name}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          by {drop.merchantName}
-                        </span>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{drop.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {drop.merchantName}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {drop.claims} / {drop.redemptions}
+                    <div className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                      {drop.claims} vouchers · {drop.redemptions} redeemed
                     </div>
                   </div>
                 ))}

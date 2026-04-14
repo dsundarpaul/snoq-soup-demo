@@ -55,7 +55,7 @@ export const createDropSchema = z
       ),
     termsAndConditions: z
       .string()
-      .max(4000, "Terms must be at most 4000 characters")
+      .max(300, "Terms must be at most 300 characters")
       .optional(),
   })
   .superRefine((data, ctx) => {

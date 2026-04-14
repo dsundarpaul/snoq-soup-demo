@@ -101,7 +101,9 @@ export class AuthService {
       deletedAt: null,
     });
     if (existingEmail) {
-      throw new ConflictException("Email already registered");
+      throw new ConflictException(
+        "Seems like you already have a merchant account with this email address"
+      );
     }
 
     const existingUsername = await this.database.merchants.findOne({
@@ -109,7 +111,7 @@ export class AuthService {
       deletedAt: null,
     });
     if (existingUsername) {
-      throw new ConflictException("Username already taken");
+      throw new ConflictException("Company slug already taken");
     }
 
     const hashedPassword = await this.hashPassword(dto.password);

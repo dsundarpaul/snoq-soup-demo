@@ -581,13 +581,34 @@ export function mapAdminAnalyticsToLegacy(raw: Record<string, unknown>) {
     cur.redemptions = r.value;
     claimsByDate.set(r.date, cur);
   }
-  const claimsOverTimeMerged = Array.from(claimsByDate.entries()).map(
-    ([date, v]) => ({
+  const claimsOverTimeMerged = Array.from(claimsByDate.entries())
+    .map(([date, v]) => ({
       date,
       claims: v.claims,
       redemptions: v.redemptions,
-    })
-  );
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const claimsByHourRaw =
+    (raw.claimsByHour as { hour: number; claims: number }[]) ?? [];
+  const claimsByHour =
+    claimsByHourRaw.length === 24
+      ? [...claimsByHourRaw].sort((a, b) => a.hour - b.hour)
+      : Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          claims: claimsByHourRaw.find((h) => h.hour === hour)?.claims ?? 0,
+        }));
+
+  const topMerchantsRaw =
+    (raw.topMerchants as Record<string, unknown>[]) ?? [];
+  const topDropsRaw = (raw.topDrops as Record<string, unknown>[]) ?? [];
+
+  const conversionRaw = raw.conversionRate ?? raw.redemptionRate;
+  const conversionRate =
+    typeof conversionRaw === "number" && Number.isFinite(conversionRaw)
+      ? conversionRaw
+      : Number(conversionRaw ?? 0);
+
   return {
     merchantGrowth: merchantsOverTime.map((p) => ({
       date: p.date,
@@ -598,21 +619,21 @@ export function mapAdminAnalyticsToLegacy(raw: Record<string, unknown>) {
         (p) => ({ date: p.date, count: p.value })
       ),
     claimsOverTime: claimsOverTimeMerged,
-    claimsByHour: [] as { hour: number; claims: number }[],
-    topMerchants: [] as {
-      id: string;
-      businessName: string;
-      claims: number;
-      redemptions: number;
-    }[],
-    topDrops: [] as {
-      id: string;
-      name: string;
-      merchantName: string;
-      claims: number;
-      redemptions: number;
-    }[],
-    conversionRate: Number(raw.redemptionRate ?? 0),
+    claimsByHour,
+    topMerchants: topMerchantsRaw.map((m) => ({
+      id: String(m.id ?? ""),
+      businessName: String(m.businessName ?? ""),
+      claims: Number(m.voucherCount ?? m.claims ?? 0),
+      redemptions: Number(m.redemptionCount ?? m.redemptions ?? 0),
+    })),
+    topDrops: topDropsRaw.map((d) => ({
+      id: String(d.id ?? ""),
+      name: String(d.name ?? ""),
+      merchantName: String(d.merchantName ?? ""),
+      claims: Number(d.voucherCount ?? d.claims ?? 0),
+      redemptions: Number(d.redemptionCount ?? d.redemptions ?? 0),
+    })),
+    conversionRate,
   };
 }
 

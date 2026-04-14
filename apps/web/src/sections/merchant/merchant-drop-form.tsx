@@ -36,7 +36,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -249,42 +249,43 @@ export function MerchantDropForm({
           {t("merchant.form.location.mapHint")}
         </p>
 
-        <Card className="shadow-none">
-          <CardHeader className="py-3 px-4 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t("merchant.form.location.searchTitle")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-3 pt-0 space-y-2">
-            <p className="text-xs text-muted-foreground">
-              {t("merchant.form.location.searchDesc")}
-            </p>
-            <GooglePlacesAutocomplete
-              apiKey={googleMapsApiKey}
-              onPlaceSelect={(lat, lng) => {
-                form.setValue("latitude", parseFloat(lat.toFixed(6)));
-                form.setValue("longitude", parseFloat(lng.toFixed(6)));
-              }}
-              label={t("merchant.form.location.searchInputLabel")}
-              placeholder="Type an address to move the pin…"
-            />
-          </CardContent>
-        </Card>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 rounded-md border border-border/80 bg-muted/15 p-3 md:rounded-e-none md:border-e-0">
+          <p className="text-sm font-medium text-foreground">
+            {t("merchant.form.location.searchTitle")}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {t("merchant.form.location.searchDesc")}
+          </p>
+          <GooglePlacesAutocomplete
+            apiKey={googleMapsApiKey}
+            onPlaceSelect={(lat, lng) => {
+              form.setValue("latitude", parseFloat(lat.toFixed(6)));
+              form.setValue("longitude", parseFloat(lng.toFixed(6)));
+            }}
+            label={t("merchant.form.location.searchInputLabel")}
+            placeholder="Type an address to move the pin…"
+          />
+        </div>
+        <div className="flex w-full shrink-0 items-center gap-2 py-2">
+          <Separator className="flex-1" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("merchant.form.location.or")}
+          </span>
+          <Separator className="flex-1" />
+        </div>
 
-        <Card className="shadow-none">
-          <CardHeader className="py-3 px-4 pb-2">
-            <CardTitle className="text-sm font-medium">
+        <div className="flex flex-col gap-0 md:flex-row md:items-stretch md:gap-0">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 rounded-md border border-border/80 bg-muted/15 p-3 md:rounded-e-none md:border-e-0">
+            <p className="text-sm font-medium text-foreground">
               {t("merchant.form.location.gpsTitle")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-3 pt-0 space-y-2">
+            </p>
             <p className="text-xs text-muted-foreground">
               {t("merchant.form.location.gpsDesc")}
             </p>
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full shrink-0 sm:w-auto"
               onClick={onUseCurrentLocation}
               disabled={isGettingLocation}
             >
@@ -300,31 +301,46 @@ export function MerchantDropForm({
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="shadow-none">
-          <CardHeader className="py-3 px-4 pb-2">
-            <CardTitle className="text-sm font-medium">
+          <div className="flex shrink-0 items-center py-2 md:w-11 md:flex-col md:justify-center md:bg-muted/10 md:py-0">
+            <div className="flex w-full items-center gap-2 md:hidden">
+              <Separator className="flex-1" />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("merchant.form.location.or")}
+              </span>
+              <Separator className="flex-1" />
+            </div>
+            <div className="relative hidden h-full min-h-[5.5rem] w-full md:flex md:flex-col md:items-center md:justify-center">
+              <Separator
+                orientation="vertical"
+                className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2"
+              />
+              <span className="relative z-[1] bg-background px-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("merchant.form.location.or")}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 rounded-md border border-border/80 bg-muted/15 p-3 md:rounded-s-none md:border-s-0">
+            <p className="text-sm font-medium text-foreground">
               {t("merchant.form.location.arTitle")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-3 pt-0 space-y-2">
+            </p>
             <p className="text-xs text-muted-foreground">
               {t("merchant.form.location.arDesc")}
             </p>
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full shrink-0 sm:w-auto"
               onClick={onOpenArPlacer}
               data-testid="button-ar-placement"
             >
               <Camera className="w-4 h-4 mr-2" />
               AR Placement
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <Collapsible open={coordsOpen} onOpenChange={setCoordsOpen}>
@@ -622,7 +638,7 @@ export function MerchantDropForm({
         <Textarea
           id="termsAndConditions"
           placeholder={t("merchant.form.terms.placeholder")}
-          maxLength={4000}
+          maxLength={300}
           rows={4}
           className={cn(err.termsAndConditions && "border-destructive")}
           {...form.register("termsAndConditions")}

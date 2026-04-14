@@ -80,7 +80,7 @@ export class CreateDropDto {
   })
   @IsString()
   @IsOptional()
-  @MaxLength(4000)
+  @MaxLength(300)
   termsAndConditions?: string;
 
   @ApiProperty({

@@ -7,8 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { Activity, BarChart3, TrendingUp } from "lucide-react";
 import type { AdminAnalyticsLegacy } from "@/sections/admin/admin-dashboard.types";
+
+function formatConversionPercent(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0%";
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+}
 
 export function AdminAnalyticsTab(props: {
   analytics: AdminAnalyticsLegacy | undefined;
@@ -30,14 +36,14 @@ export function AdminAnalyticsTab(props: {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Conversion Rate</CardDescription>
+            <CardDescription>Conversion rate</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">
-              {analytics.conversionRate}%
+            <div className="text-3xl font-bold text-primary tabular-nums">
+              {formatConversionPercent(analytics.conversionRate)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Claims to redemptions
+              Redemptions ÷ vouchers claimed in the selected period
             </p>
           </CardContent>
         </Card>
@@ -83,11 +89,88 @@ export function AdminAnalyticsTab(props: {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 className="h-5 w-5" />
-              Claims by Hour
+              <TrendingUp className="h-5 w-5" />
+              Top merchants
             </CardTitle>
             <CardDescription>
-              Distribution of claims throughout the day
+              Merchants with the most vouchers claimed in the period
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {analytics.topMerchants.slice(0, 8).map((merchant, index) => (
+                <div
+                  key={merchant.id}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="w-5 shrink-0 text-sm text-muted-foreground tabular-nums">
+                      {index + 1}.
+                    </span>
+                    <span className="truncate font-medium">
+                      {merchant.businessName}
+                    </span>
+                  </div>
+                  <div className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                    {merchant.claims} vouchers · {merchant.redemptions} redeemed
+                  </div>
+                </div>
+              ))}
+              {analytics.topMerchants.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No data in this period</p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Activity className="h-5 w-5" />
+              Top drops
+            </CardTitle>
+            <CardDescription>
+              Drops with the most vouchers claimed in the period
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {analytics.topDrops.slice(0, 8).map((drop, index) => (
+                <div
+                  key={drop.id}
+                  className="flex items-start justify-between gap-2"
+                >
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span className="w-5 shrink-0 text-sm text-muted-foreground tabular-nums">
+                      {index + 1}.
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{drop.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {drop.merchantName}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                    {drop.claims} vouchers · {drop.redemptions} redeemed
+                  </div>
+                </div>
+              ))}
+              {analytics.topDrops.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No data in this period</p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <BarChart3 className="h-5 w-5" />
+              Claims by hour
+            </CardTitle>
+            <CardDescription>
+              Distribution of claims by hour of day (UTC) in the period
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -123,7 +206,7 @@ export function AdminAnalyticsTab(props: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5" />
-              Recent Activity
+              Recent activity
             </CardTitle>
             <CardDescription>
               Claims and redemptions over the last 7 days

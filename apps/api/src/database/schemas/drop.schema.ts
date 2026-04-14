@@ -124,7 +124,7 @@ export class Drop {
   })
   @IsString()
   @IsOptional()
-  @MaxLength(4000)
+  @MaxLength(300)
   @Prop({ type: String, default: null })
   termsAndConditions!: string | null;
 

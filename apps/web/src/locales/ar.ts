@@ -438,21 +438,22 @@ const ar = {
     "غير محدود أو حد أقصى لعدد من يمكنهم الاقتناص.",
   "merchant.form.tooltip.schedule": "متى يظهر الكنز؛ اتركه فارغاً للاستمرار.",
   "merchant.form.tooltip.terms":
-    "نص قانوني أو استخدام اختياري يظهر عند عرض القسيمة أو استبدالها.",
+    "نص قانوني أو استخدام اختياري يظهر عند عرض القسيمة أو استبدالها (بحد أقصى ٣٠٠ حرفاً).",
   "merchant.form.location.sectionTitle": "تحديد موقع الكنز",
-  "merchant.form.location.searchTitle": "١. بحث عنوان",
+  "merchant.form.location.searchTitle": "بحث عنوان",
   "merchant.form.location.searchDesc":
     "اختر مكاناً من جوجل؛ يتحدث الدبوس والإحداثيات.",
   "merchant.form.location.searchInputLabel": "بحث عنوان",
-  "merchant.form.location.gpsTitle": "٢. استخدام موقعي GPS",
+  "merchant.form.location.gpsTitle": "استخدام موقعي GPS",
   "merchant.form.location.gpsDesc":
     "يضع الدبوس على موقعك الحالي (المتصفح يطلب الإذن).",
-  "merchant.form.location.arTitle": "٣. وضع بالواقع المعزز",
+  "merchant.form.location.arTitle": "وضع بالواقع المعزز",
   "merchant.form.location.arDesc":
     "ضع المكافأة في الواقع المعزز؛ يُحفظ ذلك كموقع الكنز.",
   "merchant.form.location.advancedToggle": "ضبط الإحداثيات يدوياً",
   "merchant.form.location.mapHint":
     "اسحب الدبوس على الخريطة أو استخدم الخيارات أعلاه.",
+  "merchant.form.location.or": "أو",
   "merchant.form.datetime.saudiIntent": "الجدول يُقصد به توقيت السعودية (٣+ توقيت عالمي).",
   "merchant.form.datetime.localInputNote": "حقول التاريخ والوقت تستخدم توقيت جهازك.",
   "merchant.form.schedule.clearStart": "مسح البداية",

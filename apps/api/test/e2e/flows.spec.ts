@@ -441,8 +441,14 @@ describe("SouqSnap E2E Flows", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("labels");
-      expect(response.body).toHaveProperty("datasets");
+      expect(response.body).toHaveProperty("merchantsOverTime");
+      expect(response.body).toHaveProperty("claimsOverTime");
+      expect(response.body).toHaveProperty("conversionRate");
+      expect(response.body).toHaveProperty("topMerchants");
+      expect(response.body).toHaveProperty("topDrops");
+      expect(response.body).toHaveProperty("claimsByHour");
+      expect(Array.isArray(response.body.claimsByHour)).toBe(true);
+      expect(response.body.claimsByHour.length).toBe(24);
     });
 
     it("GET /api/v1/admin/merchants - should list all merchants", async () => {
