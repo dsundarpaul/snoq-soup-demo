@@ -98,6 +98,8 @@ const en = {
   "merchant.createAccount": "Create a merchant account",
   "merchant.businessName": "Business Name",
   "merchant.yourBusinessName": "Your business name",
+  "merchant.companySlug": "Company slug",
+  "merchant.enterCompanySlug": "your-company-slug",
   "merchant.usernameSlugHint":
     "3–30 characters: letters, numbers, and underscores only. Fills from your business name until you edit it.",
   "merchant.youAtBusiness": "you@business.com",
@@ -177,6 +179,8 @@ const en = {
   "voucher.termsToggleHide": "Hide terms",
   "voucher.rewardValue": "Reward Value",
   "voucher.openMagicLink": "Open Magic Link",
+  "voucher.getDirections": "Get Directions to Store",
+  "voucher.landmark": "Landmark",
   "voucher.viewVoucher": "View Voucher",
   "voucher.deadline": "Deadline",
   "voucher.reward": "Reward",

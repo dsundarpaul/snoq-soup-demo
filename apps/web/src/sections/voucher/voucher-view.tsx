@@ -16,6 +16,15 @@ interface VoucherData {
   voucher: Voucher;
   drop: Drop;
   businessName: string;
+  merchantStoreLocation: {
+    lat: number;
+    lng: number;
+    address?: string;
+    landmark?: string;
+    howToReach?: string;
+  } | null;
+  merchantBusinessPhone: string | null;
+  merchantBusinessHours: string | null;
 }
 
 export default function VoucherViewPage() {
@@ -92,6 +101,9 @@ export default function VoucherViewPage() {
         voucher={data.voucher}
         drop={data.drop}
         businessName={data.businessName}
+        merchantStoreLocation={data.merchantStoreLocation}
+        merchantBusinessPhone={data.merchantBusinessPhone}
+        merchantBusinessHours={data.merchantBusinessHours}
       />
 
       <div className="text-center mt-6">

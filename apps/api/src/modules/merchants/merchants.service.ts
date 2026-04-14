@@ -70,6 +70,34 @@ export class MerchantsService {
     return this.toResponseDto(merchant);
   }
 
+  async updateStoreLocation(
+    id: string,
+    storeLocation: {
+      lat: number;
+      lng: number;
+      address?: string;
+      city?: string;
+      state?: string;
+      pincode?: string;
+      landmark?: string;
+      howToReach?: string;
+    },
+  ): Promise<MerchantResponseDto> {
+    const merchant = await this.database.merchants
+      .findOneAndUpdate(
+        { _id: id, deletedAt: null },
+        { $set: { storeLocation } },
+        { new: true },
+      )
+      .lean();
+
+    if (!merchant) {
+      throw new NotFoundException("Merchant not found");
+    }
+
+    return this.toResponseDto(merchant);
+  }
+
   async updateLogo(id: string, logoUrl: string): Promise<MerchantResponseDto> {
     const merchant = await this.database.merchants
       .findOneAndUpdate(
@@ -204,15 +232,45 @@ export class MerchantsService {
           email: string;
           businessName: string;
           logoUrl: string | null;
+          businessPhone?: string | null;
+          businessHours?: string | null;
           username: string;
           emailVerified: boolean;
           lockUntil?: Date | null;
+          storeLocation?: {
+            lat: number;
+            lng: number;
+            address?: string;
+            city?: string;
+            state?: string;
+            pincode?: string;
+            landmark?: string;
+            howToReach?: string;
+          } | null;
           createdAt: Date;
           updatedAt: Date;
         },
   ): MerchantResponseDto {
-    // Type-safe refactor: safely convert ObjectId to string
     const id = merchant._id ? merchant._id.toString() : "";
+
+    const sl =
+      "storeLocation" in merchant && merchant.storeLocation
+        ? {
+            lat: merchant.storeLocation.lat,
+            lng: merchant.storeLocation.lng,
+            address: merchant.storeLocation.address,
+            city: merchant.storeLocation.city,
+            state: merchant.storeLocation.state,
+            pincode: merchant.storeLocation.pincode,
+            landmark: merchant.storeLocation.landmark,
+            howToReach: merchant.storeLocation.howToReach,
+          }
+        : null;
+
+    const bPhone =
+      "businessPhone" in merchant ? (merchant.businessPhone ?? null) : null;
+    const bHours =
+      "businessHours" in merchant ? (merchant.businessHours ?? null) : null;
 
     return {
       id,
@@ -224,6 +282,9 @@ export class MerchantsService {
       phone: undefined,
       website: undefined,
       socialLinks: undefined,
+      storeLocation: sl,
+      businessPhone: bPhone,
+      businessHours: bHours,
       username: merchant.username,
       isVerified: merchant.emailVerified,
       isActive: merchant.lockUntil ? new Date() < merchant.lockUntil : true,

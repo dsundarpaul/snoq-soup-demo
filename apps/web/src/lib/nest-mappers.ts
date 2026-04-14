@@ -8,6 +8,14 @@ function toIso(v: Date | string | undefined | null): string | null {
   return v.toISOString();
 }
 
+function nestProfileDobToYmd(value: unknown): string | undefined {
+  if (value == null || value === "") return undefined;
+  const s = String(value).trim();
+  if (!s) return undefined;
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
+  return m ? m[1] : undefined;
+}
+
 export function mapNestDropToLegacy(
   raw: Record<string, unknown>,
   captureCount?: number
@@ -98,6 +106,19 @@ export function mapActiveDropsPayload(json: {
 export function mapMerchantMeToLegacy(
   raw: Record<string, unknown>
 ): Merchant {
+  const sl = raw.storeLocation as
+    | {
+        lat?: number;
+        lng?: number;
+        address?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+        landmark?: string;
+        howToReach?: string;
+      }
+    | null
+    | undefined;
   return {
     id: String(raw.id ?? ""),
     username: String(raw.username ?? ""),
@@ -110,6 +131,21 @@ export function mapMerchantMeToLegacy(
     resetTokenExpiry: null,
     scannerToken: null,
     logoUrl: (raw.logoUrl as string | null) ?? null,
+    storeLocation:
+      sl?.lat != null && sl?.lng != null
+        ? {
+            lat: sl.lat,
+            lng: sl.lng,
+            address: sl.address,
+            city: sl.city,
+            state: sl.state,
+            pincode: sl.pincode,
+            landmark: sl.landmark,
+            howToReach: sl.howToReach,
+          }
+        : null,
+    businessPhone: (raw.businessPhone as string | null) ?? null,
+    businessHours: (raw.businessHours as string | null) ?? null,
     createdAt: (raw.createdAt as Date) ?? new Date(),
   } as Merchant;
 }
@@ -292,6 +328,18 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
   voucher: Voucher;
   drop: Drop;
   businessName: string;
+  merchantStoreLocation: {
+    lat: number;
+    lng: number;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    landmark?: string;
+    howToReach?: string;
+  } | null;
+  merchantBusinessPhone: string | null;
+  merchantBusinessHours: string | null;
 } {
   const dropInfo = raw.drop as Record<string, unknown>;
   const merchant = raw.merchant as Record<string, unknown>;
@@ -334,10 +382,41 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
         }
       : undefined,
   });
+
+  const sl = merchant?.storeLocation as
+    | {
+        lat?: number;
+        lng?: number;
+        address?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+        landmark?: string;
+        howToReach?: string;
+      }
+    | null
+    | undefined;
+  const merchantStoreLocation =
+    sl?.lat != null && sl?.lng != null
+      ? {
+          lat: sl.lat as number,
+          lng: sl.lng as number,
+          address: sl.address as string | undefined,
+          city: sl.city as string | undefined,
+          state: sl.state as string | undefined,
+          pincode: sl.pincode as string | undefined,
+          landmark: sl.landmark as string | undefined,
+          howToReach: sl.howToReach as string | undefined,
+        }
+      : null;
+
   return {
     voucher,
     drop,
     businessName: String(merchant?.name ?? ""),
+    merchantStoreLocation,
+    merchantBusinessPhone: (merchant?.businessPhone as string | null) ?? null,
+    merchantBusinessHours: (merchant?.businessHours as string | null) ?? null,
   };
 }
 
@@ -415,9 +494,7 @@ export function mapHunterProfileToLegacy(raw: Record<string, unknown>): {
     redeemerMerchantId: (raw.redeemerMerchantId as string) ?? null,
     totalClaims: Number(stats?.totalClaims ?? 0),
     totalRedemptions: Number(stats?.totalRedemptions ?? 0),
-    dateOfBirth: profile?.dateOfBirth
-      ? String(profile.dateOfBirth)
-      : undefined,
+    dateOfBirth: nestProfileDobToYmd(profile?.dateOfBirth),
     gender: profile?.gender as string | undefined,
     mobileCountryCode: (profile?.countryCode as string) ?? undefined,
     mobileNumber: (profile?.number as string) ?? undefined,

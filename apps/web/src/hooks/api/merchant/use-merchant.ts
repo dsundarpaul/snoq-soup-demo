@@ -257,6 +257,56 @@ export function useMerchantDropCodesQuery(dropId: string | null) {
   });
 }
 
+export function useMerchantStoreLocationMutation(
+  options?: Omit<
+    UseMutationOptions<
+      unknown,
+      Error,
+      {
+        storeLocation: {
+          lat: number;
+          lng: number;
+          address?: string;
+          city?: string;
+          state?: string;
+          pincode?: string;
+          landmark?: string;
+          howToReach?: string;
+        };
+      }
+    >,
+    "mutationFn"
+  >
+) {
+  return useMutation({
+    ...options,
+    mutationFn: async (data: {
+      storeLocation: {
+        lat: number;
+        lng: number;
+        address?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+        landmark?: string;
+        howToReach?: string;
+      };
+    }) => {
+      const res = await apiRequest(
+        "PATCH",
+        "/api/v1/merchants/me/store-location",
+        data,
+        { auth: "merchant" }
+      );
+      return res.json();
+    },
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.me });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
 export function useMerchantLogoMutation(
   options?: Omit<
     UseMutationOptions<unknown, Error, { logoUrl: string }>,
@@ -269,6 +319,37 @@ export function useMerchantLogoMutation(
       const res = await apiRequest("PATCH", "/api/v1/merchants/me/logo", data, {
         auth: "merchant",
       });
+      return res.json();
+    },
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.me });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
+export function useMerchantProfileMutation(
+  options?: Omit<
+    UseMutationOptions<
+      unknown,
+      Error,
+      { businessPhone?: string; businessHours?: string }
+    >,
+    "mutationFn"
+  >
+) {
+  return useMutation({
+    ...options,
+    mutationFn: async (data: {
+      businessPhone?: string;
+      businessHours?: string;
+    }) => {
+      const res = await apiRequest(
+        "PATCH",
+        "/api/v1/merchants/me",
+        data,
+        { auth: "merchant" }
+      );
       return res.json();
     },
     onSuccess: (...args) => {

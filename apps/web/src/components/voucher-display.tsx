@@ -26,9 +26,11 @@ import {
   Copy,
   ExternalLink,
   Phone,
+  Clock,
   Timer,
   AlertTriangle,
   ChevronDown,
+  MapPin,
 } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import type { Voucher, Drop } from "@shared/schema";
@@ -75,10 +77,26 @@ interface VoucherDisplayProps {
   voucher: Voucher;
   drop: Drop;
   businessName?: string;
+  merchantStoreLocation?: {
+    lat: number;
+    lng: number;
+    address?: string;
+    landmark?: string;
+    howToReach?: string;
+  } | null;
+  merchantBusinessPhone?: string | null;
+  merchantBusinessHours?: string | null;
   onShare?: () => void;
 }
 
-export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: VoucherDisplayProps) {
+export function VoucherDisplay({
+  voucher,
+  drop,
+  businessName = "Merchant",
+  merchantStoreLocation,
+  merchantBusinessPhone,
+  merchantBusinessHours,
+}: VoucherDisplayProps) {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
@@ -322,6 +340,60 @@ export function VoucherDisplay({ voucher, drop, businessName = "Merchant" }: Vou
           </div>
         )}
       </div>
+
+      {(merchantBusinessPhone || merchantBusinessHours || merchantStoreLocation) && (
+        <div className="rounded-lg border border-border p-4 mb-6 space-y-3">
+          {merchantBusinessPhone && (
+            <a
+              href={`tel:${merchantBusinessPhone.replace(/\s/g, "")}`}
+              className="flex items-center gap-2 text-sm"
+            >
+              <Phone className="w-4 h-4 text-primary shrink-0" />
+              <span>{merchantBusinessPhone}</span>
+            </a>
+          )}
+          {merchantBusinessHours && (
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 text-primary shrink-0" />
+              <span>{merchantBusinessHours}</span>
+            </div>
+          )}
+          {merchantStoreLocation && (
+            <div className="space-y-2">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${merchantStoreLocation.lat},${merchantStoreLocation.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  data-testid="button-get-directions"
+                >
+                  <MapPin className="w-4 h-4 text-primary" />
+                  {t("voucher.getDirections")}
+                </Button>
+              </a>
+              {merchantStoreLocation.address && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {merchantStoreLocation.address}
+                </p>
+              )}
+              {merchantStoreLocation.landmark && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {t("voucher.landmark")}: {merchantStoreLocation.landmark}
+                </p>
+              )}
+              {merchantStoreLocation.howToReach && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {merchantStoreLocation.howToReach}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {drop.termsAndConditions?.trim() ? (
         <Collapsible

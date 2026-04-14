@@ -258,61 +258,46 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
 
   return (
     <>
-      <Card className="border-0 shadow-none">
-        <CardHeader className="flex flex-col gap-4 px-0 pt-0 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle>All Drops</CardTitle>
-            <CardDescription>
-              Create, edit, and manage drops across the platform
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={exporting}
-              onClick={() => void handleExportCsv()}
-            >
-              {exporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              Export CSV
-            </Button>
-            <Button
-              onClick={openCreateSheet}
-              data-testid="button-create-drop"
-              size="sm"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Drop
-            </Button>
+      <Card>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>All Drops</CardTitle>
+              <CardDescription>
+                Create, edit, and manage drops across the platform
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={exporting}
+                onClick={() => void handleExportCsv()}
+              >
+                {exporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Export CSV
+              </Button>
+              <Button
+                onClick={openCreateSheet}
+                data-testid="button-create-drop"
+                size="sm"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Drop
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 px-0">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="text-sm text-muted-foreground shrink-0">
-              Merchant filter
-            </label>
-            <select
-              className="h-9 w-full max-w-xs rounded-md border border-input bg-background px-3 text-sm"
-              value={merchantFilterId}
-              onChange={(e) => handleMerchantFilterChange(e.target.value)}
-              aria-label="Filter by merchant"
-            >
-              <option value="">All merchants</option>
-              {merchantsForPickers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.businessName}
-                </option>
-              ))}
-            </select>
-          </div>
+        <CardContent>
           <MerchantDropsPanel
             hideSummaryCards
+            hideToolbarActions
             externalList={{
               drops: dropsAsDrops,
               total: dropsTotal,
@@ -327,6 +312,17 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
               onStatusChange: handleDropsStatusChange,
               showMerchantColumn: true,
               getMerchantLabel: (d) => merchantNameByDropId.get(d.id) ?? "—",
+              merchantFilter: {
+                value: merchantFilterId,
+                options: merchantsForPickers.map((m) => ({
+                  id: m.id,
+                  label: m.businessName,
+                })),
+                onChange: handleMerchantFilterChange,
+                disabled:
+                  merchantsPickerQuery.isLoading &&
+                  merchantsForPickers.length === 0,
+              },
             }}
             onCreateClick={openCreateSheet}
             onShareDrop={handleShareDrop}

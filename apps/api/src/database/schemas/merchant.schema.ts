@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsString,
   MinLength,
+  MaxLength,
   IsBoolean,
   IsDate,
   IsNumber,
@@ -39,6 +40,61 @@ class PasswordReset {
   @IsOptional()
   @Prop({ type: Date })
   expiresAt?: Date;
+}
+
+@Schema({ _id: false })
+class StoreLocation {
+  @ApiProperty({ example: 24.7136, description: "Store latitude" })
+  @IsNumber()
+  @Prop({ type: Number, required: true })
+  lat!: number;
+
+  @ApiProperty({ example: 46.6753, description: "Store longitude" })
+  @IsNumber()
+  @Prop({ type: Number, required: true })
+  lng!: number;
+
+  @ApiProperty({ example: "123 Main St, Riyadh", nullable: true })
+  @IsString()
+  @IsOptional()
+  @MaxLength(200)
+  @Prop({ type: String })
+  address?: string;
+
+  @ApiProperty({ example: "Riyadh", nullable: true })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  @Prop({ type: String })
+  city?: string;
+
+  @ApiProperty({ example: "Riyadh Province", nullable: true })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  @Prop({ type: String })
+  state?: string;
+
+  @ApiProperty({ example: "12345", nullable: true })
+  @IsString()
+  @IsOptional()
+  @MaxLength(20)
+  @Prop({ type: String })
+  pincode?: string;
+
+  @ApiProperty({ example: "Near Al Faisaliyah Tower", nullable: true })
+  @IsString()
+  @IsOptional()
+  @MaxLength(150)
+  @Prop({ type: String })
+  landmark?: string;
+
+  @ApiProperty({ example: "Take exit 9 from King Fahd Road", nullable: true })
+  @IsString()
+  @IsOptional()
+  @MaxLength(300)
+  @Prop({ type: String })
+  howToReach?: string;
 }
 
 @Schema({ _id: false })
@@ -96,6 +152,28 @@ export class Merchant {
   @Prop({ type: String, default: null })
   logoUrl!: string | null;
 
+  @ApiProperty({
+    example: "+966 50 123 4567",
+    nullable: true,
+    description: "Business contact phone number",
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(30)
+  @Prop({ type: String, default: null })
+  businessPhone!: string | null;
+
+  @ApiProperty({
+    example: "Sun-Thu 9AM-10PM, Fri 2PM-10PM",
+    nullable: true,
+    description: "Business operating hours",
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  @Prop({ type: String, default: null })
+  businessHours!: string | null;
+
   @ApiProperty({ default: false, description: "Whether email is verified" })
   @IsBoolean()
   @Prop({ type: Boolean, default: false })
@@ -127,6 +205,15 @@ export class Merchant {
   })
   @Prop({ type: ScannerToken, default: {} })
   scannerToken!: ScannerToken;
+
+  @ApiProperty({
+    type: StoreLocation,
+    description: "Physical store location",
+    nullable: true,
+  })
+  @IsOptional()
+  @Prop({ type: StoreLocation, default: null })
+  storeLocation!: StoreLocation | null;
 
   @ApiProperty({ default: 0, description: "Number of failed login attempts" })
   @IsNumber()

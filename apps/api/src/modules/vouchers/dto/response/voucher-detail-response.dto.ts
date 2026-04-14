@@ -32,6 +32,32 @@ export class DropInfoDto {
   termsAndConditions?: string | null;
 }
 
+export class MerchantStoreLocationDto {
+  @ApiProperty({ example: 24.7136 })
+  lat!: number;
+
+  @ApiProperty({ example: 46.6753 })
+  lng!: number;
+
+  @ApiProperty({ example: "123 Main St, Riyadh", nullable: true })
+  address?: string;
+
+  @ApiProperty({ example: "Riyadh", nullable: true })
+  city?: string;
+
+  @ApiProperty({ example: "Riyadh Province", nullable: true })
+  state?: string;
+
+  @ApiProperty({ example: "12345", nullable: true })
+  pincode?: string;
+
+  @ApiProperty({ example: "Near Al Faisaliyah Tower", nullable: true })
+  landmark?: string;
+
+  @ApiProperty({ example: "Take exit 9 from King Fahd Road", nullable: true })
+  howToReach?: string;
+}
+
 export class MerchantInfoDto {
   @ApiProperty({
     example: "507f1f77bcf86cd799439011",
@@ -51,6 +77,27 @@ export class MerchantInfoDto {
     nullable: true,
   })
   logoUrl!: string | null;
+
+  @ApiProperty({
+    type: MerchantStoreLocationDto,
+    description: "Merchant store location",
+    nullable: true,
+  })
+  storeLocation!: MerchantStoreLocationDto | null;
+
+  @ApiProperty({
+    example: "+966 50 123 4567",
+    description: "Business phone number",
+    nullable: true,
+  })
+  businessPhone!: string | null;
+
+  @ApiProperty({
+    example: "Sun-Thu 9AM-10PM",
+    description: "Business hours",
+    nullable: true,
+  })
+  businessHours!: string | null;
 }
 
 export class RedemptionConfigDto {

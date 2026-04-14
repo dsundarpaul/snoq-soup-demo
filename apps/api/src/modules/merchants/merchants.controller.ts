@@ -29,6 +29,7 @@ import { UserRole } from "../../common/enums/user-role.enum";
 import {
   UpdateMerchantDto,
   UpdateMerchantLogoDto,
+  UpdateStoreLocationDto,
 } from "./dto/request/update-merchant.dto";
 import { GenerateScannerTokenDto } from "./dto/request/generate-scanner-token.dto";
 import { MerchantResponseDto } from "./dto/response/merchant-response.dto";
@@ -65,6 +66,22 @@ export class MerchantsController {
     @Body() dto: UpdateMerchantDto,
   ): Promise<MerchantResponseDto> {
     return this.merchantsService.updateProfile(user.userId, dto);
+  }
+
+  @Patch("me/store-location")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update merchant store location" })
+  @ApiResponse({ status: 200, type: MerchantResponseDto })
+  async updateStoreLocation(
+    @CurrentUser() user: CurrentUserType,
+    @Body() dto: UpdateStoreLocationDto,
+  ): Promise<MerchantResponseDto> {
+    return this.merchantsService.updateStoreLocation(
+      user.userId,
+      dto.storeLocation,
+    );
   }
 
   @Patch("me/logo")

@@ -22,6 +22,7 @@ import {
   X,
   Store,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { publicUrls } from "@/lib/app-config";
@@ -45,6 +46,7 @@ import {
 } from "@/sections/merchant/merchant-drop-form";
 import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-preview-dialog";
 import { adminQueryKeys } from "@/hooks/api/admin/use-admin";
+import { useMerchantMeQuery } from "@/hooks/api/merchant/use-merchant";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/contexts/language-context";
@@ -395,6 +397,12 @@ export function MerchantDropSheet({
     );
   };
 
+  const { data: merchantMe } = useMerchantMeQuery({
+    enabled: !Boolean(adminContext),
+  });
+  const missingStoreLocation =
+    !Boolean(adminContext) && !merchantMe?.storeLocation?.lat;
+
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const isSubmitting =
     createDropMutation.isPending || updateDropMutation.isPending;
@@ -522,6 +530,13 @@ export function MerchantDropSheet({
             />
           </div>
           <SheetFooter className="sticky bottom-0 z-10 shrink-0 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:flex-wrap sm:justify-start sm:space-x-0">
+            {missingStoreLocation && (
+              <div className="flex w-full items-center gap-2 rounded-md border border-amber-500/50 bg-amber-500/5 px-3 py-2 text-sm text-amber-600">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Missing store location — set it in your profile so customers can
+                find your store.
+              </div>
+            )}
             <Button
               type="button"
               variant="outline"

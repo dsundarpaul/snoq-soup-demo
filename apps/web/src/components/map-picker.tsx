@@ -15,6 +15,7 @@ export interface MapPickerCoreProps {
   longitude: number;
   radiusMeters: number;
   onLocationChange: (lat: number, lng: number) => void;
+  hideGeofence?: boolean;
 }
 
 export function MapPicker({
@@ -23,6 +24,7 @@ export function MapPicker({
   longitude,
   radiusMeters,
   onLocationChange,
+  hideGeofence = false,
 }: MapPickerCoreProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -64,23 +66,26 @@ export function MapPicker({
         });
         markerRef.current = marker;
 
-        const circle = new google.maps.Circle({
-          map,
-          center: { lat: latitude, lng: longitude },
-          radius: safeRadius,
-          strokeColor: "#2563eb",
-          strokeOpacity: 0.9,
-          strokeWeight: 2,
-          fillColor: "#3b82f6",
-          fillOpacity: 0.14,
-          clickable: false,
-        });
+        let circle: google.maps.Circle | null = null;
+        if (!hideGeofence) {
+          circle = new google.maps.Circle({
+            map,
+            center: { lat: latitude, lng: longitude },
+            radius: safeRadius,
+            strokeColor: "#2563eb",
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: "#3b82f6",
+            fillOpacity: 0.14,
+            clickable: false,
+          });
+        }
         circleRef.current = circle;
 
         const applyPosition = (lat: number, lng: number) => {
           const ll = new google.maps.LatLng(lat, lng);
           marker.setPosition(ll);
-          circle.setCenter(ll);
+          circle?.setCenter(ll);
           onLocationChangeRef.current(lat, lng);
         };
 
@@ -95,9 +100,9 @@ export function MapPicker({
           applyPosition(pos.lat(), pos.lng());
         });
 
-        const b = circle.getBounds();
-        if (b) {
-          map.fitBounds(b, 16);
+        if (circle) {
+          const b = circle.getBounds();
+          if (b) map.fitBounds(b, 16);
         }
         setMapReady(true);
       })
@@ -117,13 +122,12 @@ export function MapPicker({
 
   useEffect(() => {
     const marker = markerRef.current;
-    const circle = circleRef.current;
     const map = mapRef.current;
-    if (!mapReady || !marker || !circle || !map) return;
+    if (!mapReady || !marker || !map) return;
 
     const pos = new google.maps.LatLng(latitude, longitude);
     marker.setPosition(pos);
-    circle.setCenter(pos);
+    circleRef.current?.setCenter(pos);
     map.panTo(pos);
   }, [mapReady, latitude, longitude]);
 
@@ -153,13 +157,15 @@ export function MapPicker({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <MapPin className="w-4 h-4" />
-        <span>
-          Blue circle is the claim zone. Click the map or drag the pin to move
-          the drop.
-        </span>
-      </div>
+      {!hideGeofence && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <MapPin className="w-4 h-4" />
+          <span>
+            Blue circle is the claim zone. Click the map or drag the pin to move
+            the drop.
+          </span>
+        </div>
+      )}
       <div
         className="relative h-64 w-full rounded-md overflow-hidden border"
         data-testid="map-picker-container"

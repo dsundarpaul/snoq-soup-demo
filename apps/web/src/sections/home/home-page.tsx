@@ -386,6 +386,8 @@ interface StoredVoucher {
   claimedAt: string;
 }
 
+const EMPTY_VOUCHER_ROWS: Array<{ voucher: Voucher; drop: Drop }> = [];
+
 export default function HomePage() {
   const { t } = useLanguage();
   const geo = useGeolocation();
@@ -395,8 +397,10 @@ export default function HomePage() {
 
   const hunterSignedIn = Boolean(hunterProfile?.email);
 
-  const unredeemedVouchers = hunterVoucherBuckets?.unredeemed ?? [];
-  const redeemedVouchers = hunterVoucherBuckets?.redeemed ?? [];
+  const unredeemedVouchers =
+    hunterVoucherBuckets?.unredeemed ?? EMPTY_VOUCHER_ROWS;
+  const redeemedVouchers =
+    hunterVoucherBuckets?.redeemed ?? EMPTY_VOUCHER_ROWS;
 
   const claimedDropIdSet = useMemo(() => {
     const s = new Set<string>();

@@ -98,6 +98,8 @@ const ar = {
   "merchant.createAccount": "إنشاء حساب تاجر",
   "merchant.businessName": "اسم النشاط التجاري",
   "merchant.yourBusinessName": "اسم نشاطك التجاري",
+  "merchant.companySlug": "معرّف الشركة",
+  "merchant.enterCompanySlug": "معرّف-الشركة",
   "merchant.usernameSlugHint":
     "من 3 إلى 30 حرفاً: أحرف وأرقام وشرطة سفلية فقط. يُملأ تلقائياً من اسم النشاط حتى تعدّله.",
   "merchant.youAtBusiness": "you@business.com",
@@ -177,6 +179,8 @@ const ar = {
   "voucher.termsToggleHide": "إخفاء الشروط",
   "voucher.rewardValue": "قيمة المكافأة",
   "voucher.openMagicLink": "فتح الرابط السحري",
+  "voucher.getDirections": "الاتجاهات إلى المتجر",
+  "voucher.landmark": "معلم بارز",
   "voucher.viewVoucher": "عرض القسيمة",
   "voucher.deadline": "الموعد النهائي",
   "voucher.reward": "المكافأة",

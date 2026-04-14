@@ -39,9 +39,17 @@ import {
   MERCHANT_DROP_ACTIVE_TOGGLE_BLOCKED,
 } from "@/utils/merchant-drop-active-toggle";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import type { DashboardStats } from "./merchant-dashboard.types";
 
 const DROPS_PAGE_SIZE = 10;
+
+export type MerchantDropsPanelMerchantFilter = {
+  value: string;
+  options: { id: string; label: string }[];
+  onChange: (merchantId: string) => void;
+  disabled?: boolean;
+};
 
 export type MerchantDropsPanelExternalList = {
   drops: Drop[];
@@ -58,6 +66,7 @@ export type MerchantDropsPanelExternalList = {
   onStatusChange: (value: MerchantDropsListStatus) => void;
   showMerchantColumn?: boolean;
   getMerchantLabel?: (drop: Drop) => string;
+  merchantFilter?: MerchantDropsPanelMerchantFilter;
 };
 
 export interface MerchantDropsPanelProps {
@@ -65,6 +74,8 @@ export interface MerchantDropsPanelProps {
   statsLoading?: boolean;
   externalList?: MerchantDropsPanelExternalList;
   hideSummaryCards?: boolean;
+  /** Hide inner title + create/export row (e.g. admin tab provides its own header). */
+  hideToolbarActions?: boolean;
   onCreateClick: () => void;
   onShareDrop: (dropId: string) => void;
   onCodesClick: (dropId: string) => void;
@@ -81,6 +92,7 @@ export function MerchantDropsPanel({
   statsLoading = false,
   externalList,
   hideSummaryCards = false,
+  hideToolbarActions = false,
   onCreateClick,
   onShareDrop,
   onCodesClick,
@@ -108,6 +120,7 @@ export function MerchantDropsPanel({
     externalList?.showMerchantColumn && externalList?.getMerchantLabel,
   );
   const getMerchantLabel = externalList?.getMerchantLabel;
+  const merchantFilter = externalList?.merchantFilter;
 
   useEffect(() => {
     if (externalList) return;
@@ -154,8 +167,13 @@ export function MerchantDropsPanel({
     }
   }, [dropsListData, internalPage, totalPages, externalList]);
 
+  const hasMerchantFilter = Boolean(
+    merchantFilter?.value && merchantFilter.value.length > 0,
+  );
   const hasFilters =
-    dropsSearch.trim() !== "" || dropsStatus !== "all";
+    dropsSearch.trim() !== "" ||
+    dropsStatus !== "all" ||
+    hasMerchantFilter;
   const filteredEmpty = !dropsLoading && drops.length === 0 && hasFilters;
   const noDropsAtAll =
     !dropsLoading && drops.length === 0 && !hasFilters;
@@ -232,44 +250,56 @@ export function MerchantDropsPanel({
       </div>
       ) : null}
 
-      <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              Drops
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {onExportCsv ? (
+      <Card
+        className={cn(
+          hideToolbarActions &&
+            "border-0 bg-transparent shadow-none rounded-none",
+        )}
+      >
+        <CardHeader
+          className={cn(
+            "space-y-4",
+            hideToolbarActions && "space-y-3 p-0 pb-4",
+          )}
+        >
+          {!hideToolbarActions ? (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                Drops
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                {onExportCsv ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={exportPending}
+                    onClick={onExportCsv}
+                  >
+                    {exportPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Export CSV
+                  </Button>
+                ) : null}
                 <Button
-                  type="button"
-                  variant="outline"
                   size="sm"
-                  className="gap-2"
-                  disabled={exportPending}
-                  onClick={onExportCsv}
+                  className="gap-2 shrink-0"
+                  onClick={onCreateClick}
+                  data-testid="button-create-drop"
                 >
-                  {exportPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  Export CSV
+                  <Plus className="w-4 h-4" />
+                  New Drop
                 </Button>
-              ) : null}
-              <Button
-                size="sm"
-                className="gap-2 shrink-0"
-                onClick={onCreateClick}
-                data-testid="button-create-drop"
-              >
-                <Plus className="w-4 h-4" />
-                New Drop
-              </Button>
+              </div>
             </div>
-          </div>
+          ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="relative flex-1 min-w-[200px] sm:max-w-xs">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search name or reward…"
@@ -279,13 +309,37 @@ export function MerchantDropsPanel({
                 aria-label="Search drops"
               />
             </div>
+            {merchantFilter ? (
+              <Select
+                value={merchantFilter.value ? merchantFilter.value : "all"}
+                onValueChange={(v) =>
+                  merchantFilter.onChange(v === "all" ? "" : v)
+                }
+                disabled={merchantFilter.disabled}
+              >
+                <SelectTrigger
+                  className="w-full min-w-0 sm:w-[220px]"
+                  aria-label="Filter by merchant"
+                >
+                  <SelectValue placeholder="Merchant" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All merchants</SelectItem>
+                  {merchantFilter.options.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
             <Select
               value={dropsStatus}
               onValueChange={(v) =>
                 setDropsStatus(v as MerchantDropsListStatus)
               }
             >
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full min-w-0 sm:w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -298,7 +352,7 @@ export function MerchantDropsPanel({
             </Select>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className={cn(hideToolbarActions && "p-0 pt-0")}>
           {dropsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -312,7 +366,9 @@ export function MerchantDropsPanel({
                 No matching drops
               </h3>
               <p className="text-muted-foreground text-sm">
-                Try a different search or status filter.
+                {merchantFilter
+                  ? "Try a different search, merchant, or status."
+                  : "Try a different search or status filter."}
               </p>
             </div>
           ) : noDropsAtAll ? (

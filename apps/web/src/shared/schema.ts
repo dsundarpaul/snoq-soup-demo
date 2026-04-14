@@ -16,6 +16,17 @@ import {
 } from "@/lib/hunter-dob";
 import { getHunterNationalNumberBounds } from "@/lib/hunter-phone-bounds";
 
+export interface StoreLocation {
+  lat: number;
+  lng: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  landmark?: string;
+  howToReach?: string;
+}
+
 export const merchants = pgTable("merchants", {
   id: varchar("id")
     .primaryKey()
@@ -41,7 +52,11 @@ export const insertMerchantSchema = createInsertSchema(merchants).omit({
   createdAt: true,
 });
 export type InsertMerchant = z.infer<typeof insertMerchantSchema>;
-export type Merchant = typeof merchants.$inferSelect;
+export type Merchant = typeof merchants.$inferSelect & {
+  storeLocation?: StoreLocation | null;
+  businessPhone?: string | null;
+  businessHours?: string | null;
+};
 
 const nestPassword = z
   .string()

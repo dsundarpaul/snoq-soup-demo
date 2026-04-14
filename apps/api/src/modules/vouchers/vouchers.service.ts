@@ -750,20 +750,17 @@ export class VouchersService {
   ): Promise<VoucherDetailResponseDto> {
     const baseDto = this.toResponseDto(voucher);
 
-    // Get drop details
-    const drop = await this.database.drops.findById(voucher.dropId).lean();
+    const [drop, promoCode, merchant] = await Promise.all([
+      this.database.drops.findById(voucher.dropId).lean(),
+      this.database.promoCodes.findOne({ voucherId: voucher._id }).lean(),
+      this.database.merchants
+        .findById(voucher.merchantId)
+        .select("businessName username logoUrl storeLocation businessPhone businessHours")
+        .lean(),
+    ]);
 
-    // Get promo code
-    const promoCode = await this.database.promoCodes
-      .findOne({
-        voucherId: voucher._id,
-      })
-      .lean();
-
-    // Type-safe refactor: safely convert drop ID
     const dropIdStr = drop?._id?.toString() ?? "";
 
-    // Build drop data
     const dropData = drop
       ? {
           id: dropIdStr,
@@ -782,7 +779,6 @@ export class VouchersService {
           termsAndConditions: null,
         };
 
-    // Build redemption config
     const redemptionConfig = drop?.redemption
       ? {
           type: drop.redemption.type,
@@ -793,12 +789,43 @@ export class VouchersService {
           type: "anytime" as const,
         };
 
-    // Type-safe refactor: build response properly without forceful casting
+    const sl = merchant?.storeLocation ?? null;
+
+    const merchantInfo = merchant
+      ? {
+          id: merchant._id.toString(),
+          name: merchant.businessName,
+          username: merchant.username,
+          logoUrl: merchant.logoUrl ?? null,
+          storeLocation: sl
+            ? {
+                lat: sl.lat,
+                lng: sl.lng,
+                address: sl.address,
+                city: sl.city,
+                state: sl.state,
+                pincode: sl.pincode,
+                landmark: sl.landmark,
+                howToReach: sl.howToReach,
+              }
+            : null,
+          businessPhone: (merchant as Record<string, unknown>).businessPhone as string | null ?? null,
+          businessHours: (merchant as Record<string, unknown>).businessHours as string | null ?? null,
+        }
+      : {
+          id: "",
+          name: "",
+          username: "",
+          logoUrl: null,
+          storeLocation: null,
+          businessPhone: null,
+          businessHours: null,
+        };
+
     const detailDto: VoucherDetailResponseDto = {
       ...baseDto,
       drop: dropData,
-      // Type-safe refactor: merchant will be populated by controller
-      merchant: undefined as unknown as VoucherDetailResponseDto["merchant"],
+      merchant: merchantInfo,
       redemptionConfig,
       promoCode: promoCode
         ? {

@@ -175,10 +175,10 @@ export default function MerchantSignupPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("auth.username")}</FormLabel>
+                    <FormLabel>{t("merchant.companySlug")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={t("auth.enterUsername")}
+                        placeholder={t("merchant.enterCompanySlug")}
                         autoComplete="username"
                         data-testid="input-username"
                         {...field}
