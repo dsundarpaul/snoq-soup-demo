@@ -12,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { VoucherDisplay } from "@/components/voucher-display";
 import {
   MapPin,
@@ -38,6 +44,7 @@ import { useActiveDropsQuery } from "@/hooks/api/drop/use-drop";
 import {
   useHunterVouchersQuery,
   useTreasureHunterProfileQuery,
+  type HunterVoucherRow,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import { clearSessionsExcept } from "@/lib/auth-session";
 import type { TranslationKey } from "@/locales/en";
@@ -252,6 +259,65 @@ function DropCard({
           </Button>
         </div>
       </div>
+
+      <Accordion type="single" collapsible className="w-full mt-3 border-t pt-1">
+        <AccordionItem value="details" className="border-0">
+          <AccordionTrigger
+            className="py-2 text-sm text-muted-foreground hover:no-underline"
+            data-testid={`accordion-drop-details-${drop.id}`}
+          >
+            {t("home.dropDetails")}
+          </AccordionTrigger>
+          <AccordionContent className="text-sm space-y-3 text-muted-foreground pb-2">
+            <p className="text-foreground whitespace-pre-wrap">{drop.description}</p>
+            {drop.termsAndConditions ? (
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">
+                  {t("voucher.termsTitle")}
+                </p>
+                <p className="whitespace-pre-wrap">{drop.termsAndConditions}</p>
+              </div>
+            ) : null}
+            {remaining !== null ? (
+              <p>
+                <span className="font-medium text-foreground">
+                  {t("home.captureLimit")}:{" "}
+                </span>
+                {isSoldOut
+                  ? t("status.soldOut")
+                  : `${remaining} ${t("voucher.left")}`}
+              </p>
+            ) : null}
+            {drop.redemptionType === "timer" && drop.redemptionMinutes ? (
+              <p>
+                <span className="font-medium text-foreground">
+                  {t("voucher.timeRemaining")}:{" "}
+                </span>
+                {drop.redemptionMinutes >= 60
+                  ? `${drop.redemptionMinutes / 60}hr`
+                  : `${drop.redemptionMinutes}min`}{" "}
+                {t("voucher.toRedeem")}
+              </p>
+            ) : null}
+            {drop.redemptionType === "window" && drop.redemptionDeadline ? (
+              <p>
+                <span className="font-medium text-foreground">
+                  {t("voucher.deadline")}:{" "}
+                </span>
+                {new Date(drop.redemptionDeadline).toLocaleString()}
+              </p>
+            ) : null}
+            {timeWindowInfo ? (
+              <p>
+                <span className="font-medium text-foreground">
+                  {t("home.availability")}:{" "}
+                </span>
+                {timeWindowInfo.status}
+              </p>
+            ) : null}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   );
 }
@@ -384,9 +450,22 @@ interface StoredVoucher {
   voucher: Voucher;
   drop: Drop;
   claimedAt: string;
+  businessName: string;
+  merchantStoreLocation: {
+    lat: number;
+    lng: number;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    landmark?: string;
+    howToReach?: string;
+  } | null;
+  merchantBusinessPhone: string | null;
+  merchantBusinessHours: string | null;
 }
 
-const EMPTY_VOUCHER_ROWS: Array<{ voucher: Voucher; drop: Drop }> = [];
+const EMPTY_VOUCHER_ROWS: HunterVoucherRow[] = [];
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -520,7 +599,15 @@ export default function HomePage() {
                     </Badge>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {unredeemedVouchers.map(({ voucher, drop }) => {
+                    {unredeemedVouchers.map(
+                      ({
+                        voucher,
+                        drop,
+                        businessName,
+                        merchantStoreLocation,
+                        merchantBusinessPhone,
+                        merchantBusinessHours,
+                      }) => {
                       const status = voucherStatuses[voucher.id];
                       return (
                         <Card
@@ -531,6 +618,10 @@ export default function HomePage() {
                               voucher,
                               drop,
                               claimedAt: voucher.claimedAt?.toString() || "",
+                              businessName,
+                              merchantStoreLocation,
+                              merchantBusinessPhone,
+                              merchantBusinessHours,
                             })
                           }
                           data-testid={`card-voucher-${voucher.id}`}
@@ -597,7 +688,8 @@ export default function HomePage() {
                           </div>
                         </Card>
                       );
-                    })}
+                    }
+                    )}
                   </div>
                 </section>
               )}
@@ -614,7 +706,15 @@ export default function HomePage() {
                     </Badge>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {redeemedVouchers.map(({ voucher, drop }) => (
+                    {redeemedVouchers.map(
+                      ({
+                        voucher,
+                        drop,
+                        businessName,
+                        merchantStoreLocation,
+                        merchantBusinessPhone,
+                        merchantBusinessHours,
+                      }) => (
                       <Card
                         key={voucher.id}
                         className="p-4 border-muted cursor-pointer hover-elevate"
@@ -623,6 +723,10 @@ export default function HomePage() {
                             voucher,
                             drop,
                             claimedAt: voucher.claimedAt?.toString() || "",
+                            businessName,
+                            merchantStoreLocation,
+                            merchantBusinessPhone,
+                            merchantBusinessHours,
                           })
                         }
                         data-testid={`card-redeemed-voucher-${voucher.id}`}
@@ -660,7 +764,8 @@ export default function HomePage() {
                           </Button>
                         </div>
                       </Card>
-                    ))}
+                    )
+                    )}
                   </div>
                 </section>
               )}
@@ -820,6 +925,10 @@ export default function HomePage() {
             <VoucherDisplay
               voucher={selectedVoucher.voucher}
               drop={selectedVoucher.drop}
+              businessName={selectedVoucher.businessName}
+              merchantStoreLocation={selectedVoucher.merchantStoreLocation}
+              merchantBusinessPhone={selectedVoucher.merchantBusinessPhone}
+              merchantBusinessHours={selectedVoucher.merchantBusinessHours}
             />
           )}
         </DialogContent>

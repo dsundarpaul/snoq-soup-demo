@@ -222,6 +222,40 @@ export default function MerchantDashboardPage() {
     },
   });
 
+  const deleteOneCodeMutation = useMutation({
+    mutationFn: async ({
+      dropId,
+      codeId,
+    }: {
+      dropId: string;
+      codeId: string;
+    }) => {
+      const res = await apiRequest(
+        "DELETE",
+        `/api/v1/merchants/me/drops/${dropId}/codes/${codeId}`,
+        undefined,
+        { auth: "merchant" }
+      );
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: merchantQueryKeys.dropCodes(variables.dropId),
+      });
+      toast({
+        title: "Code removed",
+        description: "Promo code deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Could not delete this code.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLogout = async () => {
     await merchantLogout();
     router.push("/merchant");
@@ -404,6 +438,11 @@ export default function MerchantDashboardPage() {
         codesQuery={codesQuery}
         uploadPending={uploadCodesMutation.isPending}
         deletePending={deleteCodesMutation.isPending}
+        deletingCodeId={
+          deleteOneCodeMutation.isPending
+            ? deleteOneCodeMutation.variables?.codeId ?? null
+            : null
+        }
         onUploadCodes={handleUploadCodes}
         onDeleteAllCodes={() => {
           if (
@@ -412,6 +451,18 @@ export default function MerchantDashboardPage() {
             )
           ) {
             deleteCodesMutation.mutate(codesDropId!);
+          }
+        }}
+        onDeleteCode={(codeId) => {
+          if (
+            window.confirm(
+              "Delete this promo code? This cannot be undone if it is still available."
+            )
+          ) {
+            deleteOneCodeMutation.mutate({
+              dropId: codesDropId!,
+              codeId,
+            });
           }
         }}
         onImportFile={handleFileImportCodes}

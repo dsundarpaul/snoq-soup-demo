@@ -164,7 +164,7 @@ export default function ProfilePage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <Card className="p-6 bg-primary/5 border-primary/20">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -313,10 +313,10 @@ export default function ProfilePage() {
               </Card>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Link href="/history">
                 <Card
-                  className="p-4 hover-elevate cursor-pointer"
+                  className="p-4 hover-elevate cursor-pointer mb-3"
                   data-testid="link-history"
                 >
                   <div className="flex items-center gap-4">

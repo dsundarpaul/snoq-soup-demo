@@ -35,6 +35,9 @@ const ar = {
   "home.noDropsDesc": "تحقق لاحقاً لمكافآت جديدة!",
   "home.hunt": "ابدأ",
   "home.directions": "الاتجاهات",
+  "home.dropDetails": "تفاصيل الكنز",
+  "home.captureLimit": "الأماكن المتبقية",
+  "home.availability": "الجدول الزمني",
   "home.view": "عرض",
   "home.openArHunt": "ابدأ الصيد",
   "home.yourReward": "مكافأتك",
@@ -110,6 +113,7 @@ const ar = {
   "merchant.createMerchantAccount": "إنشاء حساب تاجر",
   "merchant.startRewarding": "ابدأ بمكافأة عملائك",
   "merchant.signupFailed": "فشل التسجيل. يرجى المحاولة مرة أخرى.",
+  "merchant.goToMerchantLogin": "الانتقال لتسجيل دخول التاجر",
   "merchant.imAMerchant": "أنا تاجر",
   "merchant.notMerchantLoginAsUser": "لست تاجراً؟",
   "merchant.loginAsUserLink": "تسجيل الدخول كمستخدم",
@@ -285,7 +289,7 @@ const ar = {
   "ar.toDestination": "إلى الوجهة",
 
   // Claim History
-  "history.title": "كنوزي",
+  "history.title": "قسائمي",
   "history.noVouchers": "لا توجد قسائم بعد",
   "history.startHunting": "ابدأ البحث عن المكافآت على الخريطة!",
   "history.claimed": "تم الاقتناص",

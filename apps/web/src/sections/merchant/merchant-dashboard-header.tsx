@@ -25,7 +25,7 @@ export function MerchantDashboardHeader({
         <button
           type="button"
           onClick={() => {
-            window.location.reload();
+            router.push("/merchant/dashboard");
           }}
           className="flex items-center gap-2 sm:gap-3 min-w-0 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >

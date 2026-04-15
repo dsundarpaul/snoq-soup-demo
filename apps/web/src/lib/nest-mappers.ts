@@ -324,6 +324,70 @@ export function mapMerchantPublicToStoreData(raw: Record<string, unknown>): {
   };
 }
 
+export type HunterVoucherMerchantDisplay = {
+  businessName: string;
+  merchantStoreLocation: {
+    lat: number;
+    lng: number;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    landmark?: string;
+    howToReach?: string;
+  } | null;
+  merchantBusinessPhone: string | null;
+  merchantBusinessHours: string | null;
+};
+
+function nestMerchantRecordToVoucherDisplayFields(
+  merchant: Record<string, unknown> | undefined
+): HunterVoucherMerchantDisplay {
+  if (!merchant) {
+    return {
+      businessName: "",
+      merchantStoreLocation: null,
+      merchantBusinessPhone: null,
+      merchantBusinessHours: null,
+    };
+  }
+
+  const sl = merchant.storeLocation as
+    | {
+        lat?: number;
+        lng?: number;
+        address?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+        landmark?: string;
+        howToReach?: string;
+      }
+    | null
+    | undefined;
+
+  const merchantStoreLocation =
+    sl?.lat != null && sl?.lng != null
+      ? {
+          lat: sl.lat as number,
+          lng: sl.lng as number,
+          address: sl.address as string | undefined,
+          city: sl.city as string | undefined,
+          state: sl.state as string | undefined,
+          pincode: sl.pincode as string | undefined,
+          landmark: sl.landmark as string | undefined,
+          howToReach: sl.howToReach as string | undefined,
+        }
+      : null;
+
+  return {
+    businessName: String(merchant.name ?? ""),
+    merchantStoreLocation,
+    merchantBusinessPhone: (merchant.businessPhone as string | null) ?? null,
+    merchantBusinessHours: (merchant.businessHours as string | null) ?? null,
+  };
+}
+
 export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
   voucher: Voucher;
   drop: Drop;
@@ -383,40 +447,10 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
       : undefined,
   });
 
-  const sl = merchant?.storeLocation as
-    | {
-        lat?: number;
-        lng?: number;
-        address?: string;
-        city?: string;
-        state?: string;
-        pincode?: string;
-        landmark?: string;
-        howToReach?: string;
-      }
-    | null
-    | undefined;
-  const merchantStoreLocation =
-    sl?.lat != null && sl?.lng != null
-      ? {
-          lat: sl.lat as number,
-          lng: sl.lng as number,
-          address: sl.address as string | undefined,
-          city: sl.city as string | undefined,
-          state: sl.state as string | undefined,
-          pincode: sl.pincode as string | undefined,
-          landmark: sl.landmark as string | undefined,
-          howToReach: sl.howToReach as string | undefined,
-        }
-      : null;
-
   return {
     voucher,
     drop,
-    businessName: String(merchant?.name ?? ""),
-    merchantStoreLocation,
-    merchantBusinessPhone: (merchant?.businessPhone as string | null) ?? null,
-    merchantBusinessHours: (merchant?.businessHours as string | null) ?? null,
+    ...nestMerchantRecordToVoucherDisplayFields(merchant),
   };
 }
 
@@ -447,7 +481,8 @@ export function mapClaimResponseToLegacy(raw: Record<string, unknown>): {
 export function mapHunterVoucherBundleToLegacy(row: {
   voucher: Record<string, unknown>;
   drop: Record<string, unknown>;
-}): { voucher: Voucher; drop: Drop } {
+  merchant?: Record<string, unknown>;
+}): { voucher: Voucher; drop: Drop } & HunterVoucherMerchantDisplay {
   const voucher = mapNestVoucherToLegacy(row.voucher);
   const dropRaw = row.drop;
   const drop = mapNestDropToLegacy({
@@ -455,24 +490,36 @@ export function mapHunterVoucherBundleToLegacy(row: {
     id: dropRaw.id ?? voucher.dropId,
     merchantId: (dropRaw.merchantId as string) ?? voucher.merchantId,
   });
-  return { voucher, drop };
+  return {
+    voucher,
+    drop,
+    ...nestMerchantRecordToVoucherDisplayFields(row.merchant),
+  };
 }
 
 export function mapHunterVouchersBucketsToLegacy(json: Record<string, unknown>): {
-  unredeemed: { voucher: Voucher; drop: Drop }[];
-  redeemed: { voucher: Voucher; drop: Drop }[];
+  unredeemed: ({ voucher: Voucher; drop: Drop } & HunterVoucherMerchantDisplay)[];
+  redeemed: ({ voucher: Voucher; drop: Drop } & HunterVoucherMerchantDisplay)[];
 } {
   const u = (json.unredeemed as Record<string, unknown>[] | undefined) ?? [];
   const r = (json.redeemed as Record<string, unknown>[] | undefined) ?? [];
   return {
     unredeemed: u.map((row) =>
       mapHunterVoucherBundleToLegacy(
-        row as { voucher: Record<string, unknown>; drop: Record<string, unknown> },
+        row as {
+          voucher: Record<string, unknown>;
+          drop: Record<string, unknown>;
+          merchant?: Record<string, unknown>;
+        },
       ),
     ),
     redeemed: r.map((row) =>
       mapHunterVoucherBundleToLegacy(
-        row as { voucher: Record<string, unknown>; drop: Record<string, unknown> },
+        row as {
+          voucher: Record<string, unknown>;
+          drop: Record<string, unknown>;
+          merchant?: Record<string, unknown>;
+        },
       ),
     ),
   };

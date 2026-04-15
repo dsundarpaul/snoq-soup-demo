@@ -214,6 +214,43 @@ export class PromoCodesService {
     return { deletedCount: result.modifiedCount };
   }
 
+  async deleteOne(
+    dropId: string,
+    codeId: string,
+    merchantId: string,
+  ): Promise<{ deleted: boolean }> {
+    await this.verifyDropOwnership(dropId, merchantId);
+
+    if (!Types.ObjectId.isValid(codeId)) {
+      throw new BadRequestException("Invalid promo code id");
+    }
+
+    const promoCode = await this.database.promoCodes
+      .findOne({
+        _id: new Types.ObjectId(codeId),
+        dropId: new Types.ObjectId(dropId),
+        deletedAt: null,
+      })
+      .lean();
+
+    if (!promoCode) {
+      throw new NotFoundException("Promo code not found");
+    }
+
+    if (promoCode.status !== PromoCodeStatus.AVAILABLE) {
+      throw new BadRequestException(
+        "Only available (unassigned) promo codes can be deleted",
+      );
+    }
+
+    await this.database.promoCodes.updateOne(
+      { _id: new Types.ObjectId(codeId) },
+      { $set: { deletedAt: new Date() } },
+    );
+
+    return { deleted: true };
+  }
+
   async getStats(
     dropId: string,
     merchantId: string,

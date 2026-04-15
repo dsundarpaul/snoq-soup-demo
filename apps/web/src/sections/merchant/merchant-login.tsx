@@ -77,6 +77,7 @@ export default function MerchantLoginPage() {
       setError(error.message);
       if (error.message.toLowerCase().includes("verify")) {
         setShowResendOption(true);
+        setResendEmail(form.getValues("email").trim());
       }
     },
   });

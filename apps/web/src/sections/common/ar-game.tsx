@@ -33,7 +33,9 @@ import { useClaimVoucherMutation } from "@/hooks/api/voucher/use-voucher";
 import {
   useHunterVouchersQuery,
   useTreasureHunterProfileQuery,
+  type HunterVoucherRow,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import { toast } from "@/hooks/use-toast";
 
 const DEFAULT_DROP = {
   id: "default-drop",
@@ -196,7 +198,9 @@ function ARCameraView({
           <AlertCircle className="w-16 h-16 text-teal mx-auto mb-4" />
           <p className="text-white text-lg mb-2">{t("ar.cameraRequired")}</p>
           <p className="text-slate-400 text-sm mb-4">{cameraError}</p>
-          <p className="text-slate-500 text-xs mb-4">{t("ar.permissionsSettingsHint")}</p>
+          <p className="text-slate-500 text-xs mb-4">
+            {t("ar.permissionsSettingsHint")}
+          </p>
           <Button
             className="bg-primary text-white"
             onClick={() => setCameraAttempt((n) => n + 1)}
@@ -231,7 +235,9 @@ function ARCameraView({
                 {t("ar.compassDesc")}
               </p>
               {orientationError ? (
-                <p className="text-sm text-destructive mb-4">{orientationError}</p>
+                <p className="text-sm text-destructive mb-4">
+                  {orientationError}
+                </p>
               ) : null}
               <Button
                 onClick={() => void requestPermission()}
@@ -510,20 +516,20 @@ function CaptureAnimationInner({ onComplete }: { onComplete: () => void }) {
 
       <div className="relative flex flex-col items-center text-center animate-bounce">
         <div className="relative w-32 h-32 shrink-0">
-        <div
-          className="w-32 h-32 rounded-full bg-teal/30 absolute inset-0 animate-ping"
-          style={{ animationDuration: "1s" }}
-        />
-        <div className="w-32 h-32 rounded-full bg-teal/50 flex items-center justify-center relative">
-          <svg
-            className="w-16 h-16 text-teal"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M5 3h14c.5 0 1 .5 1 1l-2 8H6L4 4c0-.5.5-1 1-1z" />
-            <path d="M7 12h10l-1.5 6c-.1.5-.5.8-1 .8H9.5c-.5 0-.9-.3-1-.8L7 12z" />
-          </svg>
-        </div>
+          <div
+            className="w-32 h-32 rounded-full bg-teal/30 absolute inset-0 animate-ping"
+            style={{ animationDuration: "1s" }}
+          />
+          <div className="w-32 h-32 rounded-full bg-teal/50 flex items-center justify-center relative">
+            <svg
+              className="w-16 h-16 text-teal"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M5 3h14c.5 0 1 .5 1 1l-2 8H6L4 4c0-.5.5-1 1-1z" />
+              <path d="M7 12h10l-1.5 6c-.1.5-.5.8-1 .8H9.5c-.5 0-.9-.3-1-.8L7 12z" />
+            </svg>
+          </div>
         </div>
         <h2 className="text-3xl font-bold text-teal mt-6 animate-pulse">
           {t("ar.captured")}
@@ -554,7 +560,7 @@ export default function ARGamePage() {
   const redeemedRows = hunterVoucherBuckets?.redeemed ?? [];
   const allVoucherRows = useMemo(
     () => [...unredeemedRows, ...redeemedRows],
-    [unredeemedRows, redeemedRows],
+    [unredeemedRows, redeemedRows]
   );
 
   const claimedDropIdSet = useMemo(() => {
@@ -567,15 +573,14 @@ export default function ARGamePage() {
 
   const hasClaimedDrop = useCallback(
     (dropId: string) => claimedDropIdSet.has(dropId),
-    [claimedDropIdSet],
+    [claimedDropIdSet]
   );
   const [dismissedClaimDropId, setDismissedClaimDropId] = useState<
     string | null
   >(null);
-  const [claimedVoucher, setClaimedVoucher] = useState<{
-    voucher: Voucher;
-    drop: Drop;
-  } | null>(null);
+  const [claimedVoucher, setClaimedVoucher] = useState<HunterVoucherRow | null>(
+    null
+  );
   const [showCaptureAnimation, setShowCaptureAnimation] = useState(false);
   const [pendingVoucher, setPendingVoucher] = useState<{
     voucher: Voucher;
@@ -636,7 +641,13 @@ export default function ARGamePage() {
   const handleAnimationComplete = () => {
     setShowCaptureAnimation(false);
     if (pendingVoucher) {
-      setClaimedVoucher(pendingVoucher);
+      setClaimedVoucher({
+        ...pendingVoucher,
+        businessName: "",
+        merchantStoreLocation: null,
+        merchantBusinessPhone: null,
+        merchantBusinessHours: null,
+      });
       setPendingVoucher(null);
     }
   };
@@ -651,6 +662,15 @@ export default function ARGamePage() {
     ) {
       const hunterId =
         typeof hunterProfile?.id === "string" ? hunterProfile.id : undefined;
+
+      if (!hunterId) {
+        toast({
+          title: t("common.error"),
+          variant: "destructive",
+        });
+        return;
+      }
+
       claimMutation.mutate({
         dropId: activeDrop.id,
         deviceId,
@@ -665,7 +685,7 @@ export default function ARGamePage() {
 
   useEffect(() => {
     const existingVoucher = allVoucherRows.find(
-      (v) => v.voucher.dropId === activeDrop?.id,
+      (v) => v.voucher.dropId === activeDrop?.id
     );
     if (
       existingVoucher &&
@@ -676,9 +696,43 @@ export default function ARGamePage() {
       setClaimedVoucher({
         voucher: existingVoucher.voucher,
         drop: existingVoucher.drop,
+        businessName: existingVoucher.businessName,
+        merchantStoreLocation: existingVoucher.merchantStoreLocation,
+        merchantBusinessPhone: existingVoucher.merchantBusinessPhone,
+        merchantBusinessHours: existingVoucher.merchantBusinessHours,
       });
     }
   }, [allVoucherRows, activeDrop, claimedVoucher, dismissedClaimDropId]);
+
+  useEffect(() => {
+    setClaimedVoucher((prev) => {
+      if (!prev?.voucher.id) return prev;
+      if (
+        prev.businessName ||
+        prev.merchantStoreLocation ||
+        prev.merchantBusinessPhone
+      ) {
+        return prev;
+      }
+      const row = allVoucherRows.find((r) => r.voucher.id === prev.voucher.id);
+      if (
+        !row ||
+        (!row.businessName &&
+          !row.merchantStoreLocation &&
+          !row.merchantBusinessPhone)
+      ) {
+        return prev;
+      }
+      return {
+        voucher: row.voucher,
+        drop: row.drop,
+        businessName: row.businessName,
+        merchantStoreLocation: row.merchantStoreLocation,
+        merchantBusinessPhone: row.merchantBusinessPhone,
+        merchantBusinessHours: row.merchantBusinessHours,
+      };
+    });
+  }, [allVoucherRows]);
 
   const handleBackFromClaimedVoucher = () => {
     if (activeDrop) {
@@ -706,7 +760,10 @@ export default function ARGamePage() {
         <VoucherDisplay
           voucher={claimedVoucher.voucher}
           drop={claimedVoucher.drop}
-          businessName=""
+          businessName={claimedVoucher.businessName}
+          merchantStoreLocation={claimedVoucher.merchantStoreLocation}
+          merchantBusinessPhone={claimedVoucher.merchantBusinessPhone}
+          merchantBusinessHours={claimedVoucher.merchantBusinessHours}
         />
       </div>
     );
@@ -849,9 +906,7 @@ export default function ARGamePage() {
                 </h3>
                 <Badge className="shrink-0 bg-teal text-teal-foreground flex items-center gap-1 max-w-[45%]">
                   <Trophy className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">
-                    {activeDrop?.rewardValue}
-                  </span>
+                  <span className="truncate">{activeDrop?.rewardValue}</span>
                 </Badge>
               </div>
               <p className="text-sm text-slate-400 line-clamp-2">
@@ -876,9 +931,9 @@ export default function ARGamePage() {
               className="w-full bg-primary text-primary-foreground"
               onClick={() => {
                 const v = allVoucherRows.find(
-                  (row) => row.voucher.dropId === activeDrop?.id,
+                  (row) => row.voucher.dropId === activeDrop?.id
                 );
-                if (v) setClaimedVoucher({ voucher: v.voucher, drop: v.drop });
+                if (v) setClaimedVoucher(v);
               }}
               data-testid="button-view-voucher"
             >

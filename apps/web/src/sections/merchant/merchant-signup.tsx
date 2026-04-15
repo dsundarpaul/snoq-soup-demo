@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Store, ArrowLeft, Mail } from "lucide-react";
+import { Loader2, Store, ArrowLeft, Mail, LogIn } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/contexts/language-context";
@@ -25,6 +25,11 @@ import {
 } from "@shared/schema";
 import { useMerchantSignupMutation } from "@/hooks/api/merchant/use-merchant";
 import { slugifyBusinessNameForMerchantUsername } from "@/lib/merchant-username";
+
+function isMerchantSignupDuplicateEmailError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : "";
+  return msg.includes("already have a merchant account with this email");
+}
 
 export default function MerchantSignupPage() {
   const [emailSent, setEmailSent] = useState(false);
@@ -258,13 +263,29 @@ export default function MerchantSignupPage() {
               />
 
               {signupMutation.error && (
-                <p
-                  className="text-sm text-destructive"
-                  data-testid="text-error"
+                <div
+                  className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 space-y-3"
+                  data-testid="signup-error-block"
                 >
-                  {(signupMutation.error as Error).message ||
-                    t("merchant.signupFailed")}
-                </p>
+                  <p
+                    className="text-sm text-destructive"
+                    data-testid="text-error"
+                  >
+                    {(signupMutation.error as Error).message ||
+                      t("merchant.signupFailed")}
+                  </p>
+                  {isMerchantSignupDuplicateEmailError(signupMutation.error) ? (
+                    <Button asChild className="w-full" variant="secondary">
+                      <Link
+                        href="/merchant"
+                        data-testid="button-go-merchant-login"
+                      >
+                        <LogIn className="w-4 h-4 mr-2" />
+                        {t("merchant.goToMerchantLogin")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
               )}
 
               <Button

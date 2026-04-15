@@ -224,6 +224,7 @@ export class HuntersService {
         redeemed: voucher.redeemed,
         redeemedAt: voucher.redeemedAt,
         promoCode: promoCode?.code || null,
+        magicToken: voucher.magicToken,
       };
     });
 

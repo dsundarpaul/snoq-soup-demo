@@ -25,8 +25,10 @@ export interface MerchantPromoCodesDialogProps {
   };
   uploadPending: boolean;
   deletePending: boolean;
+  deletingCodeId?: string | null;
   onUploadCodes: () => void;
   onDeleteAllCodes: () => void;
+  onDeleteCode: (codeId: string) => void;
   onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -38,8 +40,10 @@ export function MerchantPromoCodesDialog({
   codesQuery,
   uploadPending,
   deletePending,
+  deletingCodeId = null,
   onUploadCodes,
   onDeleteAllCodes,
+  onDeleteCode,
   onImportFile,
 }: MerchantPromoCodesDialogProps) {
   return (
@@ -153,16 +157,40 @@ export function MerchantPromoCodesDialog({
                   {codesQuery.data?.codes.map((code) => (
                     <div
                       key={code.id}
-                      className="flex items-center justify-between px-3 py-2 text-sm"
+                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
                     >
-                      <span className="font-mono">{code.code}</span>
-                      <Badge
-                        variant={
-                          code.status === "available" ? "secondary" : "default"
-                        }
-                      >
-                        {code.status}
-                      </Badge>
+                      <span className="font-mono truncate min-w-0">
+                        {code.code}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge
+                          variant={
+                            code.status === "available"
+                              ? "secondary"
+                              : "default"
+                          }
+                        >
+                          {code.status}
+                        </Badge>
+                        {code.status === "available" ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            disabled={deletingCodeId === code.id}
+                            onClick={() => onDeleteCode(code.id)}
+                            data-testid={`button-delete-code-${code.id}`}
+                            title="Delete code"
+                          >
+                            {deletingCodeId === code.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>

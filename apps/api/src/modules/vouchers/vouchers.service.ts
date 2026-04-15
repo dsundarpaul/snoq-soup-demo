@@ -14,7 +14,10 @@ import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
-import { VoucherDetailResponseDto } from "./dto/response/voucher-detail-response.dto";
+import {
+  VoucherDetailResponseDto,
+  MerchantInfoDto,
+} from "./dto/response/voucher-detail-response.dto";
 import { RedeemResultDto } from "./dto/response/redeem-result.dto";
 import { HunterVouchersBucketsDto } from "./dto/response/hunter-vouchers-buckets.dto";
 import { MailService } from "../mail/mail.service";
@@ -358,6 +361,39 @@ export class VouchersService {
       drops.map((d) => [d._id.toString(), d as DropDocument])
     );
 
+    const merchantIdStrs = [
+      ...new Set(
+        drops
+          .map((d) =>
+            d.merchantId
+              ? typeof d.merchantId === "string"
+                ? d.merchantId
+                : d.merchantId.toString()
+              : ""
+          )
+          .filter(Boolean)
+      ),
+    ];
+
+    const merchants =
+      merchantIdStrs.length > 0
+        ? await this.database.merchants
+            .find({
+              _id: {
+                $in: merchantIdStrs.map((id) => new Types.ObjectId(id)),
+              },
+              deletedAt: null,
+            })
+            .select(
+              "businessName username logoUrl storeLocation businessPhone businessHours"
+            )
+            .lean()
+        : [];
+
+    const merchantMap = new Map(
+      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>])
+    );
+
     const unredeemed: HunterVouchersBucketsDto["unredeemed"] = [];
     const redeemed: HunterVouchersBucketsDto["redeemed"] = [];
 
@@ -372,7 +408,14 @@ export class VouchersService {
       const dropDto = this.dropsService.toResponseDto(doc);
       const voucherDto = this.toResponseDto(v as VoucherDocument, null);
 
-      const item = { voucher: voucherDto, drop: dropDto };
+      const merchantIdForDrop =
+        typeof doc.merchantId === "string"
+          ? doc.merchantId
+          : (doc.merchantId?.toString() ?? "");
+      const merchantLean = merchantMap.get(merchantIdForDrop) ?? null;
+      const merchantDto = this.mapMerchantLeanToInfoDto(merchantLean);
+
+      const item = { voucher: voucherDto, drop: dropDto, merchant: merchantDto };
       if (v.redeemed) {
         redeemed.push(item);
       } else {
@@ -783,44 +826,9 @@ export class VouchersService {
           type: "anytime" as const,
         };
 
-    const sl = merchant?.storeLocation ?? null;
-
-    const merchantInfo = merchant
-      ? {
-          id: merchant._id.toString(),
-          name: merchant.businessName,
-          username: merchant.username,
-          logoUrl: merchant.logoUrl ?? null,
-          storeLocation: sl
-            ? {
-                lat: sl.lat,
-                lng: sl.lng,
-                address: sl.address,
-                city: sl.city,
-                state: sl.state,
-                pincode: sl.pincode,
-                landmark: sl.landmark,
-                howToReach: sl.howToReach,
-              }
-            : null,
-          businessPhone:
-            ((merchant as Record<string, unknown>).businessPhone as
-              | string
-              | null) ?? null,
-          businessHours:
-            ((merchant as Record<string, unknown>).businessHours as
-              | string
-              | null) ?? null,
-        }
-      : {
-          id: "",
-          name: "",
-          username: "",
-          logoUrl: null,
-          storeLocation: null,
-          businessPhone: null,
-          businessHours: null,
-        };
+    const merchantInfo = this.mapMerchantLeanToInfoDto(
+      merchant as Record<string, unknown> | null,
+    );
 
     const detailDto: VoucherDetailResponseDto = {
       ...baseDto,
@@ -836,5 +844,56 @@ export class VouchersService {
     };
 
     return detailDto;
+  }
+
+  private mapMerchantLeanToInfoDto(
+    merchant: Record<string, unknown> | null,
+  ): MerchantInfoDto {
+    if (!merchant || !merchant._id) {
+      return {
+        id: "",
+        name: "",
+        username: "",
+        logoUrl: null,
+        storeLocation: null,
+        businessPhone: null,
+        businessHours: null,
+      };
+    }
+
+    const sl = merchant.storeLocation as
+      | {
+          lat?: number;
+          lng?: number;
+          address?: string;
+          city?: string;
+          state?: string;
+          pincode?: string;
+          landmark?: string;
+          howToReach?: string;
+        }
+      | null
+      | undefined;
+
+    return {
+      id: (merchant._id as { toString(): string }).toString(),
+      name: String(merchant.businessName ?? ""),
+      username: String(merchant.username ?? ""),
+      logoUrl: (merchant.logoUrl as string | null) ?? null,
+      storeLocation: sl
+        ? {
+            lat: sl.lat ?? 0,
+            lng: sl.lng ?? 0,
+            address: sl.address,
+            city: sl.city,
+            state: sl.state,
+            pincode: sl.pincode,
+            landmark: sl.landmark,
+            howToReach: sl.howToReach,
+          }
+        : null,
+      businessPhone: (merchant.businessPhone as string | null) ?? null,
+      businessHours: (merchant.businessHours as string | null) ?? null,
+    };
   }
 }

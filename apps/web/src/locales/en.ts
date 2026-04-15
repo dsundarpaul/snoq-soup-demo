@@ -35,6 +35,9 @@ const en = {
   "home.noDropsDesc": "Check back soon for new rewards to hunt!",
   "home.hunt": "Hunt",
   "home.directions": "Directions",
+  "home.dropDetails": "Drop details",
+  "home.captureLimit": "Spots remaining",
+  "home.availability": "Schedule",
   "home.view": "View",
   "home.openArHunt": "Open AR Hunt",
   "home.yourReward": "Your Reward",
@@ -110,6 +113,7 @@ const en = {
   "merchant.createMerchantAccount": "Create Merchant Account",
   "merchant.startRewarding": "Start rewarding your customers",
   "merchant.signupFailed": "Signup failed. Please try again.",
+  "merchant.goToMerchantLogin": "Go to merchant login",
   "merchant.imAMerchant": "I'm a Merchant",
   "merchant.notMerchantLoginAsUser": "Not a merchant?",
   "merchant.loginAsUserLink": "Log in as a user",
@@ -286,7 +290,7 @@ const en = {
   "ar.toDestination": "to destination",
 
   // Claim History
-  "history.title": "My Treasure",
+  "history.title": "My Vouchers",
   "history.noVouchers": "No vouchers yet",
   "history.startHunting": "Start hunting for rewards on the map!",
   "history.claimed": "Claimed",

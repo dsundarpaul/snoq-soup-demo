@@ -24,6 +24,7 @@ import {
   mapHunterProfileToLegacy,
   mapHunterHistoryToVoucherRows,
   mapHunterVouchersBucketsToLegacy,
+  type HunterVoucherMerchantDisplay,
 } from "@/lib/nest-mappers";
 import type { Drop, Voucher } from "@shared/schema";
 import type {
@@ -39,7 +40,8 @@ export const treasureHunterQueryKeys = {
     ["/api/v1/leaderboard", limit] as const,
 };
 
-export type HunterVoucherRow = { voucher: Voucher; drop: Drop };
+export type HunterVoucherRow = { voucher: Voucher; drop: Drop } &
+  HunterVoucherMerchantDisplay;
 
 export function useHunterVouchersQuery() {
   const hasHunterAuth = useHasRoleCredentials("hunter");

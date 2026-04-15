@@ -123,6 +123,19 @@ export class PromoCodesController {
     return this.promoCodesService.getStats(dropId, user.userId);
   }
 
+  @Delete(":codeId")
+  @ApiOperation({ summary: "Delete one available promo code by id" })
+  @ApiResponse({ status: 200, description: "Promo code deleted" })
+  @ApiResponse({ status: 400, description: "Invalid id or code not available" })
+  @ApiResponse({ status: 404, description: "Drop or promo code not found" })
+  async deleteOne(
+    @CurrentUser() user: CurrentUserType,
+    @Param("dropId") dropId: string,
+    @Param("codeId") codeId: string,
+  ): Promise<{ deleted: boolean }> {
+    return this.promoCodesService.deleteOne(dropId, codeId, user.userId);
+  }
+
   @Delete()
   @ApiOperation({
     summary: "Delete all unused (available) promo codes for a drop",

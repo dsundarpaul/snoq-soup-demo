@@ -44,6 +44,13 @@ export class VoucherHistoryItemDto {
     nullable: true,
   })
   promoCode!: string | null;
+
+  @ApiProperty({
+    example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+    description:
+      "Magic token for opening the voucher link (authenticated hunter only)",
+  })
+  magicToken!: string;
 }
 
 export class HunterHistoryResponseDto {

@@ -208,8 +208,32 @@ describe("SouqSnap E2E Flows", () => {
         .set("Authorization", `Bearer ${merchantToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty("codes");
+      expect(response.body).toHaveProperty("items");
       expect(response.body).toHaveProperty("total");
+    });
+
+    it("DELETE /api/v1/merchants/me/drops/:dropId/codes/:codeId - should delete one available code", async () => {
+      const listRes = await request(app.getHttpServer())
+        .get(`/api/v1/merchants/me/drops/${dropId}/codes`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(200);
+
+      const first = listRes.body.items?.[0] as { id?: string } | undefined;
+      expect(first?.id).toBeDefined();
+
+      const delRes = await request(app.getHttpServer())
+        .delete(`/api/v1/merchants/me/drops/${dropId}/codes/${first!.id}`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(200);
+
+      expect(delRes.body).toMatchObject({ deleted: true });
+    });
+
+    it("DELETE /api/v1/merchants/me/drops/:dropId/codes/:codeId - should reject invalid code id", async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/merchants/me/drops/${dropId}/codes/not-an-objectid`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(400);
     });
 
     it("POST /api/v1/auth/merchant/forgot-password - should request password reset", async () => {
