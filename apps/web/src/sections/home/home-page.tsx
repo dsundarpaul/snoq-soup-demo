@@ -40,7 +40,10 @@ import {
 import { useLanguage } from "@/contexts/language-context";
 import { HomeHeader } from "@/sections/home/home-header";
 import type { Drop, Voucher } from "@shared/schema";
-import { useActiveDropsQuery } from "@/hooks/api/drop/use-drop";
+import {
+  useActiveDropsQuery,
+  useActiveDropsNearQuery,
+} from "@/hooks/api/drop/use-drop";
 import {
   useHunterVouchersQuery,
   useTreasureHunterProfileQuery,
@@ -48,33 +51,21 @@ import {
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import { clearSessionsExcept } from "@/lib/auth-session";
 import type { TranslationKey } from "@/locales/en";
+import {
+  type DropWithCount,
+  getCaptureRemaining,
+  isSoldOutDrop,
+  isScheduledNotYetLive,
+  isDropActive,
+  buildDropsWithDistanceClaimed,
+  getInRangeHuntableDrops,
+  getNearbyHuntableDrops,
+} from "@/lib/hunt-drop-filters";
 
 type TFunc = (
   key: TranslationKey,
   params?: Record<string, string | number>
 ) => string;
-
-type DropWithCount = Drop & { captureCount?: number };
-
-function getCaptureRemaining(drop: DropWithCount): number | null {
-  if (drop.availabilityType !== "captureLimit" || !drop.captureLimit) {
-    return null;
-  }
-  return drop.captureLimit - (drop.captureCount || 0);
-}
-
-function isSoldOutDrop(drop: DropWithCount): boolean {
-  const remaining = getCaptureRemaining(drop);
-  return remaining !== null && remaining <= 0;
-}
-
-function isScheduledNotYetLive(drop: Drop): boolean {
-  if (!drop.active) return false;
-  if (drop.availabilityType !== "timeWindow" || !drop.startTime) {
-    return false;
-  }
-  return new Date(drop.startTime) > new Date();
-}
 
 function formatDistance(meters: number): string {
   if (meters < 1000) {
@@ -322,15 +313,6 @@ function DropCard({
   );
 }
 
-function isDropActive(drop: Drop): boolean {
-  const now = new Date();
-  if (drop.availabilityType === "timeWindow") {
-    if (drop.startTime && new Date(drop.startTime) > now) return false;
-    if (drop.endTime && new Date(drop.endTime) < now) return false;
-  }
-  return drop.active;
-}
-
 function getTimeWindowInfo(
   drop: Drop,
   t: TFunc
@@ -508,7 +490,26 @@ export default function HomePage() {
     >
   >({});
 
-  const { data: drops = [], isLoading } = useActiveDropsQuery();
+  const hasGeoCoords =
+    geo.latitude != null &&
+    geo.longitude != null &&
+    Number.isFinite(geo.latitude) &&
+    Number.isFinite(geo.longitude);
+
+  const { data: allDrops = [], isLoading: allDropsLoading } =
+    useActiveDropsQuery({
+      enabled: !hasGeoCoords,
+    });
+
+  const { data: nearDrops = [], isLoading: nearDropsLoading } =
+    useActiveDropsNearQuery({
+      lat: geo.latitude ?? 0,
+      lng: geo.longitude ?? 0,
+      enabled: hasGeoCoords,
+    });
+
+  const drops = hasGeoCoords ? nearDrops : allDrops;
+  const isLoading = hasGeoCoords ? nearDropsLoading : allDropsLoading;
 
   useEffect(() => {
     const updateStatuses = () => {
@@ -527,48 +528,27 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [voucherRowsForStatus, t]);
 
-  const dropsWithDistance = useMemo(() => {
-    if (!geo.latitude || !geo.longitude) {
-      return drops.map((drop) => ({
-        ...drop,
-        distance: null as number | null,
-        claimed: hasClaimedDrop(drop.id),
-      }));
-    }
-
-    return drops
-      .map((drop) => ({
-        ...drop,
-        distance: calculateDistance(
-          geo.latitude!,
-          geo.longitude!,
-          drop.latitude,
-          drop.longitude
-        ),
-        claimed: hasClaimedDrop(drop.id),
-      }))
-      .sort((a, b) => {
-        if (a.claimed && !b.claimed) return 1;
-        if (!a.claimed && b.claimed) return -1;
-        if (a.distance === null) return 1;
-        if (b.distance === null) return -1;
-        return a.distance - b.distance;
-      });
-  }, [drops, geo.latitude, geo.longitude, hasClaimedDrop]);
-
-  const huntableDrops = useMemo(
+  const dropsWithDistance = useMemo(
     () =>
-      dropsWithDistance.filter(
-        (d) => !d.claimed && !isSoldOutDrop(d) && isDropActive(d)
+      buildDropsWithDistanceClaimed(
+        drops,
+        geo.latitude,
+        geo.longitude,
+        calculateDistance,
+        hasClaimedDrop
       ),
-    [dropsWithDistance]
+    [drops, geo.latitude, geo.longitude, hasClaimedDrop]
   );
 
-  const inRangeDrops = huntableDrops.filter(
-    (d) => d.distance !== null && d.distance <= d.radius
-  );
-  const nearbyDrops = huntableDrops.filter(
-    (d) => d.distance === null || d.distance > d.radius
+  const inRangeDrops = getInRangeHuntableDrops(dropsWithDistance);
+  const nearbyDrops = getNearbyHuntableDrops(dropsWithDistance);
+
+  const nearbyDropsSorted = useMemo(
+    () =>
+      [...nearbyDrops].sort(
+        (a, b) => (a.distance ?? 0) - (b.distance ?? 0)
+      ),
+    [nearbyDrops]
   );
 
   const scheduledDrops = useMemo(
@@ -827,7 +807,7 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {nearbyDrops.length > 0 && (
+                {nearbyDropsSorted.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Navigation className="w-4 h-4 text-muted-foreground" />
@@ -835,11 +815,11 @@ export default function HomePage() {
                         {t("home.nearbyDrops")}
                       </h3>
                       <Badge variant="secondary" className="text-xs">
-                        {nearbyDrops.length}
+                        {nearbyDropsSorted.length}
                       </Badge>
                     </div>
                     <div className="space-y-3">
-                      {nearbyDrops.map((drop) => (
+                      {nearbyDropsSorted.map((drop) => (
                         <DropCard
                           key={drop.id}
                           drop={drop}
@@ -889,8 +869,8 @@ export default function HomePage() {
           <Link
             href={
               hunterSignedIn
-                ? "/hunt"
-                : `/login?next=${encodeURIComponent("/hunt")}`
+                ? "/hunt?readySwipe=1"
+                : `/login?next=${encodeURIComponent("/hunt?readySwipe=1")}`
             }
             onClick={
               hunterSignedIn ? undefined : () => clearSessionsExcept("hunter")

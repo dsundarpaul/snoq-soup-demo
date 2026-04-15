@@ -23,12 +23,19 @@ import {
   AlertCircle,
   Menu,
   ChevronLeft,
+  ChevronRight,
   Home,
   Compass,
   ArrowUp,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import type { Drop, Voucher } from "@shared/schema";
-import { useActiveDropsQuery } from "@/hooks/api/drop/use-drop";
+import {
+  useActiveDropsQuery,
+  useActiveDropsNearQuery,
+} from "@/hooks/api/drop/use-drop";
+import { getUserFacingApiErrorMessage } from "@/lib/api-client";
 import { useClaimVoucherMutation } from "@/hooks/api/voucher/use-voucher";
 import {
   useHunterVouchersQuery,
@@ -36,6 +43,19 @@ import {
   type HunterVoucherRow,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import { toast } from "@/hooks/use-toast";
+import {
+  buildDropsWithDistanceClaimed,
+  getInRangeHuntableDrops,
+  type DropWithDistanceClaimed,
+} from "@/lib/hunt-drop-filters";
+
+const NEARBY_SWIPE_MIN_DX = 56;
+const NEARBY_SWIPE_DOMINANCE = 1.15;
+
+function dropRowToDrop(row: DropWithDistanceClaimed): Drop {
+  const { distance: _d, claimed: _c, ...rest } = row;
+  return rest as Drop;
+}
 
 const DEFAULT_DROP = {
   id: "default-drop",
@@ -552,6 +572,9 @@ export default function ARGamePage() {
   const deviceId = useDeviceId();
   const searchParams = useSearchParams();
   const targetDropId = searchParams.get("drop");
+  const nearbySwipeFromHome =
+    searchParams.get("readySwipe") === "1" ||
+    searchParams.get("nearbySwipe") === "1";
 
   const { data: hunterProfile } = useTreasureHunterProfileQuery();
   const { data: hunterVoucherBuckets } = useHunterVouchersQuery();
@@ -587,36 +610,116 @@ export default function ARGamePage() {
     drop: Drop;
   } | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [nearbySwipeIndex, setNearbySwipeIndex] = useState(0);
+  const [nearbySwipeSlideDirection, setNearbySwipeSlideDirection] = useState<
+    1 | -1
+  >(1);
+  const nearbySwipeTouchStart = useRef<{ x: number; y: number } | null>(null);
 
-  const { data: drops = [], isLoading: dropsLoading } = useActiveDropsQuery();
+  const hasGeoCoords =
+    geo.latitude != null &&
+    geo.longitude != null &&
+    Number.isFinite(geo.latitude) &&
+    Number.isFinite(geo.longitude);
 
-  const dropsWithDistance = useMemo(() => {
-    if (!geo.latitude || !geo.longitude) return [];
-    return drops
-      .filter((drop) => !hasClaimedDrop(drop.id))
-      .map((drop) => ({
-        ...drop,
-        distance: calculateDistance(
-          geo.latitude!,
-          geo.longitude!,
-          drop.latitude,
-          drop.longitude
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance);
-  }, [drops, geo.latitude, geo.longitude, hasClaimedDrop]);
+  const { data: allDrops = [], isLoading: allDropsLoading } =
+    useActiveDropsQuery({
+      enabled: !nearbySwipeFromHome || !hasGeoCoords,
+    });
+
+  const { data: nearDrops = [], isLoading: nearDropsLoading } =
+    useActiveDropsNearQuery({
+      lat: geo.latitude ?? 0,
+      lng: geo.longitude ?? 0,
+      enabled: nearbySwipeFromHome && hasGeoCoords,
+    });
+
+  const drops =
+    nearbySwipeFromHome && hasGeoCoords ? nearDrops : allDrops;
+  const dropsLoading = nearbySwipeFromHome
+    ? hasGeoCoords
+      ? nearDropsLoading
+      : allDropsLoading || geo.loading
+    : allDropsLoading;
+
+  const dropsWithDistance = useMemo(
+    () =>
+      buildDropsWithDistanceClaimed(
+        drops,
+        geo.latitude,
+        geo.longitude,
+        calculateDistance,
+        hasClaimedDrop
+      ),
+    [drops, geo.latitude, geo.longitude, hasClaimedDrop]
+  );
+
+  const nearbySwipeList = useMemo(() => {
+    if (!nearbySwipeFromHome) return [];
+    return getInRangeHuntableDrops(dropsWithDistance);
+  }, [nearbySwipeFromHome, dropsWithDistance]);
+
+  const nearbySwipeIds = useMemo(
+    () => nearbySwipeList.map((d) => d.id).join(","),
+    [nearbySwipeList]
+  );
+
+  useEffect(() => {
+    if (!nearbySwipeFromHome) {
+      setNearbySwipeIndex(0);
+      return;
+    }
+    if (nearbySwipeList.length === 0) {
+      setNearbySwipeIndex(0);
+      return;
+    }
+    if (targetDropId) {
+      const ti = nearbySwipeList.findIndex((d) => d.id === targetDropId);
+      if (ti >= 0) {
+        setNearbySwipeIndex(ti);
+        return;
+      }
+    }
+    setNearbySwipeIndex((prev) =>
+      prev < nearbySwipeList.length ? prev : 0
+    );
+  }, [nearbySwipeFromHome, targetDropId, nearbySwipeIds, nearbySwipeList.length]);
 
   const activeDrop = useMemo(() => {
+    if (nearbySwipeFromHome && nearbySwipeList.length > 0) {
+      if (targetDropId) {
+        const targetInNearby = nearbySwipeList.some(
+          (d) => d.id === targetDropId
+        );
+        if (!targetInNearby) {
+          const targetDrop = drops.find((d) => d.id === targetDropId);
+          if (targetDrop) return targetDrop;
+        }
+      }
+      const row =
+        nearbySwipeList[nearbySwipeIndex % nearbySwipeList.length];
+      return dropRowToDrop(row);
+    }
     if (targetDropId) {
       const targetDrop = drops.find((d) => d.id === targetDropId);
       if (targetDrop) return targetDrop;
     }
-    return dropsWithDistance.length > 0
-      ? dropsWithDistance[0]
-      : drops.length > 0
-      ? drops[0]
-      : DEFAULT_DROP;
-  }, [targetDropId, drops, dropsWithDistance]);
+    const unclaimedRows = dropsWithDistance.filter((r) => !r.claimed);
+    if (unclaimedRows.length > 0) {
+      return dropRowToDrop(unclaimedRows[0]);
+    }
+    if (dropsWithDistance.length > 0) {
+      return dropRowToDrop(dropsWithDistance[0]);
+    }
+    return drops.length > 0 ? drops[0] : DEFAULT_DROP;
+  }, [
+    nearbySwipeFromHome,
+    nearbySwipeList,
+    nearbySwipeIndex,
+    targetDropId,
+    drops,
+    dropsWithDistance,
+  ]);
 
   const distance = useMemo(() => {
     if (!geo.latitude || !geo.longitude || !activeDrop) return null;
@@ -631,12 +734,102 @@ export default function ARGamePage() {
   const isInRange = distance !== null && distance <= (activeDrop?.radius || 15);
   const alreadyClaimed = activeDrop ? hasClaimedDrop(activeDrop.id) : false;
 
+  const offListTargetBlocksNearbySwipe =
+    nearbySwipeFromHome &&
+    Boolean(targetDropId) &&
+    nearbySwipeList.length > 0 &&
+    !nearbySwipeList.some((d) => d.id === targetDropId);
+
+  const canSwipeNearbyHunts =
+    nearbySwipeFromHome &&
+    nearbySwipeList.length > 1 &&
+    !offListTargetBlocksNearbySwipe &&
+    !claimedVoucher &&
+    !showCaptureAnimation;
+
+  const handleNearbySwipeTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (!canSwipeNearbyHunts) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      nearbySwipeTouchStart.current = { x: touch.clientX, y: touch.clientY };
+    },
+    [canSwipeNearbyHunts]
+  );
+
+  const handleNearbySwipeTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!canSwipeNearbyHunts || !nearbySwipeTouchStart.current) return;
+      const touch = e.changedTouches[0];
+      if (!touch) {
+        nearbySwipeTouchStart.current = null;
+        return;
+      }
+      const dx = touch.clientX - nearbySwipeTouchStart.current.x;
+      const dy = touch.clientY - nearbySwipeTouchStart.current.y;
+      nearbySwipeTouchStart.current = null;
+      if (Math.abs(dx) < NEARBY_SWIPE_MIN_DX) return;
+      if (Math.abs(dx) < Math.abs(dy) * NEARBY_SWIPE_DOMINANCE) return;
+      const len = nearbySwipeList.length;
+      if (len < 2) return;
+      if (dx < 0) {
+        setNearbySwipeSlideDirection(1);
+        setNearbySwipeIndex((i) => (i + 1) % len);
+      } else {
+        setNearbySwipeSlideDirection(-1);
+        setNearbySwipeIndex((i) => (i - 1 + len) % len);
+      }
+    },
+    [canSwipeNearbyHunts, nearbySwipeList.length]
+  );
+
+  const nearbySwipeDotCount = nearbySwipeList.length;
+  const nearbySwipeActiveDot =
+    nearbySwipeDotCount > 0
+      ? ((nearbySwipeIndex % nearbySwipeDotCount) + nearbySwipeDotCount) %
+        nearbySwipeDotCount
+      : 0;
+
+  const goToNearbySwipeIndex = useCallback(
+    (targetIdx: number) => {
+      const len = nearbySwipeList.length;
+      if (len < 2) return;
+      const cur =
+        ((nearbySwipeIndex % len) + len) % len;
+      const next = ((targetIdx % len) + len) % len;
+      if (next === cur) return;
+      const forwardDist = (next - cur + len) % len;
+      const backwardDist = (cur - next + len) % len;
+      setNearbySwipeSlideDirection(forwardDist <= backwardDist ? 1 : -1);
+      setNearbySwipeIndex(next);
+    },
+    [nearbySwipeIndex, nearbySwipeList.length]
+  );
+
+  const stepNearbySwipePrev = useCallback(() => {
+    const len = nearbySwipeList.length;
+    if (len < 2 || !canSwipeNearbyHunts) return;
+    setNearbySwipeSlideDirection(-1);
+    setNearbySwipeIndex((i) => (i - 1 + len) % len);
+  }, [canSwipeNearbyHunts, nearbySwipeList.length]);
+
+  const stepNearbySwipeNext = useCallback(() => {
+    const len = nearbySwipeList.length;
+    if (len < 2 || !canSwipeNearbyHunts) return;
+    setNearbySwipeSlideDirection(1);
+    setNearbySwipeIndex((i) => (i + 1) % len);
+  }, [canSwipeNearbyHunts, nearbySwipeList.length]);
+
   const claimMutation = useClaimVoucherMutation({
     onSuccess: (data) => {
       setPendingVoucher(data);
       setShowCaptureAnimation(true);
     },
   });
+
+  useEffect(() => {
+    claimMutation.reset();
+  }, [activeDrop?.id, claimMutation.reset]);
 
   const handleAnimationComplete = () => {
     setShowCaptureAnimation(false);
@@ -741,6 +934,126 @@ export default function ARGamePage() {
     setClaimedVoucher(null);
   };
 
+  const huntDropBottomPanel = (
+    <>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-12 h-12 rounded-full bg-teal/20 flex items-center justify-center overflow-hidden">
+          {activeDrop?.logoUrl ? (
+            <img
+              src={activeDrop.logoUrl}
+              alt=""
+              className="w-full h-full object-cover bg-white"
+            />
+          ) : (
+            <Trophy className="w-6 h-6 text-teal" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="font-semibold text-white truncate min-w-0 flex-1">
+              {activeDrop?.name || t("common.loading")}
+            </h3>
+            <Badge className="shrink-0 bg-teal text-teal-foreground flex items-center gap-1 max-w-[45%]">
+              <Trophy className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{activeDrop?.rewardValue}</span>
+            </Badge>
+          </div>
+          <p className="text-sm text-slate-400 line-clamp-2">
+            {activeDrop?.description || t("drop.claimYourReward")}
+          </p>
+        </div>
+      </div>
+
+      {activeDrop?.termsAndConditions?.trim() ? (
+        <div className="mb-3 max-h-24 overflow-y-auto rounded-md border border-white/10 bg-black/50 p-2 text-left">
+          <p className="text-xs font-semibold text-teal mb-1">
+            {t("voucher.termsTitle")}
+          </p>
+          <p className="text-xs text-slate-300 whitespace-pre-wrap">
+            {activeDrop.termsAndConditions}
+          </p>
+        </div>
+      ) : null}
+
+      {alreadyClaimed ? (
+        <Button
+          className="w-full bg-primary text-primary-foreground"
+          onClick={() => {
+            const v = allVoucherRows.find(
+              (row) => row.voucher.dropId === activeDrop?.id
+            );
+            if (v) setClaimedVoucher(v);
+          }}
+          data-testid="button-view-voucher"
+        >
+          <Trophy className="w-4 h-4 mr-2" />
+          {t("voucher.viewVoucher")}
+        </Button>
+      ) : isInRange && locationReady ? (
+        <Button
+          onClick={handleClaim}
+          disabled={claimMutation.isPending}
+          className="w-full bg-teal hover:bg-teal/90 text-teal-foreground font-semibold py-6 text-lg rounded-full shadow-lg animate-pulse"
+          data-testid="button-claim-reward"
+        >
+          {claimMutation.isPending ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              {t("common.loading")}
+            </>
+          ) : (
+            <>
+              <Trophy className="w-5 h-5 mr-2" />
+              {t("drop.claimReward")}
+            </>
+          )}
+        </Button>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-center gap-2 text-slate-400">
+            <MapPin className="w-4 h-4" />
+            <span className="text-sm">
+              {t("drop.getWithinRange", {
+                radius: String(activeDrop?.radius || 15),
+              })}
+            </span>
+          </div>
+
+          {distance !== null && distance > 50 && (
+            <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <span className="text-sm text-amber-400">
+                {distance >= 1000
+                  ? `${(distance / 1000).toFixed(1)} km ${t("ar.toDestination")}`
+                  : `${Math.round(distance)}m ${t("ar.toDestination")}`}
+              </span>
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            className="w-full border-teal/30 text-teal"
+            onClick={() => {
+              const url = `https://www.google.com/maps/dir/?api=1&destination=${activeDrop?.latitude},${activeDrop?.longitude}`;
+              window.open(url, "_blank");
+            }}
+            data-testid="button-get-directions"
+          >
+            <Navigation className="w-4 h-4 mr-2" />
+            {t("drop.getDirections")}
+          </Button>
+        </div>
+      )}
+
+      {claimMutation.isError && (
+        <p className="text-red-400 text-sm text-center mt-2">
+          {getUserFacingApiErrorMessage(claimMutation.error) ??
+            t("toast.somethingWentWrong")}
+        </p>
+      )}
+    </>
+  );
+
   if (showCaptureAnimation) {
     return <CaptureAnimationInner onComplete={handleAnimationComplete} />;
   }
@@ -770,7 +1083,11 @@ export default function ARGamePage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative bg-slate-900">
+    <div
+      className="h-screen w-screen overflow-hidden relative bg-slate-900"
+      onTouchStart={handleNearbySwipeTouchStart}
+      onTouchEnd={handleNearbySwipeTouchEnd}
+    >
       <ARCameraView
         userLat={geo.latitude || 24.7136}
         userLon={geo.longitude || 46.6753}
@@ -887,121 +1204,78 @@ export default function ARGamePage() {
 
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8">
         <Card className="bg-slate-900/90 backdrop-blur-sm border-teal/30 p-4">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-teal/20 flex items-center justify-center overflow-hidden">
-              {activeDrop?.logoUrl ? (
-                <img
-                  src={activeDrop.logoUrl}
-                  alt=""
-                  className="w-full h-full object-cover bg-white"
-                />
-              ) : (
-                <Trophy className="w-6 h-6 text-teal" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col gap-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <h3 className="font-semibold text-white truncate min-w-0 flex-1">
-                  {activeDrop?.name || t("common.loading")}
-                </h3>
-                <Badge className="shrink-0 bg-teal text-teal-foreground flex items-center gap-1 max-w-[45%]">
-                  <Trophy className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{activeDrop?.rewardValue}</span>
-                </Badge>
+          {canSwipeNearbyHunts ? (
+            <p className="text-center text-xs text-slate-400 mb-2">
+              {t("ar.swipeNearbyHuntsHint")}
+            </p>
+          ) : null}
+          {canSwipeNearbyHunts && nearbySwipeDotCount >= 2 ? (
+            <div className="flex items-center justify-center gap-2 mb-3 select-none">
+              <button
+                type="button"
+                onClick={stepNearbySwipePrev}
+                className={cn(
+                  "shrink-0 rounded-md p-1.5 text-teal/90 transition-colors",
+                  "hover:bg-white/10 hover:text-teal focus:outline-none",
+                  "focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                )}
+                aria-label={t("ar.previousHunt")}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+              </button>
+              <div className="flex items-center justify-center gap-1.5 min-w-0 flex-1">
+                {nearbySwipeList.map((d, i) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => goToNearbySwipeIndex(i)}
+                    className={cn(
+                      "h-2 rounded-full shrink-0 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                      i === nearbySwipeActiveDot
+                        ? "w-4 bg-teal"
+                        : "w-2 bg-slate-600 hover:bg-slate-500"
+                    )}
+                    aria-label={`${i + 1} / ${nearbySwipeDotCount}`}
+                    aria-current={
+                      i === nearbySwipeActiveDot ? "step" : undefined
+                    }
+                  />
+                ))}
               </div>
-              <p className="text-sm text-slate-400 line-clamp-2">
-                {activeDrop?.description || t("drop.claimYourReward")}
-              </p>
-            </div>
-          </div>
-
-          {activeDrop?.termsAndConditions?.trim() ? (
-            <div className="mb-3 max-h-24 overflow-y-auto rounded-md border border-white/10 bg-black/50 p-2 text-left">
-              <p className="text-xs font-semibold text-teal mb-1">
-                {t("voucher.termsTitle")}
-              </p>
-              <p className="text-xs text-slate-300 whitespace-pre-wrap">
-                {activeDrop.termsAndConditions}
-              </p>
+              <button
+                type="button"
+                onClick={stepNearbySwipeNext}
+                className={cn(
+                  "shrink-0 rounded-md p-1.5 text-teal/90 transition-colors",
+                  "hover:bg-white/10 hover:text-teal focus:outline-none",
+                  "focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                )}
+                aria-label={t("ar.nextHunt")}
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </button>
             </div>
           ) : null}
-
-          {alreadyClaimed ? (
-            <Button
-              className="w-full bg-primary text-primary-foreground"
-              onClick={() => {
-                const v = allVoucherRows.find(
-                  (row) => row.voucher.dropId === activeDrop?.id
-                );
-                if (v) setClaimedVoucher(v);
-              }}
-              data-testid="button-view-voucher"
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              {t("voucher.viewVoucher")}
-            </Button>
-          ) : isInRange && locationReady ? (
-            <Button
-              onClick={handleClaim}
-              disabled={claimMutation.isPending}
-              className="w-full bg-teal hover:bg-teal/90 text-teal-foreground font-semibold py-6 text-lg rounded-full shadow-lg animate-pulse"
-              data-testid="button-claim-reward"
-            >
-              {claimMutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {t("common.loading")}
-                </>
-              ) : (
-                <>
-                  <Trophy className="w-5 h-5 mr-2" />
-                  {t("drop.claimReward")}
-                </>
-              )}
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-center gap-2 text-slate-400">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm">
-                  {t("drop.getWithinRange", {
-                    radius: String(activeDrop?.radius || 15),
-                  })}
-                </span>
-              </div>
-
-              {distance !== null && distance > 50 && (
-                <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm text-amber-400">
-                    {distance >= 1000
-                      ? `${(distance / 1000).toFixed(1)} km ${t(
-                          "ar.toDestination"
-                        )}`
-                      : `${Math.round(distance)}m ${t("ar.toDestination")}`}
-                  </span>
-                </div>
-              )}
-
-              <Button
-                variant="outline"
-                className="w-full border-teal/30 text-teal"
-                onClick={() => {
-                  const url = `https://www.google.com/maps/dir/?api=1&destination=${activeDrop?.latitude},${activeDrop?.longitude}`;
-                  window.open(url, "_blank");
+          {canSwipeNearbyHunts && activeDrop ? (
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeDrop.id}
+                initial={{
+                  opacity: 0,
+                  x: nearbySwipeSlideDirection * 28,
                 }}
-                data-testid="button-get-directions"
+                animate={{ opacity: 1, x: 0 }}
+                exit={{
+                  opacity: 0,
+                  x: nearbySwipeSlideDirection * -28,
+                }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               >
-                <Navigation className="w-4 h-4 mr-2" />
-                {t("drop.getDirections")}
-              </Button>
-            </div>
-          )}
-
-          {claimMutation.isError && (
-            <p className="text-red-400 text-sm text-center mt-2">
-              {t("toast.somethingWentWrong")}
-            </p>
+                {huntDropBottomPanel}
+              </motion.div>
+            </AnimatePresence>
+          ) : (
+            huntDropBottomPanel
           )}
         </Card>
       </div>

@@ -13,6 +13,7 @@ import {
   HttpStatus,
   DefaultValuePipe,
   ParseIntPipe,
+  ValidationPipe,
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
@@ -37,6 +38,7 @@ import { UpdateDropDto } from "./dto/request/update-drop.dto";
 import { DropResponseDto } from "./dto/response/drop-response.dto";
 import { DropDetailResponseDto } from "./dto/response/drop-detail-response.dto";
 import { ActiveDropsResponseDto } from "./dto/response/active-drops-response.dto";
+import { FindActiveDropsNearQueryDto } from "./dto/request/find-active-drops-near-query.dto";
 import { csvAttachmentFilename } from "../../common/utils/csv";
 
 @ApiTags("Drops")
@@ -51,6 +53,27 @@ export class DropsController {
   @ApiResponse({ status: 200, type: ActiveDropsResponseDto })
   async findActive(): Promise<ActiveDropsResponseDto> {
     return this.dropsService.findAllActive();
+  }
+
+  @Get("drops/active/nearby")
+  @SkipThrottle({ default: true, strict: true })
+  @ApiOperation({ summary: "List active drops near coordinates" })
+  @ApiResponse({ status: 200, type: ActiveDropsResponseDto })
+  async findActiveNear(
+    @Query(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    query: FindActiveDropsNearQueryDto,
+  ): Promise<ActiveDropsResponseDto> {
+    const max =
+      query.maxDistanceMeters != null
+        ? Math.min(300_000, Math.max(1_000, query.maxDistanceMeters))
+        : 100_000;
+    return this.dropsService.findActiveNear(query.lat, query.lng, max);
   }
 
   @Get("drops/:id")

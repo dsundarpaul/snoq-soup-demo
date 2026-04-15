@@ -315,6 +315,64 @@ describe("Drops E2E Tests", () => {
       expect(foundDrop).toBeDefined();
     });
 
+    it("GET /api/v1/drops/active/nearby - should only include drops within maxDistance", async () => {
+      const userPoint = { lat: 24.71, lng: 46.675 };
+
+      const closeRes = await request(app.getHttpServer())
+        .post("/api/v1/merchants/me/drops")
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .send({
+          name: "Nearby Geo Test Close",
+          description: "Close to query point",
+          lat: userPoint.lat + 0.0005,
+          lng: userPoint.lng + 0.0005,
+          radius: 50,
+          rewardValue: "5% OFF",
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: generateFutureDate(-1).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
+          active: true,
+        })
+        .expect(201);
+      createdDropIds.push(closeRes.body.id);
+
+      const farRes = await request(app.getHttpServer())
+        .post("/api/v1/merchants/me/drops")
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .send({
+          name: "Nearby Geo Test Far",
+          description: "Far from query point",
+          lat: 24.0,
+          lng: 46.0,
+          radius: 50,
+          rewardValue: "1% OFF",
+          redemptionType: "anytime",
+          availabilityType: "unlimited",
+          startTime: generateFutureDate(-1).toISOString(),
+          endTime: generateFutureDate(24).toISOString(),
+          active: true,
+        })
+        .expect(201);
+      createdDropIds.push(farRes.body.id);
+
+      const response = await request(app.getHttpServer())
+        .get(
+          `/api/v1/drops/active/nearby?lat=${userPoint.lat}&lng=${userPoint.lng}&maxDistanceMeters=15000`,
+        )
+        .expect(200);
+
+      expect(response.body).toHaveProperty("drops");
+      const ids = (response.body.drops as { id: string }[]).map((d) => d.id);
+      expect(ids).toContain(closeRes.body.id);
+      expect(ids).not.toContain(farRes.body.id);
+      const closeRow = response.body.drops.find(
+        (d: { id: string }) => d.id === closeRes.body.id,
+      );
+      expect(closeRow).toBeDefined();
+      expect(typeof closeRow.distance).toBe("number");
+    });
+
     it("GET /api/v1/drops/active - collection should retain 2dsphere index on location", async () => {
       const indexes = await dropModel.collection.indexes();
       const has2dsphereIndex = indexes.some(

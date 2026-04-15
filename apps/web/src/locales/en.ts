@@ -287,6 +287,10 @@ const en = {
   "ar.turnLeft": "left",
   "ar.turnToFind": "Turn {direction} to find",
   "ar.away": "away",
+  "ar.swipeNearbyHuntsHint":
+    "Swipe left or right to switch between hunts you can claim here",
+  "ar.previousHunt": "Previous hunt",
+  "ar.nextHunt": "Next hunt",
   "ar.toDestination": "to destination",
 
   // Claim History

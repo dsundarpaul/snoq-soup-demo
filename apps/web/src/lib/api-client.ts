@@ -27,6 +27,28 @@ function formatApiErrorPayload(text: string): string {
   return text;
 }
 
+export function getUserFacingApiErrorMessage(error: unknown): string | null {
+  if (error == null) {
+    return null;
+  }
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const withStatus = /^(\d{3}):\s*(.+)$/.exec(trimmed);
+  if (withStatus) {
+    const body = withStatus[2].trim();
+    return body.length > 0 ? body : trimmed;
+  }
+  return trimmed;
+}
+
 export async function throwIfResNotOk(
   res: Response,
   requestPathFor401?: string,

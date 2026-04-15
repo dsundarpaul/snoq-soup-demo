@@ -286,6 +286,10 @@ const ar = {
   "ar.turnLeft": "يساراً",
   "ar.turnToFind": "التفت {direction} للعثور على",
   "ar.away": "بعيد",
+  "ar.swipeNearbyHuntsHint":
+    "اسحب يميناً أو يساراً للتبديل بين الكنوز التي يمكنك المطالبة بها هنا",
+  "ar.previousHunt": "الكنز السابق",
+  "ar.nextHunt": "الكنز التالي",
   "ar.toDestination": "إلى الوجهة",
 
   // Claim History
