@@ -496,20 +496,37 @@ export default function HomePage() {
     Number.isFinite(geo.latitude) &&
     Number.isFinite(geo.longitude);
 
+  const [homeNearbyQueryCoords, setHomeNearbyQueryCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (homeNearbyQueryCoords !== null) return;
+    if (hasGeoCoords) {
+      setHomeNearbyQueryCoords({
+        lat: geo.latitude as number,
+        lng: geo.longitude as number,
+      });
+    }
+  }, [hasGeoCoords, geo.latitude, geo.longitude, homeNearbyQueryCoords]);
+
   const { data: allDrops = [], isLoading: allDropsLoading } =
     useActiveDropsQuery({
-      enabled: !hasGeoCoords,
+      enabled: homeNearbyQueryCoords === null,
     });
 
   const { data: nearDrops = [], isLoading: nearDropsLoading } =
     useActiveDropsNearQuery({
-      lat: geo.latitude ?? 0,
-      lng: geo.longitude ?? 0,
-      enabled: hasGeoCoords,
+      lat: homeNearbyQueryCoords?.lat ?? 0,
+      lng: homeNearbyQueryCoords?.lng ?? 0,
+      enabled: homeNearbyQueryCoords !== null,
     });
 
-  const drops = hasGeoCoords ? nearDrops : allDrops;
-  const isLoading = hasGeoCoords ? nearDropsLoading : allDropsLoading;
+  const drops =
+    homeNearbyQueryCoords !== null ? nearDrops : allDrops;
+  const isLoading =
+    homeNearbyQueryCoords !== null ? nearDropsLoading : allDropsLoading;
 
   useEffect(() => {
     const updateStatuses = () => {

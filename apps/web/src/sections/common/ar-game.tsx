@@ -622,6 +622,31 @@ export default function ARGamePage() {
     Number.isFinite(geo.latitude) &&
     Number.isFinite(geo.longitude);
 
+  const [arFabNearQueryCoords, setArFabNearQueryCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!nearbySwipeFromHome) {
+      setArFabNearQueryCoords(null);
+      return;
+    }
+    if (arFabNearQueryCoords !== null) return;
+    if (hasGeoCoords) {
+      setArFabNearQueryCoords({
+        lat: geo.latitude as number,
+        lng: geo.longitude as number,
+      });
+    }
+  }, [
+    nearbySwipeFromHome,
+    hasGeoCoords,
+    geo.latitude,
+    geo.longitude,
+    arFabNearQueryCoords,
+  ]);
+
   const { data: allDrops = [], isLoading: allDropsLoading } =
     useActiveDropsQuery({
       enabled: !nearbySwipeFromHome || !hasGeoCoords,
@@ -629,15 +654,17 @@ export default function ARGamePage() {
 
   const { data: nearDrops = [], isLoading: nearDropsLoading } =
     useActiveDropsNearQuery({
-      lat: geo.latitude ?? 0,
-      lng: geo.longitude ?? 0,
-      enabled: nearbySwipeFromHome && hasGeoCoords,
+      lat: arFabNearQueryCoords?.lat ?? 0,
+      lng: arFabNearQueryCoords?.lng ?? 0,
+      enabled: nearbySwipeFromHome && arFabNearQueryCoords !== null,
     });
 
   const drops =
-    nearbySwipeFromHome && hasGeoCoords ? nearDrops : allDrops;
+    nearbySwipeFromHome && arFabNearQueryCoords !== null
+      ? nearDrops
+      : allDrops;
   const dropsLoading = nearbySwipeFromHome
-    ? hasGeoCoords
+    ? arFabNearQueryCoords !== null
       ? nearDropsLoading
       : allDropsLoading || geo.loading
     : allDropsLoading;
