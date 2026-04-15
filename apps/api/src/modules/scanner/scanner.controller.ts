@@ -14,6 +14,7 @@ import { ScannerService } from "./scanner.service";
 import { ScannerValidationDto } from "./dto/response/scanner-validation.dto";
 import { RedeemByScannerDto } from "./dto/request/redeem-by-scanner.dto";
 import { ScannerRedeemResultDto } from "./dto/response/scanner-redeem-result.dto";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Scanner")
 @Controller("scanner")
@@ -46,6 +47,7 @@ export class ScannerController {
   }
 
   @Post(":token/redeem")
+  @Audit("scanner.redeem")
   @Public()
   @ApiOperation({
     summary: "Redeem voucher using scanner",

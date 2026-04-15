@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PipelineStage, Types, FlattenMaps } from "mongoose";
 import { randomBytes } from "crypto";
 import { DatabaseService } from "../../database/database.service";

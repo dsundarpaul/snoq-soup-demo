@@ -11,9 +11,11 @@ import {
 import { Hunter, HunterSchema } from "../../database/schemas/hunter.schema";
 import { Drop, DropSchema } from "../../database/schemas/drop.schema";
 import { Voucher, VoucherSchema } from "../../database/schemas/voucher.schema";
+import { AuditModule } from "../audit/audit.module";
 
 @Module({
   imports: [
+    AuditModule,
     DropsModule,
     MongooseModule.forFeature([
       { name: Admin.name, schema: AdminSchema },

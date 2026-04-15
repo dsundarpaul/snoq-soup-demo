@@ -38,11 +38,17 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { csvAttachmentFilename } from "../../common/utils/csv";
+import { AuditRemoteService } from "../audit/audit-remote.service";
+import type { AuditListRemoteResult } from "../audit/audit.types";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Admin")
 @Controller("admin")
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly auditRemoteService: AuditRemoteService,
+  ) {}
 
   @Get("stats")
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -134,6 +140,7 @@ export class AdminController {
   }
 
   @Get("merchants/export")
+  @Audit("admin.export_merchants_csv")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -162,6 +169,7 @@ export class AdminController {
   }
 
   @Patch("merchants/:id")
+  @Audit("admin.update_merchant")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -220,6 +228,7 @@ export class AdminController {
   }
 
   @Get("users/export")
+  @Audit("admin.export_users_csv")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -299,6 +308,7 @@ export class AdminController {
   }
 
   @Get("drops/export")
+  @Audit("admin.export_drops_csv")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -339,6 +349,7 @@ export class AdminController {
   }
 
   @Post("drops")
+  @Audit("admin.create_drop")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -359,6 +370,7 @@ export class AdminController {
   }
 
   @Patch("drops/:id")
+  @Audit("admin.update_drop")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -378,6 +390,7 @@ export class AdminController {
   }
 
   @Delete("drops/:id")
+  @Audit("admin.delete_drop")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin")
   @ApiBearerAuth()
@@ -396,5 +409,91 @@ export class AdminController {
     @Param("id") id: string,
   ): Promise<{ id: string; deletedAt: Date | null }> {
     return this.adminService.deleteDropAsAdmin(id);
+  }
+
+  @Get("audit-logs")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "List audit events (proxied from audit service)" })
+  @ApiResponse({ status: 200, description: "Paginated audit events" })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiQuery({ name: "cursor", required: false, type: String })
+  @ApiQuery({ name: "from", required: false, type: String })
+  @ApiQuery({ name: "to", required: false, type: String })
+  @ApiQuery({ name: "actorId", required: false, type: String })
+  @ApiQuery({ name: "action", required: false, type: String })
+  @ApiQuery({ name: "resourceType", required: false, type: String })
+  @ApiQuery({ name: "resourceId", required: false, type: String })
+  @ApiQuery({ name: "statusCode", required: false, type: Number })
+  @ApiQuery({ name: "path", required: false, type: String })
+  @ApiQuery({ name: "correlationId", required: false, type: String })
+  async listAuditLogs(
+    @Query("limit") limit?: string,
+    @Query("cursor") cursor?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("actorId") actorId?: string,
+    @Query("action") action?: string,
+    @Query("resourceType") resourceType?: string,
+    @Query("resourceId") resourceId?: string,
+    @Query("statusCode") statusCode?: string,
+    @Query("path") path?: string,
+    @Query("correlationId") correlationId?: string,
+  ): Promise<AuditListRemoteResult> {
+    const qs = new URLSearchParams();
+    if (limit) {
+      qs.set("limit", limit);
+    }
+    if (cursor) {
+      qs.set("cursor", cursor);
+    }
+    if (from) {
+      qs.set("from", from);
+    }
+    if (to) {
+      qs.set("to", to);
+    }
+    if (actorId) {
+      qs.set("actorId", actorId);
+    }
+    if (action) {
+      qs.set("action", action);
+    }
+    if (resourceType) {
+      qs.set("resourceType", resourceType);
+    }
+    if (resourceId) {
+      qs.set("resourceId", resourceId);
+    }
+    if (statusCode) {
+      qs.set("statusCode", statusCode);
+    }
+    if (path) {
+      qs.set("path", path);
+    }
+    if (correlationId) {
+      qs.set("correlationId", correlationId);
+    }
+    return this.auditRemoteService.listEvents(qs);
+  }
+
+  @Get("audit-logs/tail")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Poll recent audit events after a timestamp" })
+  @ApiResponse({ status: 200, description: "Recent audit events" })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiQuery({ name: "since", required: false, type: String })
+  async tailAuditLogs(
+    @Query("limit") limit?: string,
+    @Query("since") since?: string,
+  ): Promise<AuditListRemoteResult> {
+    const lim = limit ? parseInt(limit, 10) : 50;
+    return this.auditRemoteService.tailEvents(
+      since,
+      Number.isFinite(lim) ? lim : 50,
+    );
   }
 }

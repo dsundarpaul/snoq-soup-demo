@@ -50,6 +50,16 @@ export class PromoCode {
   voucherId!: Types.ObjectId | null;
 
   @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "Assigned hunter ObjectId",
+  })
+  @IsString()
+  @IsOptional()
+  @Prop({ type: Types.ObjectId, ref: "Hunter", default: null })
+  hunterId!: Types.ObjectId | null;
+
+  @ApiProperty({
     nullable: true,
     description: "Timestamp when code was assigned",
   })

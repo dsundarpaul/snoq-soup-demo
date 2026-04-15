@@ -16,6 +16,7 @@ import { AdminMerchantsTab } from "@/sections/admin/admin-merchants-tab";
 import { AdminDropsTab } from "@/sections/admin/admin-drops-tab";
 import { AdminUsersTab } from "@/sections/admin/admin-users-tab";
 import { AdminAnalyticsTab } from "@/sections/admin/admin-analytics-tab";
+import { AdminAuditLogsTab } from "@/sections/admin/admin-audit-logs-tab";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function AdminDashboardPage() {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5">
+          <TabsList className="grid w-full max-w-4xl grid-cols-3 sm:grid-cols-6">
             <TabsTrigger value="overview" data-testid="tab-overview">
               Overview
             </TabsTrigger>
@@ -92,6 +93,9 @@ export default function AdminDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="analytics" data-testid="tab-analytics">
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="audit" data-testid="tab-audit">
+              Audit
             </TabsTrigger>
           </TabsList>
 
@@ -116,6 +120,10 @@ export default function AdminDashboardPage() {
 
           <TabsContent value="analytics" className="space-y-6">
             <AdminAnalyticsTab analytics={analyticsQuery.data} />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AdminAuditLogsTab hasSession={hasSession} />
           </TabsContent>
         </Tabs>
       </main>

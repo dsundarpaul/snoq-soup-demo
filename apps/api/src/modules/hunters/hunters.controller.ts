@@ -17,6 +17,7 @@ import { UpdateNicknameDto } from "./dto/request/update-nickname.dto";
 import { HunterResponseDto } from "./dto/response/hunter-response.dto";
 import { HunterHistoryResponseDto } from "./dto/response/hunter-history-response.dto";
 import { LeaderboardEntryDto } from "./dto/response/leaderboard-entry.dto";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Hunters")
 @Controller()
@@ -49,6 +50,7 @@ export class HuntersController {
   }
 
   @Patch("hunters/me/profile")
+  @Audit("hunters.update_profile")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("hunter")
   @ApiBearerAuth()
@@ -63,6 +65,7 @@ export class HuntersController {
   }
 
   @Patch("hunters/me/nickname")
+  @Audit("hunters.update_nickname")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("hunter")
   @ApiBearerAuth()

@@ -79,6 +79,7 @@ export const adminQueryKeys = {
   merchants: ["/api/v1/admin/merchants"] as const,
   drops: ["/api/v1/admin/drops"] as const,
   users: ["/api/v1/admin/users"] as const,
+  auditLogs: ["/api/v1/admin/audit-logs"] as const,
   dropCodes: (dropId: string) =>
     ["/api/v1/admin/drops", dropId, "codes"] as const,
 };
@@ -506,6 +507,91 @@ export function useAdminUsersListQuery(
     queryFn: async (): Promise<AdminUsersListData> => {
       const raw = await adminGet<RawPagedJson>(`/api/v1/admin/users?${queryString}`);
       return toPagedResult(raw, mapAdminUserItem);
+    },
+  });
+}
+
+export type AdminAuditLogItem = {
+  id: string;
+  occurredAt: string;
+  httpMethod: string;
+  path: string;
+  statusCode: number;
+  durationMs: number;
+  actorType: string;
+  actorId: string;
+  ip: string;
+  userAgent: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  correlationId: string;
+  metadata: Record<string, unknown>;
+};
+
+export type AdminAuditLogsData = {
+  items: AdminAuditLogItem[];
+  nextCursor?: string;
+  hasMore: boolean;
+};
+
+export type AdminAuditLogsParams = {
+  limit: number;
+  cursor?: string;
+  from?: string;
+  to?: string;
+  actorId?: string;
+  action?: string;
+  resourceType?: string;
+  resourceId?: string;
+  statusCode?: number;
+  path?: string;
+  correlationId?: string;
+};
+
+export function useAdminAuditLogsQuery(
+  enabled: boolean,
+  params: AdminAuditLogsParams,
+  options?: { refetchInterval?: number | false },
+) {
+  const queryString = buildQueryString({
+    limit: params.limit,
+    cursor: params.cursor,
+    from: params.from,
+    to: params.to,
+    actorId: params.actorId,
+    action: params.action,
+    resourceType: params.resourceType,
+    resourceId: params.resourceId,
+    statusCode: params.statusCode,
+    path: params.path,
+    correlationId: params.correlationId,
+  });
+
+  return useQuery({
+    queryKey: [
+      ...adminQueryKeys.auditLogs,
+      params.limit,
+      params.cursor ?? "",
+      params.from ?? "",
+      params.to ?? "",
+      params.actorId ?? "",
+      params.action ?? "",
+      params.resourceType ?? "",
+      params.resourceId ?? "",
+      String(params.statusCode ?? ""),
+      params.path ?? "",
+      params.correlationId ?? "",
+    ] as const,
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    refetchInterval: options?.refetchInterval,
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<AdminAuditLogsData> => {
+      return adminGet<AdminAuditLogsData>(
+        `/api/v1/admin/audit-logs?${queryString}`,
+      );
     },
   });
 }

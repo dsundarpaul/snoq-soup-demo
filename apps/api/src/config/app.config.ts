@@ -93,4 +93,15 @@ export const config = {
     phoneNumber: e.TWILIO_PHONE,
     enabled: Boolean(e.TWILIO_ACCOUNT_SID && e.TWILIO_AUTH_TOKEN),
   },
+  audit: {
+    enabled: bool(e.AUDIT_ENABLED, false),
+    baseUrl: (e.AUDIT_SERVICE_URL ?? "").replace(/\/$/, ""),
+    serviceKey: e.AUDIT_SERVICE_KEY ?? "",
+    flushIntervalMs: num(e.AUDIT_FLUSH_INTERVAL_MS, 500),
+    maxBatchSize: num(e.AUDIT_MAX_BATCH_SIZE, 50),
+    maxBufferEvents: num(e.AUDIT_MAX_BUFFER_EVENTS, 5000),
+    requestTimeoutMs: num(e.AUDIT_REQUEST_TIMEOUT_MS, 800),
+    circuitFailureThreshold: num(e.AUDIT_CIRCUIT_FAILURE_THRESHOLD, 5),
+    circuitHalfOpenAfterMs: num(e.AUDIT_CIRCUIT_HALF_OPEN_AFTER_MS, 30_000),
+  },
 };

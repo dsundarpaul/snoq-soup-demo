@@ -6,10 +6,12 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { config } from "./config/app.config";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { correlationIdMiddleware } from "./common/middleware/correlation-id.middleware";
 
 async function bootstrapHttp() {
   const logger = new Logger("Bootstrap");
   const app = await NestFactory.create(AppModule);
+  app.getHttpAdapter().getInstance().use(correlationIdMiddleware);
 
   // Security headers
   app.use(
@@ -36,7 +38,7 @@ async function bootstrapHttp() {
     credentials: true,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     allowedHeaders:
-      "Content-Type,Authorization,X-Requested-With,Accept,X-Device-Id",
+      "Content-Type,Authorization,X-Requested-With,Accept,X-Device-Id,X-Request-Id,X-Correlation-Id",
   });
 
   // Global pipes

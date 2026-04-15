@@ -29,6 +29,7 @@ import { TokenResponseDto } from "./dto/response/token-response.dto";
 import { ResendVerificationResponseDto } from "./dto/response/resend-verification-response.dto";
 import { UserType } from "../../database/schemas/refresh-token.schema";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -39,6 +40,7 @@ export class AuthController {
     "If the email exists, a verification link has been sent.";
 
   @Post("verify-email")
+  @Audit("auth.verify_email")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Verify email with token from email link" })
   @ApiResponse({ status: 200, description: "Email verified successfully" })
@@ -48,6 +50,7 @@ export class AuthController {
   }
 
   @Post("resend-verification")
+  @Audit("auth.resend_verification")
   @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Resend email verification link" })
@@ -66,6 +69,7 @@ export class AuthController {
   }
 
   @Post("merchant/register")
+  @Audit("auth.merchant_register")
   @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } }) // 3 requests per hour
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Register a new merchant" })
@@ -82,6 +86,7 @@ export class AuthController {
   }
 
   @Post("merchant/login")
+  @Audit("auth.merchant_login")
   @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } }) // 5 attempts per 15 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login as merchant" })
@@ -100,6 +105,7 @@ export class AuthController {
   }
 
   @Post("merchant/verify-email/:token")
+  @Audit("auth.merchant_verify_email")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Verify merchant email (token in URL)" })
   @ApiParam({ name: "token", description: "Verification token from email" })
@@ -110,6 +116,7 @@ export class AuthController {
   }
 
   @Post("merchant/resend-verification")
+  @Audit("auth.merchant_resend_verification")
   @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } }) // 3 requests per 15 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Resend merchant verification email" })
@@ -128,6 +135,7 @@ export class AuthController {
   }
 
   @Post("merchant/forgot-password")
+  @Audit("auth.merchant_forgot_password")
   @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } }) // 3 requests per 15 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Request merchant password reset" })
@@ -140,6 +148,7 @@ export class AuthController {
   }
 
   @Post("merchant/reset-password/:token")
+  @Audit("auth.merchant_reset_password")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Reset merchant password" })
   @ApiParam({ name: "token", description: "Password reset token from email" })
@@ -157,6 +166,7 @@ export class AuthController {
   }
 
   @Post("hunter/register")
+  @Audit("auth.hunter_register")
   @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } }) // 3 requests per hour
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Register a new hunter" })
@@ -176,6 +186,7 @@ export class AuthController {
   }
 
   @Post("hunter/login")
+  @Audit("auth.hunter_login")
   @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } }) // 5 attempts per 15 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login as hunter with email/password" })
@@ -190,6 +201,7 @@ export class AuthController {
   }
 
   @Post("hunter/device-login")
+  @Audit("auth.hunter_device_login")
   @Throttle({ default: { limit: 10, ttl: 60 * 60 * 1000 } }) // 10 requests per hour
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login or create hunter by device ID" })
@@ -205,6 +217,7 @@ export class AuthController {
   }
 
   @Post("hunter/forgot-password")
+  @Audit("auth.hunter_forgot_password")
   @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } }) // 3 requests per 15 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Request hunter password reset" })
@@ -217,6 +230,7 @@ export class AuthController {
   }
 
   @Post("hunter/reset-password/:token")
+  @Audit("auth.hunter_reset_password")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Reset hunter password" })
   @ApiParam({ name: "token", description: "Password reset token from email" })
@@ -230,6 +244,7 @@ export class AuthController {
   }
 
   @Post("admin/login")
+  @Audit("auth.admin_login")
   @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } }) // 5 attempts per 15 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login as admin" })
@@ -245,6 +260,7 @@ export class AuthController {
   }
 
   @Post("refresh")
+  @Audit("auth.refresh")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Refresh access and refresh tokens" })
   @ApiResponse({
@@ -258,6 +274,7 @@ export class AuthController {
   }
 
   @Post("logout")
+  @Audit("auth.logout")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)

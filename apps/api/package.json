@@ -57,6 +57,7 @@
     "rxjs": "^7.8.0",
     "sanitize-html": "^2.12.0",
     "twilio": "^5.0.0",
+    "undici": "^8.1.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

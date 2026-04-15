@@ -3,8 +3,6 @@ import {
   Get,
   Patch,
   Post,
-  Put,
-  Delete,
   Body,
   UseGuards,
   Param,
@@ -37,6 +35,7 @@ import { MerchantPublicResponseDto } from "./dto/response/merchant-public-respon
 import { ScannerTokenResponseDto } from "./dto/response/scanner-token-response.dto";
 import { MerchantStatsResponseDto } from "./dto/response/merchant-stats-response.dto";
 import { MerchantAnalyticsResponseDto } from "./dto/response/merchant-analytics-response.dto";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Merchants")
 @Controller("merchants")
@@ -56,6 +55,7 @@ export class MerchantsController {
   }
 
   @Patch("me")
+  @Audit("merchants.update_profile")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()
@@ -69,6 +69,7 @@ export class MerchantsController {
   }
 
   @Patch("me/store-location")
+  @Audit("merchants.update_store_location")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()
@@ -85,6 +86,7 @@ export class MerchantsController {
   }
 
   @Patch("me/logo")
+  @Audit("merchants.update_logo")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()
@@ -98,6 +100,7 @@ export class MerchantsController {
   }
 
   @Post("me/scanner-token")
+  @Audit("merchants.generate_scanner_token")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()

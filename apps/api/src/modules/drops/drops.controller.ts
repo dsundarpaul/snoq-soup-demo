@@ -38,6 +38,7 @@ import { DropResponseDto } from "./dto/response/drop-response.dto";
 import { DropDetailResponseDto } from "./dto/response/drop-detail-response.dto";
 import { ActiveDropsResponseDto } from "./dto/response/active-drops-response.dto";
 import { csvAttachmentFilename } from "../../common/utils/csv";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Drops")
 @Controller()
@@ -106,6 +107,7 @@ export class DropsController {
   }
 
   @Get("merchants/me/drops/export")
+  @Audit("drops.merchant_export_csv")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()
@@ -142,6 +144,7 @@ export class DropsController {
   }
 
   @Post("merchants/me/drops")
+  @Audit("drops.create")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()
@@ -156,6 +159,7 @@ export class DropsController {
   }
 
   @Patch("merchants/me/drops/:id")
+  @Audit("drops.update")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()
@@ -170,6 +174,7 @@ export class DropsController {
   }
 
   @Delete("merchants/me/drops/:id")
+  @Audit("drops.delete")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MERCHANT)
   @ApiBearerAuth()

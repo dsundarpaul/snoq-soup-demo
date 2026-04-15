@@ -24,6 +24,7 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { GetSignedUrlDto } from "./dto/request/get-signed-url.dto";
 import { SignedUrlResponseDto } from "./dto/response/signed-url-response.dto";
 import { AllowedMimeType } from "./dto/request/get-signed-url.dto";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("S3")
 @Controller("s3")
@@ -34,6 +35,7 @@ export class S3Controller {
   ) {}
 
   @Post("signed-url")
+  @Audit("s3.signed_url")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -54,6 +56,7 @@ export class S3Controller {
   }
 
   @Post("upload")
+  @Audit("s3.upload")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @UseInterceptors(

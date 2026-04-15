@@ -36,6 +36,7 @@ import {
   PromoCodeStatsDto,
 } from "./dto/response/promo-code-list.dto";
 import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
+import { Audit } from "../audit/audit.decorator";
 
 @ApiTags("Promo Codes")
 @Controller("merchants/me/drops/:dropId/codes")
@@ -46,6 +47,7 @@ export class PromoCodesController {
   constructor(private readonly promoCodesService: PromoCodesService) {}
 
   @Post()
+  @Audit("promo_codes.create")
   @ApiOperation({ summary: "Create single promo code for a drop" })
   @ApiResponse({ status: 201, type: PromoCodeResponseDto })
   @ApiResponse({ status: 404, description: "Drop not found" })
@@ -60,6 +62,7 @@ export class PromoCodesController {
   }
 
   @Post("bulk")
+  @Audit("promo_codes.bulk_create")
   @ApiOperation({ summary: "Bulk create promo codes for a drop" })
   @ApiResponse({ status: 201, type: [PromoCodeResponseDto] })
   @ApiResponse({ status: 400, description: "Duplicate codes in request" })
@@ -124,6 +127,7 @@ export class PromoCodesController {
   }
 
   @Delete()
+  @Audit("promo_codes.delete_unused")
   @ApiOperation({
     summary: "Delete all unused (available) promo codes for a drop",
   })

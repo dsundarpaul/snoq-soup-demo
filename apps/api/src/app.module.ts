@@ -14,6 +14,7 @@ import { CommandsModule } from "./modules/commands/commands.module";
 import { ScannerModule } from "./modules/scanner/scanner.module";
 import { PromoCodesModule } from "./modules/promo-codes/promo-codes.module";
 import { S3Module } from "./modules/s3/s3.module";
+import { AuditModule } from "./modules/audit/audit.module";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { S3Module } from "./modules/s3/s3.module";
     ScannerModule,
     PromoCodesModule,
     S3Module,
+    AuditModule,
   ],
   providers: [
     // Apply rate limiting globally
