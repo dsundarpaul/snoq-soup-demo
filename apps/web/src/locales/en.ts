@@ -279,6 +279,9 @@ const en = {
     "If you chose Block before, open your browser or site settings for this page, allow Camera and Location, then try again.",
   "ar.enableCompass": "Enable Compass",
   "ar.enableArMode": "Enable AR Mode",
+  "ar.tapToStartAr": "Tap to start AR",
+  "ar.tapToStartArDesc":
+    "Safari only unlocks the camera and compass after you tap. You may need to tap again after each full page reload; this is normal on iPhone and iPad.",
   "ar.compassDesc": "Allow compass access to see rewards floating in the real world",
   "ar.calibrating": "Calibrating compass... Move your phone in a figure-8",
   "ar.captured": "CAPTURED!",

@@ -99,66 +99,68 @@ function ARCameraView({
 }: ARCameraViewProps) {
   const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [cameraAttempt, setCameraAttempt] = useState(0);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [arSessionStarted, setArSessionStarted] = useState(false);
+  const [startingAr, setStartingAr] = useState(false);
   const {
     heading,
-    permissionGranted,
     requestPermission,
     hasValidHeading,
     isCalibrating,
     error: orientationError,
   } = useDeviceOrientation();
-  const [needsPermission, setNeedsPermission] = useState(false);
 
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    let cancelled = false;
-
-    const startCamera = async () => {
-      setCameraError(null);
-      setCameraActive(false);
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setCameraActive(true);
-        }
-      } catch (err) {
-        console.error("Camera error:", err);
-        if (!cancelled) {
-          setCameraError(t("ar.cameraDenied"));
-          setCameraActive(false);
-        }
-      }
-    };
-
-    void startCamera();
-
-    return () => {
-      cancelled = true;
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [cameraAttempt, t]);
-
-  useEffect(() => {
-    if (
-      typeof (DeviceOrientationEvent as any).requestPermission === "function" &&
-      !permissionGranted
-    ) {
-      setNeedsPermission(true);
+  const stopCameraStream = useCallback(() => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
     }
-  }, [permissionGranted]);
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, [stopCameraStream]);
+
+  const attachCameraStream = useCallback(async (): Promise<boolean> => {
+    setCameraError(null);
+    setCameraActive(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+      stopCameraStream();
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setCameraActive(true);
+        setArSessionStarted(true);
+        return true;
+      }
+      stream.getTracks().forEach((track) => track.stop());
+      return false;
+    } catch (err) {
+      console.error("Camera error:", err);
+      setCameraError(t("ar.cameraDenied"));
+      setCameraActive(false);
+      return false;
+    }
+  }, [stopCameraStream, t]);
+
+  const handleStartArSession = useCallback(async () => {
+    setStartingAr(true);
+    await requestPermission();
+    await attachCameraStream();
+    setStartingAr(false);
+  }, [requestPermission, attachCameraStream]);
 
   const bearing = useMemo(() => {
     return calculateBearing(userLat, userLon, targetLat, targetLon);
@@ -223,7 +225,7 @@ function ARCameraView({
           </p>
           <Button
             className="bg-primary text-white"
-            onClick={() => setCameraAttempt((n) => n + 1)}
+            onClick={() => void attachCameraStream()}
           >
             {t("scanner.tryAgain")}
           </Button>
@@ -239,20 +241,23 @@ function ARCameraView({
         autoPlay
         playsInline
         muted
-        className="absolute inset-0 w-full h-full object-cover"
+        className={cn(
+          "absolute inset-0 w-full h-full object-cover",
+          !arSessionStarted && "opacity-0 pointer-events-none"
+        )}
         data-testid="camera-view"
       />
 
-      {cameraActive && needsPermission && !permissionGranted && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
-          <Card className="p-6 m-4 bg-background/95 backdrop-blur">
+      {!arSessionStarted ? (
+        <div className="absolute inset-0 z-20 bg-gradient-to-b from-slate-900 via-primary/20 to-slate-900 flex items-center justify-center">
+          <Card className="p-6 m-4 max-w-sm bg-background/95 backdrop-blur">
             <div className="text-center">
-              <Compass className="w-12 h-12 text-teal mx-auto mb-4" />
+              <Compass className="w-12 h-12 text-teal mx-auto mb-3" />
               <h3 className="text-lg font-semibold mb-2">
-                {t("ar.enableArMode")}
+                {t("ar.tapToStartAr")}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {t("ar.compassDesc")}
+                {t("ar.tapToStartArDesc")}
               </p>
               {orientationError ? (
                 <p className="text-sm text-destructive mb-4">
@@ -260,10 +265,18 @@ function ARCameraView({
                 </p>
               ) : null}
               <Button
-                onClick={() => void requestPermission()}
-                className="bg-primary text-white"
+                className="bg-primary text-white w-full"
+                disabled={startingAr}
+                onClick={() => void handleStartArSession()}
               >
-                {t("ar.enableCompass")}
+                {startingAr ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                    {t("ar.enableArMode")}
+                  </>
+                ) : (
+                  t("ar.enableArMode")
+                )}
               </Button>
               <p className="text-xs text-muted-foreground mt-3">
                 {t("ar.permissionsSettingsHint")}
@@ -271,9 +284,9 @@ function ARCameraView({
             </div>
           </Card>
         </div>
-      )}
+      ) : null}
 
-      {cameraActive && (permissionGranted || !needsPermission) && (
+      {arSessionStarted && cameraActive && (
         <>
           {isCalibrating || angleDiff === null ? (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
