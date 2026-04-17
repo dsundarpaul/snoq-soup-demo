@@ -48,6 +48,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("Email verification required");
     }
 
+    if (
+      payload.type === UserType.MERCHANT &&
+      "suspendedAt" in user &&
+      user.suspendedAt != null
+    ) {
+      throw new UnauthorizedException("Account suspended");
+    }
+
     return {
       userId: payload.sub,
       type: payload.type,

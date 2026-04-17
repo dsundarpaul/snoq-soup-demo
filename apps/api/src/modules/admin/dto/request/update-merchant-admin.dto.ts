@@ -22,7 +22,7 @@ export class UpdateMerchantAdminDto {
 
   @ApiProperty({
     example: true,
-    description: "Whether merchant is verified",
+    description: "Whether merchant email is verified (admin override)",
     required: false,
   })
   @IsBoolean()
@@ -31,12 +31,13 @@ export class UpdateMerchantAdminDto {
 
   @ApiProperty({
     example: true,
-    description: "Whether merchant account is active",
+    description:
+      "When true, suspends the merchant account. When false, reactivates it.",
     required: false,
   })
   @IsBoolean()
   @IsOptional()
-  isActive?: boolean;
+  suspended?: boolean;
 
   @ApiProperty({
     example: "updated_username",

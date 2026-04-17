@@ -690,7 +690,8 @@ export function mapAdminMerchantItem(raw: Record<string, unknown>) {
     username: String(raw.username ?? ""),
     businessName: String(raw.businessName ?? ""),
     email: String(raw.email ?? ""),
-    emailVerified: Boolean(raw.isVerified ?? false),
+    emailVerified: Boolean(raw.isVerified ?? raw.emailVerified ?? false),
+    isSuspended: Boolean(raw.isSuspended ?? false),
     createdAt: toIso(raw.createdAt as Date) ?? "",
   };
 }

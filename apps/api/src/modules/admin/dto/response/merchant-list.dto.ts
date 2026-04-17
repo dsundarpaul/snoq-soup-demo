@@ -22,7 +22,17 @@ export class MerchantListItemDto {
   @ApiProperty({ example: true, description: "Whether merchant is verified" })
   isVerified!: boolean;
 
-  @ApiProperty({ example: true, description: "Whether merchant is active" })
+  @ApiProperty({
+    example: false,
+    description: "Whether the merchant account is suspended by an admin",
+  })
+  isSuspended!: boolean;
+
+  @ApiProperty({
+    example: true,
+    description:
+      "Whether the merchant may use the product (not suspended and not locked out)",
+  })
   isActive!: boolean;
 
   @ApiProperty({ example: 15, description: "Total drops created" })

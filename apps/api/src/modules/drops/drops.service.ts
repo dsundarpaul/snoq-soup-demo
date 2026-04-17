@@ -27,12 +27,12 @@ const ACTIVE_DROPS_CACHE_TTL_MS = 20_000;
 export class DropsService {
   constructor(
     private readonly database: DatabaseService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   async create(
     merchantId: string,
-    dto: CreateDropDto
+    dto: CreateDropDto,
   ): Promise<DropResponseDto> {
     // Build redemption object from flat fields
     const redemption: Drop["redemption"] = {
@@ -68,7 +68,7 @@ export class DropsService {
       (!dto.availabilityLimit || dto.availabilityLimit < 1)
     ) {
       throw new BadRequestException(
-        "Limited availability requires a valid limit"
+        "Limited availability requires a valid limit",
       );
     }
 
@@ -82,7 +82,7 @@ export class DropsService {
 
     if (lng == null || lat == null) {
       throw new BadRequestException(
-        "Longitude (lng/longitude) and Latitude (lat/latitude) are required"
+        "Longitude (lng/longitude) and Latitude (lat/latitude) are required",
       );
     }
 
@@ -137,7 +137,7 @@ export class DropsService {
     page = 1,
     limit = 20,
     search?: string,
-    status?: string
+    status?: string,
   ): Promise<{
     drops: DropResponseDto[];
     total: number;
@@ -147,7 +147,7 @@ export class DropsService {
     const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
     const safeLimit = Math.min(
       100,
-      Math.max(1, Number.isFinite(limit) ? limit : 20)
+      Math.max(1, Number.isFinite(limit) ? limit : 20),
     );
     const filter = this.buildMerchantDropsFilter(merchantId, search, status);
     const skip = (safePage - 1) * safeLimit;
@@ -173,7 +173,7 @@ export class DropsService {
   async merchantDropsCsv(
     merchantId: string,
     search?: string,
-    status?: string
+    status?: string,
   ): Promise<string> {
     const filter = this.buildMerchantDropsFilter(merchantId, search, status);
     const drops = await this.database.drops
@@ -212,13 +212,13 @@ export class DropsService {
         "Radius",
         "Created",
       ],
-      rows
+      rows,
     );
   }
 
   buildDropSearchAndStatusClauses(
     search?: string,
-    status?: string
+    status?: string,
   ): FilterQuery<DropDocument>[] {
     const andParts: FilterQuery<DropDocument>[] = [];
     const trimmed = search?.trim();
@@ -263,7 +263,7 @@ export class DropsService {
           break;
         default:
           throw new BadRequestException(
-            "Invalid status. Use active, inactive, scheduled, expired, or all."
+            "Invalid status. Use active, inactive, scheduled, expired, or all.",
           );
       }
     }
@@ -274,7 +274,7 @@ export class DropsService {
   private buildMerchantDropsFilter(
     merchantId: string,
     search?: string,
-    status?: string
+    status?: string,
   ): FilterQuery<DropDocument> {
     const base: FilterQuery<DropDocument> = {
       merchantId: new Types.ObjectId(merchantId),
@@ -291,7 +291,7 @@ export class DropsService {
   }
 
   async findForPublicMerchantStore(
-    merchantId: string
+    merchantId: string,
   ): Promise<DropResponseDto[]> {
     const drops = await this.database.drops
       .find({
@@ -307,7 +307,7 @@ export class DropsService {
 
   async findAllActive(): Promise<ActiveDropsResponseDto> {
     const cached = await this.cacheManager.get<ActiveDropsResponseDto>(
-      ACTIVE_DROPS_CACHE_KEY
+      ACTIVE_DROPS_CACHE_KEY,
     );
     if (cached) {
       return cached;
@@ -380,14 +380,14 @@ export class DropsService {
     await this.cacheManager.set(
       ACTIVE_DROPS_CACHE_KEY,
       result,
-      ACTIVE_DROPS_CACHE_TTL_MS
+      ACTIVE_DROPS_CACHE_TTL_MS,
     );
 
     return result;
   }
 
   async findAllActiveExcludingHunterClaims(
-    hunterId: string
+    hunterId: string,
   ): Promise<ActiveDropsResponseDto> {
     let excludeIds: Types.ObjectId[] = [];
     try {
@@ -399,7 +399,7 @@ export class DropsService {
       excludeIds = rawIds
         .filter((id) => id != null)
         .map((id) =>
-          id instanceof Types.ObjectId ? id : new Types.ObjectId(String(id))
+          id instanceof Types.ObjectId ? id : new Types.ObjectId(String(id)),
         );
     } catch {
       excludeIds = [];
@@ -475,7 +475,7 @@ export class DropsService {
   async findActiveNear(
     lat: number,
     lng: number,
-    maxDistanceMeters: number
+    maxDistanceMeters: number,
   ): Promise<ActiveDropsResponseDto> {
     const currentTime = new Date();
     const cappedMax = Math.min(300_000, Math.max(1_000, maxDistanceMeters));
@@ -555,7 +555,7 @@ export class DropsService {
   async update(
     id: string,
     merchantId: string,
-    dto: UpdateDropDto
+    dto: UpdateDropDto,
   ): Promise<DropResponseDto> {
     const drop = await this.database.drops.findOne({
       _id: new Types.ObjectId(id),
@@ -565,7 +565,7 @@ export class DropsService {
 
     if (!drop) {
       throw new NotFoundException(
-        "Drop not found or you do not have permission"
+        "Drop not found or you do not have permission",
       );
     }
 
@@ -626,7 +626,7 @@ export class DropsService {
       (!dto.availabilityLimit || dto.availabilityLimit < 1)
     ) {
       throw new BadRequestException(
-        "Limited availability requires a valid limit"
+        "Limited availability requires a valid limit",
       );
     }
 
@@ -655,7 +655,7 @@ export class DropsService {
 
   async updateAsAdmin(
     id: string,
-    dto: UpdateDropDto
+    dto: UpdateDropDto,
   ): Promise<DropResponseDto> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException("Invalid drop ID");
@@ -721,7 +721,7 @@ export class DropsService {
       (!dto.availabilityLimit || dto.availabilityLimit < 1)
     ) {
       throw new BadRequestException(
-        "Limited availability requires a valid limit"
+        "Limited availability requires a valid limit",
       );
     }
 
@@ -760,7 +760,7 @@ export class DropsService {
 
     if (!existing) {
       throw new NotFoundException(
-        "Drop not found or you do not have permission"
+        "Drop not found or you do not have permission",
       );
     }
 
@@ -772,12 +772,12 @@ export class DropsService {
         merchantId: merchantObjectId,
         deletedAt: null,
       },
-      { $set: { deletedAt: new Date(), active: false } }
+      { $set: { deletedAt: new Date(), active: false } },
     );
 
     if (!result.modifiedCount) {
       throw new NotFoundException(
-        "Drop not found or you do not have permission"
+        "Drop not found or you do not have permission",
       );
     }
 
@@ -785,7 +785,7 @@ export class DropsService {
   }
 
   private async assertDropHasNoBlockingReferences(
-    dropObjectId: Types.ObjectId
+    dropObjectId: Types.ObjectId,
   ): Promise<void> {
     const [voucherCount, promoCodeCount] = await Promise.all([
       this.database.vouchers.countDocuments({ dropId: dropObjectId }),
@@ -802,12 +802,12 @@ export class DropsService {
     }
     if (promoCodeCount > 0) {
       parts.push(
-        `${promoCodeCount} promo code${promoCodeCount === 1 ? "" : "s"}`
+        `${promoCodeCount} promo code${promoCodeCount === 1 ? "" : "s"}`,
       );
     }
 
     throw new ConflictException(
-      `Cannot delete this drop while linked data exists (${parts.join(", ")}).`
+      `Cannot delete this drop while linked data exists (${parts.join(", ")}).`,
     );
   }
 
@@ -816,7 +816,7 @@ export class DropsService {
   }
 
   async checkAvailability(
-    dropId: string
+    dropId: string,
   ): Promise<{ available: boolean; remainingClaims?: number }> {
     const drop = await this.database.drops
       .findOne({ _id: dropId, deletedAt: null })
@@ -873,7 +873,7 @@ export class DropsService {
 
   private effectiveScheduleAfterUpdate(
     drop: { schedule?: Drop["schedule"] },
-    dto: UpdateDropDto
+    dto: UpdateDropDto,
   ): Drop["schedule"] {
     let start = drop.schedule?.start;
     let end = drop.schedule?.end;
@@ -889,7 +889,7 @@ export class DropsService {
   async getDetailWithAvailability(
     id: string,
     userLat?: number,
-    userLng?: number
+    userLng?: number,
   ): Promise<DropDetailResponseDto> {
     const drop = await this.database.drops
       .findOne({ _id: id, deletedAt: null })
@@ -906,7 +906,7 @@ export class DropsService {
         userLat,
         userLng,
         drop.location.coordinates[1],
-        drop.location.coordinates[0]
+        drop.location.coordinates[0],
       );
     }
 
@@ -945,7 +945,7 @@ export class DropsService {
     lat1: number,
     lng1: number,
     lat2: number,
-    lng2: number
+    lng2: number,
   ): number {
     const R = 6371000; // Earth's radius in meters
     const dLat = this.toRad(lat2 - lat1);

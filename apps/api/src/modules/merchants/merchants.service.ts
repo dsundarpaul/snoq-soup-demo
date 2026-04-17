@@ -236,6 +236,7 @@ export class MerchantsService {
           businessHours?: string | null;
           username: string;
           emailVerified: boolean;
+          suspendedAt?: Date | null;
           lockUntil?: Date | null;
           storeLocation?: {
             lat: number;
@@ -287,7 +288,9 @@ export class MerchantsService {
       businessHours: bHours,
       username: merchant.username,
       isVerified: merchant.emailVerified,
-      isActive: merchant.lockUntil ? new Date() < merchant.lockUntil : true,
+      isActive:
+        !merchant.suspendedAt &&
+        !(merchant.lockUntil && new Date() < new Date(merchant.lockUntil)),
       createdAt: merchant.createdAt,
       updatedAt: merchant.updatedAt,
     };
@@ -304,6 +307,7 @@ export class MerchantsService {
           logoUrl: string | null;
           username: string;
           emailVerified: boolean;
+          suspendedAt?: Date | null;
           lockUntil?: Date | null;
           createdAt: Date;
           updatedAt: Date;

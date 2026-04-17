@@ -57,7 +57,7 @@ export class VouchersController {
   async claim(
     @Body() dto: ClaimVoucherDto,
     @DeviceId() deviceId: string,
-    @Req() req: Request & { hunterId?: string }
+    @Req() req: Request & { hunterId?: string },
   ): Promise<VoucherResponseDto> {
     return this.vouchersService.claim({
       ...dto,

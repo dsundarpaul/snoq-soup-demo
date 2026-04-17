@@ -41,10 +41,12 @@ interface VoucherQuery {
 export class HuntersService {
   constructor(
     private readonly database: DatabaseService,
-    private readonly dropsService: DropsService
+    private readonly dropsService: DropsService,
   ) {}
 
-  async getActiveDropsForHunt(hunterId: string): Promise<ActiveDropsResponseDto> {
+  async getActiveDropsForHunt(
+    hunterId: string,
+  ): Promise<ActiveDropsResponseDto> {
     return this.dropsService.findAllActiveExcludingHunterClaims(hunterId);
   }
 

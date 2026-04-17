@@ -4,6 +4,8 @@ import {
   NotFoundException,
   BadRequestException,
 } from "@nestjs/common";
+import { AuthService } from "../auth/auth.service";
+import { UserType } from "../../database/schemas/refresh-token.schema";
 import { FilterQuery, PipelineStage, Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
 import { DropsService } from "../drops/drops.service";
@@ -31,7 +33,6 @@ export interface PaginationQuery {
 
 export interface MerchantQuery extends PaginationQuery {
   isVerified?: boolean;
-  isActive?: boolean;
   search?: string;
 }
 
@@ -52,7 +53,21 @@ export class AdminService {
   constructor(
     private readonly database: DatabaseService,
     private readonly dropsService: DropsService,
+    private readonly authService: AuthService,
   ) {}
+
+  private merchantAccountFlags(merchant: {
+    lockUntil?: Date | null;
+    suspendedAt?: Date | null;
+  }): { isSuspended: boolean; isActive: boolean } {
+    const locked =
+      merchant.lockUntil != null && new Date() < new Date(merchant.lockUntil);
+    const suspended = merchant.suspendedAt != null;
+    return {
+      isSuspended: suspended,
+      isActive: !suspended && !locked,
+    };
+  }
 
   private merchantListFilter(
     query: Pick<MerchantQuery, "isVerified" | "search">,
@@ -442,13 +457,15 @@ export class AdminService {
         totalDrops: 0,
         activeDrops: 0,
       };
+      const flags = this.merchantAccountFlags(m);
       return {
         id: m._id.toString(),
         email: m.email,
         businessName: m.businessName,
         username: m.username,
         isVerified: m.emailVerified,
-        isActive: m.lockUntil ? new Date() < m.lockUntil : true,
+        isSuspended: flags.isSuspended,
+        isActive: flags.isActive,
         totalDrops: stats.totalDrops,
         activeDrops: stats.activeDrops,
         createdAt: m.createdAt,
@@ -476,27 +493,81 @@ export class AdminService {
       throw new BadRequestException("Invalid merchant ID");
     }
 
+    const objectId = new Types.ObjectId(id);
+
+    const existing = await this.database.merchants
+      .findOne({ _id: objectId, deletedAt: null })
+      .lean();
+
+    if (!existing) {
+      throw new NotFoundException("Merchant not found");
+    }
+
+    const hasMutation =
+      dto.businessName !== undefined ||
+      dto.logoUrl !== undefined ||
+      dto.username !== undefined ||
+      dto.isVerified !== undefined ||
+      dto.suspended !== undefined;
+
+    if (!hasMutation) {
+      throw new BadRequestException("No fields to update");
+    }
+
     if (dto.username) {
-      const existing = await this.database.merchants
+      const taken = await this.database.merchants
         .findOne({
           username: dto.username.toLowerCase(),
-          _id: { $ne: new Types.ObjectId(id) },
+          _id: { $ne: objectId },
         })
         .lean();
-      if (existing) {
+      if (taken) {
         throw new ConflictException("Username already taken");
       }
     }
 
-    const updateData: Record<string, unknown> = { ...dto };
+    if (dto.suspended === true && !existing.emailVerified) {
+      throw new BadRequestException(
+        "Cannot suspend a merchant until their email is verified",
+      );
+    }
+
+    const $set: Record<string, unknown> = {};
+
+    if (dto.businessName !== undefined) {
+      $set.businessName = dto.businessName.trim();
+    }
+    if (dto.logoUrl !== undefined) {
+      $set.logoUrl = dto.logoUrl;
+    }
     if (dto.username) {
-      updateData.username = dto.username.toLowerCase();
+      $set.username = dto.username.toLowerCase();
+    }
+
+    if (dto.isVerified === true) {
+      $set.emailVerified = true;
+      $set.emailVerification = {};
+    } else if (dto.isVerified === false) {
+      $set.emailVerified = false;
+    }
+
+    if (dto.suspended === true) {
+      if (!existing.suspendedAt) {
+        await this.authService.revokeAllUserTokens(id, UserType.MERCHANT);
+      }
+      $set.suspendedAt = new Date();
+    } else if (dto.suspended === false) {
+      $set.suspendedAt = null;
+    }
+
+    if (Object.keys($set).length === 0) {
+      throw new BadRequestException("No valid fields to update");
     }
 
     const merchant = await this.database.merchants
       .findOneAndUpdate(
-        { _id: id, deletedAt: null },
-        { $set: updateData },
+        { _id: objectId, deletedAt: null },
+        { $set },
         { new: true, runValidators: true },
       )
       .lean();
@@ -506,7 +577,7 @@ export class AdminService {
     }
 
     const dropStats = await this.database.drops.aggregate([
-      { $match: { merchantId: new Types.ObjectId(id), deletedAt: null } },
+      { $match: { merchantId: objectId, deletedAt: null } },
       {
         $group: {
           _id: "$merchantId",
@@ -517,6 +588,7 @@ export class AdminService {
     ]);
 
     const stats = dropStats[0] || { totalDrops: 0, activeDrops: 0 };
+    const flags = this.merchantAccountFlags(merchant);
 
     return {
       id: merchant._id.toString(),
@@ -524,7 +596,8 @@ export class AdminService {
       businessName: merchant.businessName,
       username: merchant.username,
       isVerified: merchant.emailVerified,
-      isActive: merchant.lockUntil ? new Date() < merchant.lockUntil : true,
+      isSuspended: flags.isSuspended,
+      isActive: flags.isActive,
       totalDrops: stats.totalDrops,
       activeDrops: stats.activeDrops,
       createdAt: merchant.createdAt,
@@ -643,15 +716,26 @@ export class AdminService {
       .find(filter)
       .sort({ createdAt: -1 })
       .lean();
-    const rows = merchants.map((m) => [
-      m.businessName ?? "",
-      m.email ?? "",
-      m.username ?? "",
-      m.emailVerified ? "yes" : "no",
-      this.formatCsvDate(m.createdAt),
-    ]);
+    const rows = merchants.map((m) => {
+      const suspended = m.suspendedAt != null;
+      return [
+        m.businessName ?? "",
+        m.email ?? "",
+        m.username ?? "",
+        m.emailVerified ? "yes" : "no",
+        suspended ? "yes" : "no",
+        this.formatCsvDate(m.createdAt),
+      ];
+    });
     return encodeCsv(
-      ["Business Name", "Email", "Username", "Verified", "Created"],
+      [
+        "Business Name",
+        "Email",
+        "Username",
+        "Email verified",
+        "Suspended",
+        "Created",
+      ],
       rows,
     );
   }

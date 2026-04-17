@@ -177,6 +177,7 @@ export class AdminController {
   })
   @ApiResponse({ status: 404, description: "Merchant not found" })
   @ApiResponse({ status: 409, description: "Username already taken" })
+  @ApiResponse({ status: 400, description: "Invalid request" })
   async updateMerchant(
     @Param("id") id: string,
     @Body() dto: UpdateMerchantAdminDto,

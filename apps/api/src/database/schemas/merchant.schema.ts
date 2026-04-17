@@ -235,6 +235,15 @@ export class Merchant {
   @Prop({ type: Date, default: null })
   deletedAt!: Date | null;
 
+  @ApiProperty({
+    nullable: true,
+    description: "When the merchant account was suspended by an admin",
+  })
+  @IsDate()
+  @IsOptional()
+  @Prop({ type: Date, default: null })
+  suspendedAt!: Date | null;
+
   @ApiProperty({ description: "Timestamp when document was created" })
   createdAt!: Date;
 
@@ -252,3 +261,4 @@ MerchantSchema.index({ username: 1 }, { unique: true });
 MerchantSchema.index({ "passwordReset.token": 1 }, { sparse: true });
 MerchantSchema.index({ "scannerToken.token": 1 }, { sparse: true });
 MerchantSchema.index({ deletedAt: 1 });
+MerchantSchema.index({ suspendedAt: 1 });

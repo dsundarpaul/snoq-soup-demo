@@ -220,21 +220,25 @@ export function useAdminSessionQuery(enabled = true) {
 
 // ── Mutations ──
 
+export type AdminUpdateMerchantInput =
+  | { id: string; isVerified: true }
+  | { id: string; suspended: true }
+  | { id: string; suspended: false };
+
 export function useAdminUpdateMerchantMutation(
   options?: Omit<
-    UseMutationOptions<unknown, Error, { id: string; emailVerified: boolean }>,
+    UseMutationOptions<unknown, Error, AdminUpdateMerchantInput>,
     "mutationFn"
   >
 ) {
   return useMutation({
     ...options,
-    mutationFn: async ({ id, emailVerified }) => {
+    mutationFn: async (input) => {
+      const { id, ...body } = input;
       const res = await apiRequest(
         "PATCH",
         `/api/v1/admin/merchants/${id}`,
-        {
-          isVerified: emailVerified,
-        },
+        body,
         { auth: "admin" }
       );
       return res.json();

@@ -41,17 +41,17 @@ export class VouchersService {
   constructor(
     private readonly database: DatabaseService,
     private readonly mailService: MailService,
-    private readonly dropsService: DropsService
+    private readonly dropsService: DropsService,
   ) {}
 
   async claim(
-    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string }
+    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string },
   ): Promise<VoucherResponseDto> {
     const { dropId, deviceId, hunterId } = dto;
 
     if (!hunterId) {
       throw new BadRequestException(
-        "Hunter could not be resolved for this device"
+        "Hunter could not be resolved for this device",
       );
     }
 
@@ -150,7 +150,7 @@ export class VouchersService {
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
       drop._id as Types.ObjectId,
-      hunterObjectId
+      hunterObjectId,
     );
 
     await this.database.hunters.findByIdAndUpdate(hunterObjectId, {
@@ -163,7 +163,7 @@ export class VouchersService {
   async redeem(
     dto: RedeemVoucherDto,
     redeemerType: "merchant" | "scanner" | "hunter",
-    redeemerId: string
+    redeemerId: string,
   ): Promise<RedeemResultDto> {
     const { voucherId, magicToken } = dto;
 
@@ -209,7 +209,7 @@ export class VouchersService {
 
       if (drop.redemption.minutes && minutesElapsed > drop.redemption.minutes) {
         throw new ForbiddenException(
-          `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`
+          `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`,
         );
       }
     } else if (
@@ -231,14 +231,14 @@ export class VouchersService {
       const link = hunter.redeemerMerchantId?.toString() ?? "";
       if (!link || link !== voucherMerchantId) {
         throw new ForbiddenException(
-          "Hunter is not authorized to redeem for this merchant"
+          "Hunter is not authorized to redeem for this merchant",
         );
       }
     }
 
     if (redeemerType === "merchant" && redeemerId !== voucherMerchantId) {
       throw new ForbiddenException(
-        "You can only redeem vouchers for your own drops"
+        "You can only redeem vouchers for your own drops",
       );
     }
 
@@ -249,7 +249,7 @@ export class VouchersService {
       const scannerMerchantId = redeemerId;
       if (scannerMerchantId !== voucherMerchantId) {
         throw new ForbiddenException(
-          "Scanner can only redeem vouchers for their assigned merchant"
+          "Scanner can only redeem vouchers for their assigned merchant",
         );
       }
     }
@@ -270,7 +270,7 @@ export class VouchersService {
         voucher.claimedBy.hunterId,
         {
           $inc: { "stats.totalRedemptions": 1 },
-        }
+        },
       );
     }
 
@@ -341,9 +341,9 @@ export class VouchersService {
               ? typeof v.dropId === "string"
                 ? v.dropId
                 : v.dropId.toString()
-              : ""
+              : "",
           )
-          .filter(Boolean)
+          .filter(Boolean),
       ),
     ];
 
@@ -358,7 +358,7 @@ export class VouchersService {
         : [];
 
     const dropMap = new Map(
-      drops.map((d) => [d._id.toString(), d as DropDocument])
+      drops.map((d) => [d._id.toString(), d as DropDocument]),
     );
 
     const merchantIdStrs = [
@@ -369,9 +369,9 @@ export class VouchersService {
               ? typeof d.merchantId === "string"
                 ? d.merchantId
                 : d.merchantId.toString()
-              : ""
+              : "",
           )
-          .filter(Boolean)
+          .filter(Boolean),
       ),
     ];
 
@@ -385,13 +385,13 @@ export class VouchersService {
               deletedAt: null,
             })
             .select(
-              "businessName username logoUrl storeLocation businessPhone businessHours"
+              "businessName username logoUrl storeLocation businessPhone businessHours",
             )
             .lean()
         : [];
 
     const merchantMap = new Map(
-      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>])
+      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>]),
     );
 
     const unredeemed: HunterVouchersBucketsDto["unredeemed"] = [];
@@ -415,7 +415,11 @@ export class VouchersService {
       const merchantLean = merchantMap.get(merchantIdForDrop) ?? null;
       const merchantDto = this.mapMerchantLeanToInfoDto(merchantLean);
 
-      const item = { voucher: voucherDto, drop: dropDto, merchant: merchantDto };
+      const item = {
+        voucher: voucherDto,
+        drop: dropDto,
+        merchant: merchantDto,
+      };
       if (v.redeemed) {
         redeemed.push(item);
       } else {
@@ -431,7 +435,7 @@ export class VouchersService {
     page = 1,
     limit = 20,
     search?: string,
-    status?: string
+    status?: string,
   ): Promise<{
     vouchers: VoucherResponseDto[];
     total: number;
@@ -488,7 +492,7 @@ export class VouchersService {
             .lean()
         : [];
     const dropMap = new Map(
-      drops.map((d) => [d._id.toString(), d as DropDocument])
+      drops.map((d) => [d._id.toString(), d as DropDocument]),
     );
 
     const hunterIdStrings = new Set<string>();
@@ -521,7 +525,7 @@ export class VouchersService {
           nickname: h.nickname ?? null,
           email: h.email ?? null,
         },
-      ])
+      ]),
     );
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -530,7 +534,7 @@ export class VouchersService {
       vouchers: vouchers.map((v) => {
         const dto = this.toResponseDto(
           v as VoucherDocument,
-          dropMap.get(v.dropId?.toString() ?? "") ?? null
+          dropMap.get(v.dropId?.toString() ?? "") ?? null,
         );
         const hid = dto.claimedBy?.hunterId;
         if (hid) {
@@ -558,7 +562,7 @@ export class VouchersService {
     voucherId: string,
     email: string,
     magicLink: string,
-    magicToken: string
+    magicToken: string,
   ): Promise<void> {
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
@@ -590,7 +594,7 @@ export class VouchersService {
   async sendByWhatsApp(
     voucherId: string,
     phone: string,
-    magicLink: string
+    magicLink: string,
   ): Promise<void> {
     const voucher = await this.database.vouchers.findById(voucherId);
 
@@ -613,7 +617,7 @@ export class VouchersService {
 
   async getPromoCode(
     voucherId: string,
-    magicToken: string
+    magicToken: string,
   ): Promise<string | null> {
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
@@ -662,7 +666,7 @@ export class VouchersService {
   private async assignPromoCode(
     voucherId: Types.ObjectId,
     dropId: Types.ObjectId,
-    hunterId: Types.ObjectId
+    hunterId: Types.ObjectId,
   ): Promise<void> {
     // Find available promo code for this drop
     const promoCode = await this.database.promoCodes.findOneAndUpdate(
@@ -679,7 +683,7 @@ export class VouchersService {
           assignedAt: new Date(),
         },
       },
-      { sort: { createdAt: 1 } }
+      { sort: { createdAt: 1 } },
     );
 
     // If no promo code available, that's okay - voucher still valid
@@ -690,7 +694,7 @@ export class VouchersService {
 
   private computeVoucherExpiresAt(
     drop: DropDocument | FlattenMaps<DropDocument>,
-    claimedAt: Date
+    claimedAt: Date,
   ): Date | null {
     const candidates: number[] = [];
     const abs = drop.voucherAbsoluteExpiresAt;
@@ -719,7 +723,7 @@ export class VouchersService {
 
   private toResponseDto(
     voucher: VoucherDocument | FlattenMaps<VoucherDocument>,
-    drop?: DropDocument | FlattenMaps<DropDocument> | null
+    drop?: DropDocument | FlattenMaps<DropDocument> | null,
   ): VoucherResponseDto {
     // Type-safe refactor: safely convert ObjectId to string
     const id =
@@ -781,7 +785,7 @@ export class VouchersService {
   }
 
   private async toDetailResponseDto(
-    voucher: VoucherDocument
+    voucher: VoucherDocument,
   ): Promise<VoucherDetailResponseDto> {
     const baseDto = this.toResponseDto(voucher);
 
@@ -791,7 +795,7 @@ export class VouchersService {
       this.database.merchants
         .findById(voucher.merchantId)
         .select(
-          "businessName username logoUrl storeLocation businessPhone businessHours"
+          "businessName username logoUrl storeLocation businessPhone businessHours",
         )
         .lean(),
     ]);

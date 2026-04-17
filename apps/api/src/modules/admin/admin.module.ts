@@ -3,6 +3,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AdminService } from "./admin.service";
 import { AdminController } from "./admin.controller";
 import { DropsModule } from "../drops/drops.module";
+import { AuthModule } from "../auth/auth.module";
 import { Admin, AdminSchema } from "../../database/schemas/admin.schema";
 import {
   Merchant,
@@ -14,6 +15,7 @@ import { Voucher, VoucherSchema } from "../../database/schemas/voucher.schema";
 
 @Module({
   imports: [
+    AuthModule,
     DropsModule,
     MongooseModule.forFeature([
       { name: Admin.name, schema: AdminSchema },

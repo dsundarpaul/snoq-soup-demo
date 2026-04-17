@@ -41,6 +41,7 @@ import {
   Search,
   Download,
   Loader2,
+  Ban,
 } from "lucide-react";
 
 type VerifiedFilter = "all" | "verified" | "pending";
@@ -80,6 +81,13 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
   const updateMerchantMutation = useAdminUpdateMerchantMutation({
     onSuccess: () => {
       toast({ title: "Merchant updated" });
+    },
+    onError: (err) => {
+      toast({
+        title: "Update failed",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -190,15 +198,20 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
                     </TableCell>
                     <TableCell>{merchant.email}</TableCell>
                     <TableCell>
-                      {merchant.emailVerified ? (
-                        <Badge variant="default" className="bg-green-500">
+                      {merchant.isSuspended ? (
+                        <Badge variant="destructive">
+                          <Ban className="mr-1 h-3 w-3" />
+                          Suspended
+                        </Badge>
+                      ) : merchant.emailVerified ? (
+                        <Badge variant="default" className="bg-green-600">
                           <CheckCircle className="mr-1 h-3 w-3" />
-                          Verified
+                          Active
                         </Badge>
                       ) : (
                         <Badge variant="secondary">
                           <Clock className="mr-1 h-3 w-3" />
-                          Pending
+                          Pending verification
                         </Badge>
                       )}
                     </TableCell>
@@ -206,33 +219,50 @@ export function AdminMerchantsTab(props: { hasSession: boolean }) {
                       {new Date(merchant.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      {merchant.emailVerified ? (
+                      {merchant.isSuspended ? (
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
+                          disabled={updateMerchantMutation.isPending}
                           onClick={() =>
                             updateMerchantMutation.mutate({
                               id: merchant.id,
-                              emailVerified: false,
+                              suspended: false,
+                            })
+                          }
+                          data-testid={`button-reactivate-${merchant.id}`}
+                        >
+                          Reactivate
+                        </Button>
+                      ) : !merchant.emailVerified ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          disabled={updateMerchantMutation.isPending}
+                          onClick={() =>
+                            updateMerchantMutation.mutate({
+                              id: merchant.id,
+                              isVerified: true,
+                            })
+                          }
+                          data-testid={`button-verify-${merchant.id}`}
+                        >
+                          Verify email
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={updateMerchantMutation.isPending}
+                          onClick={() =>
+                            updateMerchantMutation.mutate({
+                              id: merchant.id,
+                              suspended: true,
                             })
                           }
                           data-testid={`button-suspend-${merchant.id}`}
                         >
                           Suspend
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() =>
-                            updateMerchantMutation.mutate({
-                              id: merchant.id,
-                              emailVerified: true,
-                            })
-                          }
-                          data-testid={`button-verify-${merchant.id}`}
-                        >
-                          Verify
                         </Button>
                       )}
                     </TableCell>

@@ -7,7 +7,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { VoucherDisplay } from "@/components/voucher-display";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Trophy, Home } from "lucide-react";
+import { Loader2, AlertCircle, Trophy, Home, ArrowLeft } from "lucide-react";
 import type { Voucher, Drop } from "@shared/schema";
 import { useVoucherByMagicTokenQuery } from "@/hooks/api/voucher/use-voucher";
 import { mapVoucherMagicDetailToView } from "@/lib/nest-mappers";
@@ -83,6 +83,20 @@ export default function VoucherViewPage() {
 
   return (
     <div className="min-h-screen bg-background p-4">
+      <div className="max-w-md mx-auto mb-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 -ml-2"
+          data-testid="button-voucher-back"
+          asChild
+        >
+          <Link href="/">
+            <ArrowLeft className="w-4 h-4" />
+            {t("nav.backToApp")}
+          </Link>
+        </Button>
+      </div>
       <div className="max-w-md mx-auto mb-6">
         <div className="text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/30">
