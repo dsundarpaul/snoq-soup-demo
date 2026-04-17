@@ -793,7 +793,7 @@ export function createDropFormToNestDto(data: {
   description: string;
   latitude: number;
   longitude: number;
-  radius: number;
+  radius?: number;
   rewardValue: string;
   logoUrl?: string | null;
   termsAndConditions?: string;

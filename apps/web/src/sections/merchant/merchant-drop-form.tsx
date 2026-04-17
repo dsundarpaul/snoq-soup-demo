@@ -436,7 +436,7 @@ export function MerchantDropForm({
                       .replace(/\D/g, "")
                       .slice(0, 4);
                     if (digits === "") {
-                      field.onChange(undefined);
+                      field.onChange("");
                       return;
                     }
                     field.onChange(Number(digits));

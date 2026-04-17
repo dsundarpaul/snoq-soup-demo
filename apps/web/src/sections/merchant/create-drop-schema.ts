@@ -12,11 +12,18 @@ export const createDropSchema = z
       .max(250, "Description must be at most 250 characters"),
     latitude: z.coerce.number().min(-90).max(90),
     longitude: z.coerce.number().min(-180).max(180),
-    radius: z.coerce
-      .number()
-      .min(5, "Radius must be at least 5 meters")
-      .max(2000, "Radius must be at most 1000 meters")
-      .default(15),
+    radius: z
+      .union([z.coerce.number(), z.undefined(), z.null()])
+      .optional()
+      .transform((v) =>
+        typeof v === "number" && Number.isFinite(v) ? v : undefined
+      )
+      .refine((v) => v === undefined || v >= 5, {
+        message: "Radius must be at least 5 meters",
+      })
+      .refine((v) => v === undefined || v <= 2000, {
+        message: "Radius must be at most 2000 meters",
+      }),
     rewardValue: z
       .string()
       .min(1, "Reward value is required")

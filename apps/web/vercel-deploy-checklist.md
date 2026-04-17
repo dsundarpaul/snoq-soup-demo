@@ -97,3 +97,4 @@ Configure as needed for how the browser talks to the API:
 | API routes 503 in prod | **BACKEND_URL** missing or wrong. |
 | Wrong API host in browser | **NEXT_PUBLIC_*** URLs wrong or stale — **redeploy** after changing them. |
 | Maps broken | **NEXT_PUBLIC_GOOGLE_MAPS_API_KEY** missing or restricted by HTTP referrer. |
+| `prerender-error` / build fails on a route using `useSearchParams` | Wrap that route’s default export in `<Suspense>` in `app/.../page.tsx` (see `login`, `signup`, `hunt`, `history`). |

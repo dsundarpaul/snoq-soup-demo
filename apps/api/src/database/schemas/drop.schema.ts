@@ -102,13 +102,13 @@ export class Drop {
 
   @ApiProperty({
     minimum: 5,
-    maximum: 1000,
+    maximum: 2000,
     default: 15,
     description: "Capture radius in meters",
   })
   @IsNumber()
   @Min(5)
-  @Max(1000)
+  @Max(2000)
   @Prop({ type: Number, required: true, min: 5, max: 2000, default: 15 })
   radius!: number;
 

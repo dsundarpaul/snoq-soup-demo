@@ -413,9 +413,9 @@ export function VoucherDisplay({
             ) : (
               <div className="w-48 h-48 mx-auto bg-muted/80 animate-pulse rounded-lg border border-border/40" />
             )}
-            <p className="text-center text-xs text-muted-foreground mt-3 font-mono tracking-tight">
+            {/* <p className="text-center text-xs text-muted-foreground mt-3 font-mono tracking-tight">
               ID: {voucher.id.slice(0, 8)}…
-            </p>
+            </p> */}
           </div>
         </div>
 
@@ -553,8 +553,8 @@ export function VoucherDisplay({
               isExpired
                 ? "bg-destructive/10 border-destructive/25"
                 : hasTimer
-                  ? "bg-primary/8 border-primary/25"
-                  : "bg-amber-500/8 border-amber-500/25"
+                ? "bg-primary/8 border-primary/25"
+                : "bg-amber-500/8 border-amber-500/25"
             )}
           >
             {isExpired ? (
@@ -574,8 +574,8 @@ export function VoucherDisplay({
                 {isExpired
                   ? t("voucher.voucherExpired")
                   : hasTimer
-                    ? t("voucher.timeRemaining")
-                    : t("voucher.timeUntilDeadline")}
+                  ? t("voucher.timeRemaining")
+                  : t("voucher.timeUntilDeadline")}
               </p>
               <p
                 className={cn(
@@ -583,8 +583,8 @@ export function VoucherDisplay({
                   isExpired
                     ? "text-destructive"
                     : hasTimer
-                      ? "text-primary"
-                      : "text-amber-600 dark:text-amber-400"
+                    ? "text-primary"
+                    : "text-amber-600 dark:text-amber-400"
                 )}
               >
                 {timeRemaining !== null
@@ -643,7 +643,9 @@ export function VoucherDisplay({
               </Button>
             </div>
             {email.trim().length > 0 && !emailValid ? (
-              <p className="text-xs text-destructive">{t("voucher.invalidEmail")}</p>
+              <p className="text-xs text-destructive">
+                {t("voucher.invalidEmail")}
+              </p>
             ) : null}
           </div>
 
@@ -682,7 +684,9 @@ export function VoucherDisplay({
                 type="tel"
                 inputMode="numeric"
                 autoComplete="tel-national"
-                placeholder={`${t("voucher.phoneNational")} (${hunterMobileLengthHint(phoneBounds)})`}
+                placeholder={`${t(
+                  "voucher.phoneNational"
+                )} (${hunterMobileLengthHint(phoneBounds)})`}
                 value={nationalNumber}
                 onChange={(e) => {
                   const digits = e.target.value.replace(/\D/g, "");
@@ -702,7 +706,9 @@ export function VoucherDisplay({
               </Button>
             </div>
             {nationalNumber.length > 0 && !phoneValid ? (
-              <p className="text-xs text-destructive">{t("voucher.phoneInvalid")}</p>
+              <p className="text-xs text-destructive">
+                {t("voucher.phoneInvalid")}
+              </p>
             ) : null}
           </div>
         </div>
