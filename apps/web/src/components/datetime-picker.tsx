@@ -39,10 +39,18 @@ export function parseDatetimeLocalString(s: string): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+function toDate(
+  value: Date | string | number | null | undefined
+): Date | undefined {
+  if (value == null || value === "") return undefined;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 export interface DatetimePickerProps {
   id?: string;
   label: string;
-  value: string;
+  value: Date | string | number | null | undefined;
   onChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
@@ -84,9 +92,10 @@ export function DatetimePicker({
   defaultMonth,
   "data-testid": testId,
 }: DatetimePickerProps) {
-  const parsed = parseDatetimeLocalString(value);
+  const parsed = toDate(value);
   const [open, setOpen] = React.useState(false);
   const display = parsed ? format(parsed, "PPp") : "Pick date & time";
+  const hasValue = parsed != null;
   const ariaLabel = `${label}: ${display}`;
 
   const calendarYear = new Date().getFullYear();
@@ -158,7 +167,7 @@ export function DatetimePicker({
           variant="outline"
           className={cn(
             "w-full justify-start text-left font-normal",
-            !value && "text-muted-foreground"
+            !hasValue && "text-muted-foreground"
           )}
           disabled={disabled}
           type="button"

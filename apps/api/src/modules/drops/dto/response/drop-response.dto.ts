@@ -33,6 +33,7 @@ export class DropResponseDto {
   voucherAbsoluteExpiresAt?: Date | null;
   voucherTtlHoursAfterClaim?: number | null;
   merchantId!: string;
+  captureCount?: number;
   createdAt!: Date;
   updatedAt!: Date;
 }

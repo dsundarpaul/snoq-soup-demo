@@ -11,7 +11,7 @@ export function getTimeWindowInfo(
   drop: Drop,
   t: TranslateFn
 ): TimeWindowInfo | null {
-  if (drop.availabilityType !== "timeWindow") return null;
+  if (!drop.startTime && !drop.endTime) return null;
 
   const now = new Date();
 

@@ -191,6 +191,8 @@ const en = {
   "voucher.rewardValue": "Reward Value",
   "voucher.openMagicLink": "Open Magic Link",
   "voucher.getDirections": "Get Directions to Store",
+  "voucher.storePhone": "Store phone",
+  "voucher.storeHours": "Opening hours",
   "voucher.landmark": "Landmark",
   "voucher.viewVoucher": "View Voucher",
   "voucher.deadline": "Deadline",

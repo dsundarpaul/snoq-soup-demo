@@ -20,7 +20,6 @@ import {
   Gift,
   Target,
   Sparkles,
-  Ticket,
   QrCode,
   Timer,
   History,
@@ -498,15 +497,13 @@ export default function HomePage() {
         open={selectedVoucher !== null}
         onOpenChange={(open) => !open && setSelectedVoucher(null)}
       >
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-teal" />
-              {t("home.yourReward")}
-            </DialogTitle>
+        <DialogContent className="max-w-lg max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col sm:rounded-xl">
+          <DialogHeader className="sr-only shrink-0">
+            <DialogTitle>{t("home.yourReward")}</DialogTitle>
           </DialogHeader>
-          {selectedVoucher && (
+          {selectedVoucher ? (
             <VoucherDisplay
+              layout="dialog"
               voucher={selectedVoucher.voucher}
               drop={selectedVoucher.drop}
               businessName={selectedVoucher.businessName}
@@ -514,7 +511,7 @@ export default function HomePage() {
               merchantBusinessPhone={selectedVoucher.merchantBusinessPhone}
               merchantBusinessHours={selectedVoucher.merchantBusinessHours}
             />
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

@@ -16,18 +16,14 @@ export function isSoldOutDrop(drop: DropWithCount): boolean {
 
 export function isScheduledNotYetLive(drop: Drop): boolean {
   if (!drop.active) return false;
-  if (drop.availabilityType !== "timeWindow" || !drop.startTime) {
-    return false;
-  }
+  if (!drop.startTime) return false;
   return new Date(drop.startTime) > new Date();
 }
 
 export function isDropActive(drop: Drop): boolean {
   const now = new Date();
-  if (drop.availabilityType === "timeWindow") {
-    if (drop.startTime && new Date(drop.startTime) > now) return false;
-    if (drop.endTime && new Date(drop.endTime) < now) return false;
-  }
+  if (drop.startTime && new Date(drop.startTime) > now) return false;
+  if (drop.endTime && new Date(drop.endTime) < now) return false;
   return drop.active;
 }
 

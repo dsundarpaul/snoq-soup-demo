@@ -31,7 +31,7 @@ export const createDropSchema = z
     redemptionMinutes: z.coerce.number().optional(),
     redemptionDeadline: z.string().optional(),
     availabilityType: z
-      .enum(["unlimited", "captureLimit", "timeWindow"])
+      .enum(["unlimited", "captureLimit"])
       .default("unlimited"),
     captureLimit: z.preprocess((val) => {
       if (val === "" || val === null || val === undefined) return undefined;
@@ -93,11 +93,3 @@ export function getCreateDropEmptyValues(): CreateDropForm {
   };
 }
 
-export function formatIsoForDatetimeLocalInput(
-  date: Date | string | null | undefined
-): string {
-  if (!date) return "";
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 16);
-}

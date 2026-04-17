@@ -129,7 +129,8 @@ export class DropsService {
     if (!drop) {
       throw new NotFoundException("Drop not found");
     }
-    return this.toResponseDto(drop as Drop);
+    const captureCount = await this.getClaimCount(id);
+    return this.toResponseDto(drop as Drop, captureCount);
   }
 
   async findByMerchant(
@@ -162,8 +163,28 @@ export class DropsService {
       this.database.drops.countDocuments(filter),
     ]);
 
+    const dropIds = drops
+      .map((d) => d._id)
+      .filter((id): id is Types.ObjectId => id != null);
+      
+    const counts = await this.database.vouchers.aggregate<{
+      _id: Types.ObjectId;
+      count: number;
+    }>([
+      { $match: { dropId: { $in: dropIds }, deletedAt: null } },
+      { $group: { _id: "$dropId", count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map<string, number>(
+      counts.map((c) => [c._id.toString(), c.count]),
+    );
+
     return {
-      drops: drops.map((d) => this.toResponseDto(d as Drop)),
+      drops: drops.map((d) =>
+        this.toResponseDto(
+          d as Drop,
+          countMap.get((d._id as Types.ObjectId).toString()) ?? 0
+        )
+      ),
       total,
       page: safePage,
       limit: safeLimit,
@@ -569,7 +590,8 @@ export class DropsService {
       );
     }
 
-    // Build update object from flat fields
+    await this.enforcePostClaimRestrictions(drop as Drop, id, dto);
+
     const updateData: Partial<Drop> = {};
 
     // Simple field updates
@@ -669,6 +691,8 @@ export class DropsService {
     if (!drop) {
       throw new NotFoundException("Drop not found");
     }
+
+    await this.enforcePostClaimRestrictions(drop as Drop, id, dto);
 
     const updateData: Partial<Drop> = {};
 
@@ -930,15 +954,62 @@ export class DropsService {
   }
 
   private async hasClaims(dropId: string): Promise<boolean> {
-    // Placeholder - implement based on your claims collection
-    void dropId;
-    return false;
+    const count = await this.getClaimCount(dropId);
+    return count > 0;
   }
 
   private async getClaimCount(dropId: string): Promise<number> {
-    // Placeholder - implement based on your claims collection
-    void dropId;
-    return 0;
+    if (!Types.ObjectId.isValid(dropId)) return 0;
+    return this.database.vouchers.countDocuments({
+      dropId: new Types.ObjectId(dropId),
+      deletedAt: null,
+    });
+  }
+
+  private async enforcePostClaimRestrictions(
+    drop: Drop,
+    dropId: string,
+    dto: UpdateDropDto,
+  ): Promise<void> {
+    const claimCount = await this.getClaimCount(dropId);
+    if (claimCount <= 0) return;
+
+    const redemptionChange =
+      (dto.redemptionType !== undefined &&
+        dto.redemptionType !== drop.redemption?.type) ||
+      (dto.redemptionMinutes !== undefined &&
+        dto.redemptionMinutes !== drop.redemption?.minutes) ||
+      dto.redemptionDeadline !== undefined;
+
+    if (redemptionChange) {
+      throw new BadRequestException(
+        "Redemption rules cannot be changed after vouchers have been claimed.",
+      );
+    }
+
+    if (dto.availabilityType !== undefined) {
+      const currentType = drop.availability?.type ?? "unlimited";
+      if (currentType === "unlimited" && dto.availabilityType === "limited") {
+        throw new BadRequestException(
+          "Cannot switch to limited availability after vouchers have been claimed.",
+        );
+      }
+    }
+
+    const newType = dto.availabilityType ?? drop.availability?.type;
+    if (newType === "limited" && dto.availabilityLimit !== undefined) {
+      const currentLimit = drop.availability?.limit ?? 0;
+      if (dto.availabilityLimit < currentLimit) {
+        throw new BadRequestException(
+          `Capture limit can only be increased (current: ${currentLimit}).`,
+        );
+      }
+      if (dto.availabilityLimit < claimCount) {
+        throw new BadRequestException(
+          `Capture limit cannot be below current claims (${claimCount}).`,
+        );
+      }
+    }
   }
 
   private calculateDistance(
@@ -980,8 +1051,10 @@ export class DropsService {
     return "";
   }
 
-  toResponseDto(drop: Drop | DropDocument): DropResponseDto {
-    // Type-safe refactor: safely convert ObjectId to string
+  toResponseDto(
+    drop: Drop | DropDocument,
+    captureCount?: number,
+  ): DropResponseDto {
     const id = "_id" in drop && drop._id ? drop._id.toString() : "";
     const merchantIdStr =
       "merchantId" in drop && drop.merchantId ? drop.merchantId.toString() : "";
@@ -1005,6 +1078,7 @@ export class DropsService {
       voucherAbsoluteExpiresAt: drop.voucherAbsoluteExpiresAt ?? null,
       voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? null,
       merchantId: merchantIdStr,
+      captureCount,
       createdAt: drop.createdAt,
       updatedAt: drop.updatedAt,
     };

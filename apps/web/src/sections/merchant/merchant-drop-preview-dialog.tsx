@@ -191,8 +191,6 @@ export function MerchantDropPreviewDialog({
                 {form.watch("availabilityType") === "unlimited" && "Unlimited"}
                 {form.watch("availabilityType") === "captureLimit" &&
                   `${form.watch("captureLimit") || 0} captures`}
-                {form.watch("availabilityType") === "timeWindow" &&
-                  "Time window"}
               </span>
             </div>
             <div className="flex justify-between">

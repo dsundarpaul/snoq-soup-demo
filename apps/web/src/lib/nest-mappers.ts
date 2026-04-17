@@ -41,14 +41,13 @@ export function mapNestDropToLegacy(
   let startTime: string | null = null;
   let endTime: string | null = null;
 
-  if (schedule?.start || schedule?.end) {
-    availabilityType = "timeWindow";
-    startTime = toIso(schedule.start);
-    endTime = toIso(schedule.end);
-  } else if (availability?.type === "limited") {
+  if (availability?.type === "limited") {
     availabilityType = "captureLimit";
     captureLimit = availability.limit ?? null;
   }
+
+  if (schedule?.start) startTime = toIso(schedule.start);
+  if (schedule?.end) endTime = toIso(schedule.end);
 
   const out: DropWithCount = {
     id: String(raw.id ?? ""),
@@ -84,7 +83,13 @@ export function mapNestDropToLegacy(
           : null,
     createdAt: (raw.createdAt as Date) ?? new Date(),
   };
-  if (captureCount !== undefined) out.captureCount = captureCount;
+  const resolvedCount =
+    captureCount !== undefined
+      ? captureCount
+      : typeof raw.captureCount === "number"
+        ? raw.captureCount
+        : undefined;
+  if (resolvedCount !== undefined) out.captureCount = resolvedCount;
   return out;
 }
 
@@ -786,7 +791,7 @@ export function createDropFormToNestDto(data: {
   redemptionType: "anytime" | "timer" | "window";
   redemptionMinutes?: number;
   redemptionDeadline?: string;
-  availabilityType: "unlimited" | "captureLimit" | "timeWindow";
+  availabilityType: "unlimited" | "captureLimit";
   captureLimit?: number;
   startTime?: string;
   endTime?: string;
@@ -819,18 +824,12 @@ export function createDropFormToNestDto(data: {
         : undefined,
     availabilityType,
     availabilityLimit,
-    startTime:
-      data.availabilityType === "timeWindow" && data.startTime
-        ? new Date(data.startTime).toISOString()
-        : data.startTime
-          ? new Date(data.startTime).toISOString()
-          : undefined,
-    endTime:
-      data.availabilityType === "timeWindow" && data.endTime
-        ? new Date(data.endTime).toISOString()
-        : data.endTime
-          ? new Date(data.endTime).toISOString()
-          : undefined,
+    startTime: data.startTime
+      ? new Date(data.startTime).toISOString()
+      : undefined,
+    endTime: data.endTime
+      ? new Date(data.endTime).toISOString()
+      : undefined,
     voucherAbsoluteExpiresAt:
       data.voucherAbsoluteExpiresAt?.trim() &&
       data.voucherAbsoluteExpiresAt.trim().length > 0

@@ -38,7 +38,6 @@ import { validateImageFile } from "@/lib/upload-validation";
 import type { Drop } from "@shared/schema";
 import { ARDropPlacer } from "@/components/ar-drop-placer";
 import {
-  formatIsoForDatetimeLocalInput,
   getCreateDropEmptyValues,
   type CreateDropForm,
 } from "@/sections/merchant/create-drop-schema";
@@ -96,14 +95,13 @@ function dropToFormValues(drop: Drop): CreateDropForm {
     logoUrl: drop.logoUrl || "",
     redemptionType: redemptionTypeValue as "anytime" | "timer" | "window",
     redemptionMinutes: drop.redemptionMinutes ?? undefined,
-    redemptionDeadline: formatIsoForDatetimeLocalInput(drop.redemptionDeadline),
+    redemptionDeadline: (drop.redemptionDeadline as unknown as string) ?? "",
     availabilityType: availabilityTypeValue,
     captureLimit: drop.captureLimit ?? undefined,
-    startTime: formatIsoForDatetimeLocalInput(drop.startTime),
-    endTime: formatIsoForDatetimeLocalInput(drop.endTime),
-    voucherAbsoluteExpiresAt: formatIsoForDatetimeLocalInput(
-      drop.voucherAbsoluteExpiresAt
-    ),
+    startTime: (drop.startTime as unknown as string) ?? "",
+    endTime: (drop.endTime as unknown as string) ?? "",
+    voucherAbsoluteExpiresAt:
+      (drop.voucherAbsoluteExpiresAt as unknown as string) ?? "",
     voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? undefined,
     termsAndConditions: drop.termsAndConditions ?? "",
   };
@@ -530,6 +528,20 @@ export function MerchantDropSheet({
               onOpenArPlacer={() => setArPlacerOpen(true)}
               onSubmitValid={onSubmit}
               onSubmitInvalid={handleValidationError}
+              captureCount={
+                editingDrop
+                  ? ((editingDrop as unknown as { captureCount?: number })
+                      .captureCount ?? 0)
+                  : 0
+              }
+              originalAvailabilityType={
+                editingDrop
+                  ? legacyAvailabilityToMerchantForm(editingDrop)
+                  : undefined
+              }
+              originalCaptureLimit={
+                editingDrop?.captureLimit ?? undefined
+              }
             />
           </div>
           <SheetFooter className="sticky bottom-0 z-10 shrink-0 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:flex-wrap sm:justify-start sm:space-x-0">

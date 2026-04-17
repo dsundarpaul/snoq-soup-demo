@@ -33,10 +33,8 @@ function isDropAvailable(drop: DropWithCount): boolean {
     const remaining = drop.captureLimit - (drop.captureCount || 0);
     if (remaining <= 0) return false;
   }
-  if (drop.availabilityType === "timeWindow") {
-    const now = new Date();
-    if (drop.endTime && new Date(drop.endTime) < now) return false;
-  }
+  const now = new Date();
+  if (drop.endTime && new Date(drop.endTime) < now) return false;
   return true;
 }
 
@@ -53,14 +51,12 @@ function getDropStatus(
       variant: "secondary" as const,
     };
   }
-  if (drop.availabilityType === "timeWindow") {
-    const now = new Date();
-    if (drop.startTime && new Date(drop.startTime) > now) {
-      return { label: t("status.comingSoon"), variant: "secondary" as const };
-    }
-    if (drop.endTime && new Date(drop.endTime) < now) {
-      return { label: t("status.expired"), variant: "destructive" as const };
-    }
+  const now = new Date();
+  if (drop.startTime && new Date(drop.startTime) > now) {
+    return { label: t("status.comingSoon"), variant: "secondary" as const };
+  }
+  if (drop.endTime && new Date(drop.endTime) < now) {
+    return { label: t("status.expired"), variant: "destructive" as const };
   }
   return null;
 }

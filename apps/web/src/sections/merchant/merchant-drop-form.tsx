@@ -94,6 +94,9 @@ export interface MerchantDropFormProps {
   onOpenArPlacer: () => void;
   onSubmitValid: SubmitHandler<CreateDropForm>;
   onSubmitInvalid?: SubmitErrorHandler<CreateDropForm>;
+  captureCount?: number;
+  originalAvailabilityType?: "unlimited" | "captureLimit";
+  originalCaptureLimit?: number;
 }
 
 export function MerchantDropForm({
@@ -107,11 +110,21 @@ export function MerchantDropForm({
   onOpenArPlacer,
   onSubmitValid,
   onSubmitInvalid,
+  captureCount = 0,
+  originalAvailabilityType,
+  originalCaptureLimit,
 }: MerchantDropFormProps) {
   const { t } = useLanguage();
   const [coordsOpen, setCoordsOpen] = useState(false);
   const redemptionType = form.watch("redemptionType");
   const availabilityTypeRaw = form.watch("availabilityType");
+  const hasClaims = captureCount > 0;
+  const lockToUnlimitedOnly =
+    hasClaims && originalAvailabilityType === "unlimited";
+  const minCaptureLimit =
+    hasClaims && originalAvailabilityType === "captureLimit"
+      ? Math.max(originalCaptureLimit ?? 0, captureCount)
+      : 1;
   const availabilitySelectValue =
     availabilityTypeRaw === "captureLimit" ? "captureLimit" : "unlimited";
   const err = form.formState.errors;
@@ -423,7 +436,7 @@ export function MerchantDropForm({
                       .replace(/\D/g, "")
                       .slice(0, 4);
                     if (digits === "") {
-                      field.onChange(15);
+                      field.onChange(undefined);
                       return;
                     }
                     field.onChange(Number(digits));
@@ -476,10 +489,12 @@ export function MerchantDropForm({
                   field.onChange(value);
                   form.clearErrors("redemptionType");
                 }}
+                disabled={hasClaims}
               >
                 <SelectTrigger
                   className={cn(fieldState.error && "border-destructive")}
                   data-testid="select-redemption-type"
+                  disabled={hasClaims}
                 >
                   <SelectValue placeholder="Select redemption type" />
                 </SelectTrigger>
@@ -501,6 +516,12 @@ export function MerchantDropForm({
             </>
           )}
         />
+        {hasClaims && (
+          <p className="text-xs text-muted-foreground">
+            Locked because {captureCount} voucher
+            {captureCount === 1 ? " has" : "s have"} already been claimed.
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           {redemptionType === "anytime" &&
             "Users can redeem anytime within the drop's start and end dates"}
@@ -519,8 +540,12 @@ export function MerchantDropForm({
             onValueChange={(value) =>
               form.setValue("redemptionMinutes", Number(value))
             }
+            disabled={hasClaims}
           >
-            <SelectTrigger data-testid="select-redemption-minutes">
+            <SelectTrigger
+              data-testid="select-redemption-minutes"
+              disabled={hasClaims}
+            >
               <SelectValue placeholder="Select time limit" />
             </SelectTrigger>
             <SelectContent>
@@ -541,6 +566,7 @@ export function MerchantDropForm({
             value={form.watch("redemptionDeadline") || ""}
             onChange={(v) => form.setValue("redemptionDeadline", v)}
             data-testid="input-redemption-deadline"
+            disabled={hasClaims}
           />
           <p className="text-xs text-muted-foreground">
             {t("merchant.form.datetime.saudiIntent")}{" "}
@@ -586,7 +612,9 @@ export function MerchantDropForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unlimited">Unlimited</SelectItem>
-                  <SelectItem value="captureLimit">Capture Limit</SelectItem>
+                  <SelectItem value="captureLimit" disabled={lockToUnlimitedOnly}>
+                    Capture Limit
+                  </SelectItem>
                 </SelectContent>
               </Select>
               {fieldState.error && (
@@ -603,6 +631,17 @@ export function MerchantDropForm({
           {availabilitySelectValue === "captureLimit" &&
             "Limited number of users can claim this drop"}
         </p>
+        {hasClaims && originalAvailabilityType === "captureLimit" && (
+          <p className="text-xs text-muted-foreground">
+            {captureCount} claimed. You can only increase the capture limit or
+            switch to Unlimited.
+          </p>
+        )}
+        {lockToUnlimitedOnly && (
+          <p className="text-xs text-muted-foreground">
+            Cannot switch to Capture Limit after vouchers have been claimed.
+          </p>
+        )}
       </div>
 
       {availabilitySelectValue === "captureLimit" && (
@@ -611,7 +650,7 @@ export function MerchantDropForm({
           <Input
             id="captureLimit"
             type="number"
-            min={1}
+            min={minCaptureLimit}
             max={99999}
             placeholder="Enter limit"
             className={cn(err.captureLimit && "border-destructive")}
