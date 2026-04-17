@@ -52,12 +52,17 @@ import {
 } from "@/lib/hunt-drop-filters";
 
 const EMPTY_VOUCHER_ROWS: HunterVoucherRow[] = [];
+const HOME_UNREDEEMED_LIMIT = 4;
+const HOME_REDEEMED_LIMIT = 2;
 
 export default function HomePage() {
   const { t } = useLanguage();
   const geo = useGeolocation();
   const hasHunterCreds = useHasRoleCredentials("hunter");
-  const { data: hunterVoucherBuckets } = useHunterVouchersQuery();
+  const { data: hunterVoucherBuckets } = useHunterVouchersQuery({
+    unredeemedLimit: HOME_UNREDEEMED_LIMIT,
+    redeemedLimit: HOME_REDEEMED_LIMIT,
+  });
 
   const { data: hunterProfile } = useTreasureHunterProfileQuery();
 
@@ -66,14 +71,25 @@ export default function HomePage() {
   const unredeemedVouchers =
     hunterVoucherBuckets?.unredeemed ?? EMPTY_VOUCHER_ROWS;
   const redeemedVouchers = hunterVoucherBuckets?.redeemed ?? EMPTY_VOUCHER_ROWS;
+  const unredeemedTotal =
+    hunterVoucherBuckets?.unredeemedTotal ?? unredeemedVouchers.length;
+  const redeemedTotal =
+    hunterVoucherBuckets?.redeemedTotal ?? redeemedVouchers.length;
 
   const claimedDropIdSet = useMemo(() => {
     const s = new Set<string>();
+    for (const id of hunterVoucherBuckets?.claimedDropIds ?? []) {
+      s.add(id);
+    }
     for (const row of [...unredeemedVouchers, ...redeemedVouchers]) {
       s.add(row.voucher.dropId);
     }
     return s;
-  }, [unredeemedVouchers, redeemedVouchers]);
+  }, [
+    hunterVoucherBuckets?.claimedDropIds,
+    unredeemedVouchers,
+    redeemedVouchers,
+  ]);
 
   const hasClaimedDrop = useCallback(
     (dropId: string) => claimedDropIdSet.has(dropId),
@@ -157,14 +173,30 @@ export default function HomePage() {
             <div className="space-y-6">
               {unredeemedVouchers.length > 0 && (
                 <section>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Gift className="w-5 h-5 text-teal" />
-                    <h2 className="font-semibold text-lg text-foreground">
-                      {t("home.claimedDrops")}
-                    </h2>
-                    <Badge className="bg-teal/10 text-teal border-teal/20">
-                      {unredeemedVouchers.length}
-                    </Badge>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Gift className="w-5 h-5 shrink-0 text-teal" />
+                      <h2 className="font-semibold text-lg text-foreground truncate">
+                        {t("home.claimedDrops")}
+                      </h2>
+                      <Badge className="shrink-0 bg-teal/10 text-teal border-teal/20">
+                        {unredeemedTotal}
+                      </Badge>
+                    </div>
+                    {unredeemedTotal > unredeemedVouchers.length ? (
+                      <Link href="/history?tab=unredeemed" className="shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          data-testid="button-show-more-claimed"
+                        >
+                          {t("home.showMore")}
+                          <ChevronRight className="w-4 h-4" aria-hidden />
+                        </Button>
+                      </Link>
+                    ) : null}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {unredeemedVouchers.map(
@@ -280,12 +312,30 @@ export default function HomePage() {
 
               {redeemedVouchers.length > 0 && (
                 <section>
-                  <div className="flex items-center gap-2 mb-3">
-                    <History className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="font-semibold text-lg text-foreground">
-                      {t("home.redeemedRewards")}
-                    </h2>
-                    <Badge variant="secondary">{redeemedVouchers.length}</Badge>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <History className="w-5 h-5 shrink-0 text-muted-foreground" />
+                      <h2 className="font-semibold text-lg text-foreground truncate">
+                        {t("home.redeemedRewards")}
+                      </h2>
+                      <Badge variant="secondary" className="shrink-0">
+                        {redeemedTotal}
+                      </Badge>
+                    </div>
+                    {redeemedTotal > redeemedVouchers.length ? (
+                      <Link href="/history?tab=redeemed" className="shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          data-testid="button-show-more-redeemed"
+                        >
+                          {t("home.showMore")}
+                          <ChevronRight className="w-4 h-4" aria-hidden />
+                        </Button>
+                      </Link>
+                    ) : null}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {redeemedVouchers.map(

@@ -28,6 +28,7 @@ const en = {
   "home.startingSoon": "Starting soon",
   "home.claimedDrops": "Claimed rewards",
   "home.redeemedRewards": "Redeemed rewards",
+  "home.showMore": "Show more",
   "home.timeToRedeem": "Time to redeem",
   "home.redeemAnytime": "Redeem anytime",
   "home.loadingDrops": "Loading treasures...",
@@ -319,6 +320,11 @@ const en = {
   "history.recently": "recently",
   "history.failedToLoad": "Failed to load history",
   "history.tryAgainLater": "Please try again later",
+  "history.tabAll": "All",
+  "history.tabUnredeemed": "Claimed",
+  "history.tabRedeemed": "Redeemed",
+  "history.loadingMore": "Loading more...",
+  "history.endOfList": "You've reached the end",
 
   // Leaderboard
   "leaderboard.topHunters": "Top Hunters",

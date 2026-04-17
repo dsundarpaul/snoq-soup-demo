@@ -28,6 +28,7 @@ const ar = {
   "home.startingSoon": "يبدأ قريباً",
   "home.claimedDrops": "مكافآت مُقتَنصة",
   "home.redeemedRewards": "مكافآت مُستَردّة",
+  "home.showMore": "عرض المزيد",
   "home.timeToRedeem": "الوقت للاسترداد",
   "home.redeemAnytime": "استرداد في أي وقت",
   "home.loadingDrops": "جاري تحميل الكنوز...",
@@ -314,6 +315,11 @@ const ar = {
   "history.recently": "مؤخراً",
   "history.failedToLoad": "فشل تحميل السجل",
   "history.tryAgainLater": "يرجى المحاولة لاحقاً",
+  "history.tabAll": "الكل",
+  "history.tabUnredeemed": "مُقتَنصة",
+  "history.tabRedeemed": "مُستَردّة",
+  "history.loadingMore": "جارٍ تحميل المزيد...",
+  "history.endOfList": "وصلت إلى النهاية",
 
   // Leaderboard
   "leaderboard.topHunters": "أفضل الصيادين",

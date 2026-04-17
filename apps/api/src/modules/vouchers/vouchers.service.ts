@@ -19,7 +19,11 @@ import {
   MerchantInfoDto,
 } from "./dto/response/voucher-detail-response.dto";
 import { RedeemResultDto } from "./dto/response/redeem-result.dto";
-import { HunterVouchersBucketsDto } from "./dto/response/hunter-vouchers-buckets.dto";
+import {
+  HunterVouchersBucketsDto,
+  HunterVouchersPageDto,
+  HunterVoucherItemDto,
+} from "./dto/response/hunter-vouchers-buckets.dto";
 import { MailService } from "../mail/mail.service";
 import { DropsService } from "../drops/drops.service";
 
@@ -41,17 +45,17 @@ export class VouchersService {
   constructor(
     private readonly database: DatabaseService,
     private readonly mailService: MailService,
-    private readonly dropsService: DropsService,
+    private readonly dropsService: DropsService
   ) {}
 
   async claim(
-    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string },
+    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string }
   ): Promise<VoucherResponseDto> {
     const { dropId, deviceId, hunterId } = dto;
 
     if (!hunterId) {
       throw new BadRequestException(
-        "Hunter could not be resolved for this device",
+        "Hunter could not be resolved for this device"
       );
     }
 
@@ -150,7 +154,7 @@ export class VouchersService {
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
       drop._id as Types.ObjectId,
-      hunterObjectId,
+      hunterObjectId
     );
 
     await this.database.hunters.findByIdAndUpdate(hunterObjectId, {
@@ -163,7 +167,7 @@ export class VouchersService {
   async redeem(
     dto: RedeemVoucherDto,
     redeemerType: "merchant" | "scanner" | "hunter",
-    redeemerId: string,
+    redeemerId: string
   ): Promise<RedeemResultDto> {
     const { voucherId, magicToken } = dto;
 
@@ -209,7 +213,7 @@ export class VouchersService {
 
       if (drop.redemption.minutes && minutesElapsed > drop.redemption.minutes) {
         throw new ForbiddenException(
-          `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`,
+          `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`
         );
       }
     } else if (
@@ -231,14 +235,14 @@ export class VouchersService {
       const link = hunter.redeemerMerchantId?.toString() ?? "";
       if (!link || link !== voucherMerchantId) {
         throw new ForbiddenException(
-          "Hunter is not authorized to redeem for this merchant",
+          "Hunter is not authorized to redeem for this merchant"
         );
       }
     }
 
     if (redeemerType === "merchant" && redeemerId !== voucherMerchantId) {
       throw new ForbiddenException(
-        "You can only redeem vouchers for your own drops",
+        "You can only redeem vouchers for your own drops"
       );
     }
 
@@ -249,7 +253,7 @@ export class VouchersService {
       const scannerMerchantId = redeemerId;
       if (scannerMerchantId !== voucherMerchantId) {
         throw new ForbiddenException(
-          "Scanner can only redeem vouchers for their assigned merchant",
+          "Scanner can only redeem vouchers for their assigned merchant"
         );
       }
     }
@@ -270,7 +274,7 @@ export class VouchersService {
         voucher.claimedBy.hunterId,
         {
           $inc: { "stats.totalRedemptions": 1 },
-        },
+        }
       );
     }
 
@@ -309,41 +313,28 @@ export class VouchersService {
     return this.toDetailResponseDto(voucher);
   }
 
-  async findByHunter(hunterId: string): Promise<HunterVouchersBucketsDto> {
-    const hunter = await this.database.hunters
-      .findOne({ _id: hunterId, deletedAt: null })
-      .select("deviceId")
-      .lean();
-
-    if (!hunter) {
-      return { unredeemed: [], redeemed: [] };
-    }
-
-    const filter: VoucherFilter = {
+  private buildHunterVoucherFilter(hunterId: string): VoucherFilter {
+    return {
       deletedAt: null,
       $or: [{ "claimedBy.hunterId": new Types.ObjectId(hunterId) }],
     };
+  }
 
-    // if (hunter.deviceId) {
-    //   filter.$or.push({ "claimedBy.deviceId": hunter.deviceId });
-    // }
-
-    const vouchersList = await this.database.vouchers
-      .find(filter)
-      .sort({ claimedAt: -1 })
-      .lean();
-
+  private async hydrateHunterVoucherItems(
+    vouchersList: Array<Record<string, unknown>>
+  ): Promise<HunterVoucherItemDto[]> {
+    const voucherDocs = vouchersList as unknown as VoucherDocument[];
     const dropIdStrs = [
       ...new Set(
-        vouchersList
+        voucherDocs
           .map((v) =>
             v.dropId
               ? typeof v.dropId === "string"
                 ? v.dropId
                 : v.dropId.toString()
-              : "",
+              : ""
           )
-          .filter(Boolean),
+          .filter(Boolean)
       ),
     ];
 
@@ -358,7 +349,7 @@ export class VouchersService {
         : [];
 
     const dropMap = new Map(
-      drops.map((d) => [d._id.toString(), d as DropDocument]),
+      drops.map((d) => [d._id.toString(), d as DropDocument])
     );
 
     const merchantIdStrs = [
@@ -369,9 +360,9 @@ export class VouchersService {
               ? typeof d.merchantId === "string"
                 ? d.merchantId
                 : d.merchantId.toString()
-              : "",
+              : ""
           )
-          .filter(Boolean),
+          .filter(Boolean)
       ),
     ];
 
@@ -385,49 +376,158 @@ export class VouchersService {
               deletedAt: null,
             })
             .select(
-              "businessName username logoUrl storeLocation businessPhone businessHours",
+              "businessName username logoUrl storeLocation businessPhone businessHours"
             )
             .lean()
         : [];
 
     const merchantMap = new Map(
-      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>]),
+      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>])
     );
 
-    const unredeemed: HunterVouchersBucketsDto["unredeemed"] = [];
-    const redeemed: HunterVouchersBucketsDto["redeemed"] = [];
-
-    for (const v of vouchersList) {
+    const items: HunterVoucherItemDto[] = [];
+    for (const v of voucherDocs) {
       const dropIdStr =
         typeof v.dropId === "string" ? v.dropId : (v.dropId?.toString() ?? "");
       const doc = dropMap.get(dropIdStr);
-      if (!doc) {
-        continue;
-      }
-
-      const dropDto = this.dropsService.toResponseDto(doc);
-      const voucherDto = this.toResponseDto(v as VoucherDocument, null);
+      if (!doc) continue;
 
       const merchantIdForDrop =
         typeof doc.merchantId === "string"
           ? doc.merchantId
           : (doc.merchantId?.toString() ?? "");
-      const merchantLean = merchantMap.get(merchantIdForDrop) ?? null;
-      const merchantDto = this.mapMerchantLeanToInfoDto(merchantLean);
 
-      const item = {
-        voucher: voucherDto,
-        drop: dropDto,
-        merchant: merchantDto,
+      items.push({
+        voucher: this.toResponseDto(v, null),
+        drop: this.dropsService.toResponseDto(doc),
+        merchant: this.mapMerchantLeanToInfoDto(
+          merchantMap.get(merchantIdForDrop) ?? null
+        ),
+      });
+    }
+    return items;
+  }
+
+  async findByHunter(
+    hunterId: string,
+    unredeemedLimit?: number,
+    redeemedLimit?: number
+  ): Promise<HunterVouchersBucketsDto> {
+    const hunter = await this.database.hunters
+      .findOne({ _id: hunterId, deletedAt: null })
+      .select("_id")
+      .lean();
+
+    if (!hunter) {
+      return {
+        unredeemed: [],
+        redeemed: [],
+        unredeemedTotal: 0,
+        redeemedTotal: 0,
+        claimedDropIds: [],
       };
-      if (v.redeemed) {
-        redeemed.push(item);
-      } else {
-        unredeemed.push(item);
-      }
     }
 
-    return { unredeemed, redeemed };
+    const baseFilter = this.buildHunterVoucherFilter(hunterId);
+    const unredeemedFilter = { ...baseFilter, redeemed: false };
+    const redeemedFilter = { ...baseFilter, redeemed: true };
+
+    const unredeemedQuery = this.database.vouchers
+      .find(unredeemedFilter)
+      .sort({ claimedAt: -1 });
+    if (unredeemedLimit && unredeemedLimit > 0) {
+      unredeemedQuery.limit(unredeemedLimit);
+    }
+
+    const redeemedQuery = this.database.vouchers
+      .find(redeemedFilter)
+      .sort({ claimedAt: -1 });
+    if (redeemedLimit && redeemedLimit > 0) {
+      redeemedQuery.limit(redeemedLimit);
+    }
+
+    const [
+      unredeemedDocs,
+      redeemedDocs,
+      unredeemedTotal,
+      redeemedTotal,
+      claimedDropIdsRaw,
+    ] = await Promise.all([
+      unredeemedQuery.lean(),
+      redeemedQuery.lean(),
+      this.database.vouchers.countDocuments(unredeemedFilter),
+      this.database.vouchers.countDocuments(redeemedFilter),
+      this.database.vouchers.distinct("dropId", baseFilter),
+    ]);
+
+    const [unredeemed, redeemed] = await Promise.all([
+      this.hydrateHunterVoucherItems(unredeemedDocs),
+      this.hydrateHunterVoucherItems(redeemedDocs),
+    ]);
+
+    const claimedDropIds = (claimedDropIdsRaw as unknown[])
+      .map((id) => (id ? String(id) : ""))
+      .filter(Boolean);
+
+    return {
+      unredeemed,
+      redeemed,
+      unredeemedTotal,
+      redeemedTotal,
+      claimedDropIds,
+    };
+  }
+
+  async findByHunterPaginated(
+    hunterId: string,
+    status: "unredeemed" | "redeemed" | "all",
+    page = 1,
+    limit = 20
+  ): Promise<HunterVouchersPageDto> {
+    const safePage = Math.max(1, Math.floor(page));
+    const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));
+
+    const hunter = await this.database.hunters
+      .findOne({ _id: hunterId, deletedAt: null })
+      .select("_id")
+      .lean();
+
+    if (!hunter) {
+      return {
+        items: [],
+        total: 0,
+        page: safePage,
+        limit: safeLimit,
+        totalPages: 0,
+      };
+    }
+
+    const baseFilter = this.buildHunterVoucherFilter(hunterId);
+    const filter: Record<string, unknown> = { ...baseFilter };
+    if (status === "unredeemed") filter.redeemed = false;
+    if (status === "redeemed") filter.redeemed = true;
+
+    const skip = (safePage - 1) * safeLimit;
+
+    const [docs, total] = await Promise.all([
+      this.database.vouchers
+        .find(filter)
+        .sort({ claimedAt: -1 })
+        .skip(skip)
+        .limit(safeLimit)
+        .lean(),
+      this.database.vouchers.countDocuments(filter),
+    ]);
+
+    const items = await this.hydrateHunterVoucherItems(docs);
+
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    };
   }
 
   async findByMerchant(
@@ -435,7 +535,7 @@ export class VouchersService {
     page = 1,
     limit = 20,
     search?: string,
-    status?: string,
+    status?: string
   ): Promise<{
     vouchers: VoucherResponseDto[];
     total: number;
@@ -492,7 +592,7 @@ export class VouchersService {
             .lean()
         : [];
     const dropMap = new Map(
-      drops.map((d) => [d._id.toString(), d as DropDocument]),
+      drops.map((d) => [d._id.toString(), d as DropDocument])
     );
 
     const hunterIdStrings = new Set<string>();
@@ -525,7 +625,7 @@ export class VouchersService {
           nickname: h.nickname ?? null,
           email: h.email ?? null,
         },
-      ]),
+      ])
     );
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -534,7 +634,7 @@ export class VouchersService {
       vouchers: vouchers.map((v) => {
         const dto = this.toResponseDto(
           v as VoucherDocument,
-          dropMap.get(v.dropId?.toString() ?? "") ?? null,
+          dropMap.get(v.dropId?.toString() ?? "") ?? null
         );
         const hid = dto.claimedBy?.hunterId;
         if (hid) {
@@ -562,7 +662,7 @@ export class VouchersService {
     voucherId: string,
     email: string,
     magicLink: string,
-    magicToken: string,
+    magicToken: string
   ): Promise<void> {
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
@@ -594,7 +694,7 @@ export class VouchersService {
   async sendByWhatsApp(
     voucherId: string,
     phone: string,
-    magicLink: string,
+    magicLink: string
   ): Promise<void> {
     const voucher = await this.database.vouchers.findById(voucherId);
 
@@ -617,7 +717,7 @@ export class VouchersService {
 
   async getPromoCode(
     voucherId: string,
-    magicToken: string,
+    magicToken: string
   ): Promise<string | null> {
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
@@ -666,7 +766,7 @@ export class VouchersService {
   private async assignPromoCode(
     voucherId: Types.ObjectId,
     dropId: Types.ObjectId,
-    hunterId: Types.ObjectId,
+    hunterId: Types.ObjectId
   ): Promise<void> {
     // Find available promo code for this drop
     const promoCode = await this.database.promoCodes.findOneAndUpdate(
@@ -683,7 +783,7 @@ export class VouchersService {
           assignedAt: new Date(),
         },
       },
-      { sort: { createdAt: 1 } },
+      { sort: { createdAt: 1 } }
     );
 
     // If no promo code available, that's okay - voucher still valid
@@ -694,7 +794,7 @@ export class VouchersService {
 
   private computeVoucherExpiresAt(
     drop: DropDocument | FlattenMaps<DropDocument>,
-    claimedAt: Date,
+    claimedAt: Date
   ): Date | null {
     const candidates: number[] = [];
     const abs = drop.voucherAbsoluteExpiresAt;
@@ -723,7 +823,7 @@ export class VouchersService {
 
   private toResponseDto(
     voucher: VoucherDocument | FlattenMaps<VoucherDocument>,
-    drop?: DropDocument | FlattenMaps<DropDocument> | null,
+    drop?: DropDocument | FlattenMaps<DropDocument> | null
   ): VoucherResponseDto {
     // Type-safe refactor: safely convert ObjectId to string
     const id =
@@ -785,7 +885,7 @@ export class VouchersService {
   }
 
   private async toDetailResponseDto(
-    voucher: VoucherDocument,
+    voucher: VoucherDocument
   ): Promise<VoucherDetailResponseDto> {
     const baseDto = this.toResponseDto(voucher);
 
@@ -795,7 +895,7 @@ export class VouchersService {
       this.database.merchants
         .findById(voucher.merchantId)
         .select(
-          "businessName username logoUrl storeLocation businessPhone businessHours",
+          "businessName username logoUrl storeLocation businessPhone businessHours"
         )
         .lean(),
     ]);
@@ -831,7 +931,7 @@ export class VouchersService {
         };
 
     const merchantInfo = this.mapMerchantLeanToInfoDto(
-      merchant as Record<string, unknown> | null,
+      merchant as Record<string, unknown> | null
     );
 
     const detailDto: VoucherDetailResponseDto = {
@@ -851,7 +951,7 @@ export class VouchersService {
   }
 
   private mapMerchantLeanToInfoDto(
-    merchant: Record<string, unknown> | null,
+    merchant: Record<string, unknown> | null
   ): MerchantInfoDto {
     if (!merchant || !merchant._id) {
       return {

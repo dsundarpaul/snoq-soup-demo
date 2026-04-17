@@ -505,6 +505,9 @@ export function mapHunterVoucherBundleToLegacy(row: {
 export function mapHunterVouchersBucketsToLegacy(json: Record<string, unknown>): {
   unredeemed: ({ voucher: Voucher; drop: Drop } & HunterVoucherMerchantDisplay)[];
   redeemed: ({ voucher: Voucher; drop: Drop } & HunterVoucherMerchantDisplay)[];
+  unredeemedTotal: number;
+  redeemedTotal: number;
+  claimedDropIds: string[];
 } {
   const u = (json.unredeemed as Record<string, unknown>[] | undefined) ?? [];
   const r = (json.redeemed as Record<string, unknown>[] | undefined) ?? [];
@@ -527,6 +530,12 @@ export function mapHunterVouchersBucketsToLegacy(json: Record<string, unknown>):
         },
       ),
     ),
+    unredeemedTotal: Number(json.unredeemedTotal ?? u.length) || 0,
+    redeemedTotal: Number(json.redeemedTotal ?? r.length) || 0,
+    claimedDropIds: Array.isArray(json.claimedDropIds)
+      ? (json.claimedDropIds as unknown[]).map((id) => String(id ?? ""))
+          .filter(Boolean)
+      : [],
   };
 }
 

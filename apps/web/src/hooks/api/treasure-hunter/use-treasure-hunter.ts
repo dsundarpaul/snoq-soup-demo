@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   type UseMutationOptions,
@@ -14,7 +15,11 @@ import {
   setHunterSuppressDeviceLoginAfterLogout,
 } from "@/lib/auth-session";
 import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
-import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
+import {
+  apiFetch,
+  apiFetchMaybeRetry,
+  throwIfResNotOk,
+} from "@/lib/api-client";
 import {
   setTokenBundle,
   clearTokenBundle,
@@ -23,6 +28,7 @@ import {
 import {
   mapHunterProfileToLegacy,
   mapHunterHistoryToVoucherRows,
+  mapHunterVoucherBundleToLegacy,
   mapHunterVouchersBucketsToLegacy,
   type HunterVoucherMerchantDisplay,
 } from "@/lib/nest-mappers";
@@ -36,19 +42,41 @@ export const treasureHunterQueryKeys = {
   profile: ["hunter-profile-v1"] as const,
   history: ["hunter-history-v1"] as const,
   vouchers: ["hunter-vouchers-v1"] as const,
-  leaderboard: (limit: number) =>
-    ["/api/v1/leaderboard", limit] as const,
+  vouchersSummary: (unredeemedLimit?: number, redeemedLimit?: number) =>
+    ["hunter-vouchers-v1", "summary", unredeemedLimit, redeemedLimit] as const,
+  vouchersList: (status: HunterVoucherStatus, limit: number) =>
+    ["hunter-vouchers-v1", "list", status, limit] as const,
+  leaderboard: (limit: number) => ["/api/v1/leaderboard", limit] as const,
 };
 
-export type HunterVoucherRow = { voucher: Voucher; drop: Drop } &
-  HunterVoucherMerchantDisplay;
+export type HunterVoucherRow = {
+  voucher: Voucher;
+  drop: Drop;
+} & HunterVoucherMerchantDisplay;
 
-export function useHunterVouchersQuery() {
+export type HunterVoucherStatus = "all" | "unredeemed" | "redeemed";
+
+export function useHunterVouchersQuery(options?: {
+  unredeemedLimit?: number;
+  redeemedLimit?: number;
+}) {
   const hasHunterAuth = useHasRoleCredentials("hunter");
+  const { unredeemedLimit, redeemedLimit } = options ?? {};
   return useQuery({
-    queryKey: treasureHunterQueryKeys.vouchers,
+    queryKey: treasureHunterQueryKeys.vouchersSummary(
+      unredeemedLimit,
+      redeemedLimit
+    ),
     queryFn: async () => {
-      const path = "/api/v1/hunters/me/vouchers";
+      const params = new URLSearchParams();
+      if (unredeemedLimit) {
+        params.set("unredeemedLimit", String(unredeemedLimit));
+      }
+      if (redeemedLimit) {
+        params.set("redeemedLimit", String(redeemedLimit));
+      }
+      const query = params.toString();
+      const path = "/api/v1/hunters/me/vouchers" + (query ? `?${query}` : "");
       const res = await apiFetchMaybeRetry("GET", path, {
         auth: "hunter",
       });
@@ -56,13 +84,78 @@ export function useHunterVouchersQuery() {
         if (hadAuthCredentials("hunter")) {
           invalidateAuthSession("hunter");
         }
-        return { unredeemed: [], redeemed: [] };
+        return {
+          unredeemed: [],
+          redeemed: [],
+          unredeemedTotal: 0,
+          redeemedTotal: 0,
+          claimedDropIds: [],
+        };
       }
       await throwIfResNotOk(res, path, "hunter");
       const json = (await res.json()) as Record<string, unknown>;
       return mapHunterVouchersBucketsToLegacy(json);
     },
     enabled: hasHunterAuth,
+  });
+}
+
+export function useHunterVouchersInfiniteQuery(
+  status: HunterVoucherStatus = "all",
+  pageSize = 10
+) {
+  const hasHunterAuth = useHasRoleCredentials("hunter");
+  return useInfiniteQuery({
+    queryKey: treasureHunterQueryKeys.vouchersList(status, pageSize),
+    enabled: hasHunterAuth,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams();
+      params.set("status", status);
+      params.set("page", String(pageParam));
+      params.set("limit", String(pageSize));
+      const path = `/api/v1/hunters/me/vouchers/list?${params.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, { auth: "hunter" });
+      if (res.status === 401) {
+        if (hadAuthCredentials("hunter")) {
+          invalidateAuthSession("hunter");
+        }
+        return {
+          items: [] as HunterVoucherRow[],
+          page: Number(pageParam),
+          totalPages: 0,
+          total: 0,
+        };
+      }
+      await throwIfResNotOk(res, path, "hunter");
+      const json = (await res.json()) as {
+        items: Record<string, unknown>[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+      const items = (json.items ?? []).map((row) =>
+        mapHunterVoucherBundleToLegacy(
+          row as {
+            voucher: Record<string, unknown>;
+            drop: Record<string, unknown>;
+            merchant?: Record<string, unknown>;
+          }
+        )
+      );
+      return {
+        items,
+        page: Number(json.page ?? pageParam),
+        totalPages: Number(json.totalPages ?? 0),
+        total: Number(json.total ?? 0),
+      };
+    },
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined;
+      if (lastPage.page >= lastPage.totalPages) return undefined;
+      return lastPage.page + 1;
+    },
   });
 }
 
@@ -239,9 +332,14 @@ export function useTreasureHunterPatchProfileMutation(
   return useMutation({
     ...options,
     mutationFn: async (data: Record<string, unknown>) => {
-      const res = await apiRequest("PATCH", "/api/v1/hunters/me/profile", data, {
-        auth: "hunter",
-      });
+      const res = await apiRequest(
+        "PATCH",
+        "/api/v1/hunters/me/profile",
+        data,
+        {
+          auth: "hunter",
+        }
+      );
       return res.json();
     },
     onSuccess: (...args) => {
@@ -261,12 +359,9 @@ export function useTreasureHunterForgotPasswordMutation(
 ) {
   return useMutation({
     mutationFn: async (data: { email: string }) => {
-      await apiRequest(
-        "POST",
-        "/api/v1/auth/hunter/forgot-password",
-        data,
-        { auth: undefined }
-      );
+      await apiRequest("POST", "/api/v1/auth/hunter/forgot-password", data, {
+        auth: undefined,
+      });
     },
     ...options,
   });
@@ -306,10 +401,7 @@ export function useLeaderboardQuery(limit = 50) {
   return useQuery({
     queryKey: treasureHunterQueryKeys.leaderboard(limit),
     queryFn: async () => {
-      const res = await apiFetch(
-        "GET",
-        `/api/v1/leaderboard?limit=${limit}`
-      );
+      const res = await apiFetch("GET", `/api/v1/leaderboard?limit=${limit}`);
       await throwIfResNotOk(res);
       const rows = (await res.json()) as {
         nickname?: string;
