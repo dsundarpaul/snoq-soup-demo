@@ -202,7 +202,7 @@ const ar = {
   "voucher.notFoundDesc":
     "هذا الرابط السحري غير صالح أو منتهي الصلاحية. قد تكون القسيمة محذوفة.",
   "voucher.yourRewardAwaits": "مكافأتك بانتظارك",
-  "voucher.startYourHunt": "ابدأ رحلة الصيد",
+  "voucher.startNewHunt": "ابدأ جديدة الصيد",
   "voucher.partnerCode": "كود الشريك",
   "voucher.copyCode": "نسخ الكود",
   "voucher.codeCopied": "تم نسخ الكود!",

@@ -204,7 +204,7 @@ const en = {
   "voucher.notFoundDesc":
     "This magic link is invalid or has expired. The voucher may have been removed.",
   "voucher.yourRewardAwaits": "Your Reward Awaits",
-  "voucher.startYourHunt": "Start your own hunt",
+  "voucher.startNewHunt": "Start new hunt",
   "voucher.partnerCode": "Partner Code",
   "voucher.copyCode": "Copy Code",
   "voucher.codeCopied": "Code Copied!",
