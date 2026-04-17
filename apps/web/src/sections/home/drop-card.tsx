@@ -220,6 +220,14 @@ export function DropCard({
         drop={drop}
         distance={distance}
         onDirections={handleGetDirections}
+        hunterSignedIn={hunterSignedIn}
+        showHuntAction={
+          !claimed &&
+          !isSoldOut &&
+          !timeWindowInfo?.isExpired &&
+          !timeWindowInfo?.notYetActive
+        }
+        huntDisabled={!isActive}
       />
     </Card>
   );

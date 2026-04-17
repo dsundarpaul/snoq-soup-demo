@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
+  ArrowRight,
   CircleDot,
   Clock,
   Gift,
@@ -27,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { formatDistance } from "@/lib/format-distance";
 import type { DropWithCount } from "@/lib/hunt-drop-filters";
 import { getCaptureRemaining } from "@/lib/hunt-drop-filters";
+import { clearSessionsExcept } from "@/lib/auth-session";
 import { getTimeWindowInfo } from "@/sections/home/drop-time-window";
 
 function InfoTile({
@@ -81,6 +84,9 @@ export type DropDetailsDialogProps = {
   drop: DropWithCount;
   distance: number | null;
   onDirections: () => void;
+  hunterSignedIn: boolean;
+  showHuntAction: boolean;
+  huntDisabled: boolean;
 };
 
 export function DropDetailsDialog({
@@ -89,6 +95,9 @@ export function DropDetailsDialog({
   drop,
   distance,
   onDirections,
+  hunterSignedIn,
+  showHuntAction,
+  huntDisabled,
 }: DropDetailsDialogProps) {
   const { t } = useLanguage();
   const remaining = getCaptureRemaining(drop);
@@ -229,16 +238,44 @@ export function DropDetailsDialog({
           ) : null}
         </div>
 
-        <div className="shrink-0 border-t border-border/60 p-4 bg-muted/15">
+        <div className="shrink-0 flex flex-row gap-2 border-t border-border/60 p-4 bg-muted/15">
           <Button
             type="button"
-            variant="default"
-            className="w-full gap-2"
+            variant="outline"
+            className={cn(
+              "gap-2 shrink-0",
+              showHuntAction ? "min-w-0 flex-1" : "w-full"
+            )}
             onClick={onDirections}
+            data-testid={`dialog-button-directions-${drop.id}`}
           >
             <Navigation className="w-4 h-4" />
             {t("home.directions")}
           </Button>
+          {showHuntAction ? (
+            <Link
+              href={
+                hunterSignedIn
+                  ? `/hunt?drop=${drop.id}`
+                  : `/login?next=${encodeURIComponent(`/hunt?drop=${drop.id}`)}`
+              }
+              className="min-w-0 flex-1"
+              onClick={
+                hunterSignedIn ? undefined : () => clearSessionsExcept("hunter")
+              }
+            >
+              <Button
+                type="button"
+                variant="default"
+                className="w-full gap-2"
+                disabled={huntDisabled}
+                data-testid={`dialog-button-hunt-${drop.id}`}
+              >
+                {t("home.hunt")}
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
