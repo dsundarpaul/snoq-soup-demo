@@ -15,9 +15,8 @@ import {
 } from "@/lib/nest-mappers";
 import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import type { AuthRole } from "@/lib/auth-tokens";
-import type { Drop, Voucher } from "@shared/schema";
 
-type ClaimResult = { voucher: Voucher; drop: Drop };
+type ClaimResult = ReturnType<typeof mapClaimResponseToLegacy>;
 
 export function useClaimVoucherMutation(
   options?: Omit<

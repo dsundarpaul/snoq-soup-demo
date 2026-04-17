@@ -617,10 +617,9 @@ export default function ARGamePage() {
     null
   );
   const [showCaptureAnimation, setShowCaptureAnimation] = useState(false);
-  const [pendingVoucher, setPendingVoucher] = useState<{
-    voucher: Voucher;
-    drop: Drop;
-  } | null>(null);
+  const [pendingVoucher, setPendingVoucher] = useState<HunterVoucherRow | null>(
+    null
+  );
   const [showMenu, setShowMenu] = useState(false);
   const [nearbySwipeIndex, setNearbySwipeIndex] = useState(0);
   const [nearbySwipeSlideDirection, setNearbySwipeSlideDirection] = useState<
@@ -873,13 +872,7 @@ export default function ARGamePage() {
   const handleAnimationComplete = () => {
     setShowCaptureAnimation(false);
     if (pendingVoucher) {
-      setClaimedVoucher({
-        ...pendingVoucher,
-        businessName: "",
-        merchantStoreLocation: null,
-        merchantBusinessPhone: null,
-        merchantBusinessHours: null,
-      });
+      setClaimedVoucher(pendingVoucher);
       setPendingVoucher(null);
     }
   };

@@ -192,6 +192,7 @@ const en = {
   "voucher.rewardValue": "Reward Value",
   "voucher.openMagicLink": "Open Magic Link",
   "voucher.getDirections": "Get Directions to Store",
+  "voucher.wayToRedeem": "Way to redeem",
   "voucher.storePhone": "Store phone",
   "voucher.storeHours": "Opening hours",
   "voucher.landmark": "Landmark",
@@ -199,7 +200,7 @@ const en = {
   "voucher.deadline": "Deadline",
   "voucher.reward": "Reward",
   "voucher.dropName": "Treasure Name",
-  "voucher.voucherId": "Voucher ID",
+  "voucher.voucherId": "Voucher",
   "voucher.loading": "Loading your voucher...",
   "voucher.notFound": "Voucher Not Found",
   "voucher.notFoundDesc":

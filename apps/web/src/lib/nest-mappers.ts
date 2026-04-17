@@ -462,7 +462,7 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
 export function mapClaimResponseToLegacy(raw: Record<string, unknown>): {
   voucher: Voucher;
   drop: Drop;
-} {
+} & HunterVoucherMerchantDisplay {
   const voucher = mapNestVoucherToLegacy(raw);
   const dropRaw = raw.drop as Record<string, unknown> | undefined;
   const drop = dropRaw
@@ -480,7 +480,13 @@ export function mapClaimResponseToLegacy(raw: Record<string, unknown>): {
         radius: 15,
         rewardValue: "",
       });
-  return { voucher, drop };
+  return {
+    voucher,
+    drop,
+    ...nestMerchantRecordToVoucherDisplayFields(
+      raw.merchant as Record<string, unknown> | undefined
+    ),
+  };
 }
 
 export function mapHunterVoucherBundleToLegacy(row: {

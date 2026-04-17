@@ -24,6 +24,7 @@ describe("VouchersService", () => {
     drops: { findOne: jest.Mock; findById: jest.Mock };
     promoCodes: { findOne: jest.Mock; findOneAndUpdate: jest.Mock };
     hunters: { findByIdAndUpdate: jest.Mock; findOne: jest.Mock };
+    merchants: { findById: jest.Mock };
   };
 
   beforeEach(() => {
@@ -55,6 +56,13 @@ describe("VouchersService", () => {
       drops: { findOne: jest.fn(), findById: jest.fn() },
       promoCodes: { findOne: jest.fn(), findOneAndUpdate: jest.fn() },
       hunters: { findByIdAndUpdate: jest.fn(), findOne: jest.fn() },
+      merchants: {
+        findById: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(null),
+          }),
+        }),
+      },
     };
     service = new VouchersService(
       database as unknown as DatabaseService,
@@ -110,7 +118,7 @@ describe("VouchersService", () => {
         service.claim({
           dropId: dropId.toString(),
           deviceId: "device_a",
-          deviceResolvedHunterId: hunterId.toString(),
+          hunterId: hunterId.toString(),
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -118,7 +126,10 @@ describe("VouchersService", () => {
     it("rejects when drop is missing", async () => {
       database.hunters.findOne.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({ _id: hunterId }),
+          lean: jest.fn().mockResolvedValue({
+            _id: hunterId,
+            email: "hunter@test.com",
+          }),
         }),
       });
       database.drops.findOne.mockResolvedValue(null);
@@ -127,7 +138,7 @@ describe("VouchersService", () => {
         service.claim({
           dropId: dropId.toString(),
           deviceId: "device_a",
-          deviceResolvedHunterId: hunterId.toString(),
+          hunterId: hunterId.toString(),
         }),
       ).rejects.toThrow(NotFoundException);
     });
@@ -135,7 +146,10 @@ describe("VouchersService", () => {
     it("rejects duplicate claim for same hunter and drop", async () => {
       database.hunters.findOne.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({ _id: hunterId }),
+          lean: jest.fn().mockResolvedValue({
+            _id: hunterId,
+            email: "hunter@test.com",
+          }),
         }),
       });
       database.drops.findOne.mockResolvedValue(baseDrop);
@@ -145,7 +159,7 @@ describe("VouchersService", () => {
         service.claim({
           dropId: dropId.toString(),
           deviceId: "device_a",
-          deviceResolvedHunterId: hunterId.toString(),
+          hunterId: hunterId.toString(),
         }),
       ).rejects.toThrow(ConflictException);
     });
@@ -154,7 +168,10 @@ describe("VouchersService", () => {
       const now = new Date();
       database.hunters.findOne.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({ _id: hunterId }),
+          lean: jest.fn().mockResolvedValue({
+            _id: hunterId,
+            email: "hunter@test.com",
+          }),
         }),
       });
       database.drops.findOne.mockResolvedValue(baseDrop);
@@ -176,13 +193,29 @@ describe("VouchersService", () => {
       });
       database.promoCodes.findOneAndUpdate.mockResolvedValue(null);
       database.hunters.findByIdAndUpdate.mockResolvedValue(null);
+      database.merchants.findById.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({
+            _id: merchantId,
+            businessName: "Test Merchant",
+            username: "testmerchant",
+            logoUrl: null,
+            storeLocation: null,
+            businessPhone: "+966500000000",
+            businessHours: "9-5",
+          }),
+        }),
+      });
 
-      await service.claim({
+      const claimResult = await service.claim({
         dropId: dropId.toString(),
         deviceId: "device_a",
         hunterId: hunterId.toString(),
         deviceResolvedHunterId: hunterId.toString(),
       });
+
+      expect(claimResult.merchant.name).toBe("Test Merchant");
+      expect(claimResult.merchant.businessPhone).toBe("+966500000000");
 
       expect(database.vouchers.findOne).toHaveBeenCalledWith({
         dropId: new Types.ObjectId(dropId.toString()),

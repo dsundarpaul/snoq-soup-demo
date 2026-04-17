@@ -34,6 +34,7 @@ import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { SendEmailDto } from "./dto/request/send-email.dto";
 import { SendWhatsAppDto } from "./dto/request/send-whatsapp.dto";
 import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
+import { ClaimVoucherResponseDto } from "./dto/response/claim-voucher-response.dto";
 import { VoucherDetailResponseDto } from "./dto/response/voucher-detail-response.dto";
 import { RedeemResultDto } from "./dto/response/redeem-result.dto";
 import {
@@ -50,7 +51,7 @@ export class VouchersController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for claims
   @ApiOperation({ summary: "Claim a voucher from a drop" })
-  @ApiResponse({ status: 201, type: VoucherResponseDto })
+  @ApiResponse({ status: 201, type: ClaimVoucherResponseDto })
   @ApiResponse({
     status: 400,
     description: "Invalid request or constraints not met",
@@ -61,7 +62,7 @@ export class VouchersController {
     @Body() dto: ClaimVoucherDto,
     @DeviceId() deviceId: string,
     @Req() req: Request & { hunterId?: string }
-  ): Promise<VoucherResponseDto> {
+  ): Promise<ClaimVoucherResponseDto> {
     return this.vouchersService.claim({
       ...dto,
       deviceId,

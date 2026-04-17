@@ -14,6 +14,7 @@ import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
+import { ClaimVoucherResponseDto } from "./dto/response/claim-voucher-response.dto";
 import {
   VoucherDetailResponseDto,
   MerchantInfoDto,
@@ -50,18 +51,19 @@ export class VouchersService {
 
   async claim(
     dto: ClaimVoucherDto & { deviceResolvedHunterId?: string }
-  ): Promise<VoucherResponseDto> {
-    const { dropId, deviceId, hunterId } = dto;
-
+  ): Promise<ClaimVoucherResponseDto> {
+    const { dropId, deviceId } = dto;
+    const fromBody = dto.hunterId?.trim();
+    const resolvedFromDevice = dto.deviceResolvedHunterId?.trim();
+    if (fromBody && resolvedFromDevice && fromBody !== resolvedFromDevice) {
+      throw new BadRequestException("Hunter does not match device");
+    }
+    const hunterId = fromBody ?? resolvedFromDevice;
     if (!hunterId) {
       throw new BadRequestException(
         "Hunter could not be resolved for this device"
       );
     }
-
-    // if (bodyHunterId?.trim() && bodyHunterId.trim() !== resolvedFromDevice) {
-    //   throw new BadRequestException("Hunter does not match device");
-    // }
 
     let hunterObjectId: Types.ObjectId;
     try {
@@ -81,7 +83,6 @@ export class VouchersService {
     if (!hunter) {
       throw new BadRequestException("Hunter not found");
     }
-    console.log(hunter);
 
     if (!hunter.email) {
       throw new BadRequestException("Hunter not registered");
@@ -161,7 +162,20 @@ export class VouchersService {
       $inc: { "stats.totalClaims": 1 },
     });
 
-    return this.toResponseDto(voucher, drop);
+    const merchantDoc = await this.database.merchants
+      .findById(drop.merchantId)
+      .select(
+        "businessName username logoUrl storeLocation businessPhone businessHours"
+      )
+      .lean();
+
+    const base = this.toResponseDto(voucher, drop);
+    return {
+      ...base,
+      merchant: this.mapMerchantLeanToInfoDto(
+        merchantDoc as Record<string, unknown> | null
+      ),
+    };
   }
 
   async redeem(

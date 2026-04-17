@@ -190,6 +190,7 @@ const ar = {
   "voucher.rewardValue": "قيمة المكافأة",
   "voucher.openMagicLink": "فتح الرابط السحري",
   "voucher.getDirections": "الاتجاهات إلى المتجر",
+  "voucher.wayToRedeem": "طريقة الاسترداد",
   "voucher.storePhone": "هاتف المتجر",
   "voucher.storeHours": "ساعات العمل",
   "voucher.landmark": "معلم بارز",

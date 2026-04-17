@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   ChevronDown,
   MapPin,
+  Store,
   Trophy,
   QrCode,
   FileText,
@@ -420,29 +421,44 @@ export function VoucherDisplay({
         </div>
 
         {showMerchantBlock ? (
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-              {businessName}
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {merchantBusinessPhone ? (
-                <InfoTile icon={Phone} label={t("voucher.storePhone")}>
-                  <a
-                    href={`tel:${merchantBusinessPhone.replace(/\s/g, "")}`}
-                    className="text-primary hover:underline break-all"
-                  >
-                    {merchantBusinessPhone}
-                  </a>
-                </InfoTile>
-              ) : null}
-              {merchantBusinessHours ? (
-                <InfoTile icon={Clock} label={t("voucher.storeHours")}>
-                  {merchantBusinessHours}
-                </InfoTile>
+          <div
+            className="rounded-xl border border-border/70 bg-gradient-to-br from-primary/[0.07] via-muted/25 to-teal/[0.06] p-4 sm:p-5 shadow-sm space-y-4"
+            data-testid="section-way-to-redeem"
+          >
+            <div className="space-y-1.5">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                <Store className="w-3.5 h-3.5 shrink-0 text-primary" />
+                {t("voucher.wayToRedeem")}
+              </h4>
+              {businessName.trim() ? (
+                <p className="text-lg font-semibold text-foreground leading-snug text-left">
+                  {businessName}
+                </p>
               ) : null}
             </div>
+
+            {merchantBusinessPhone || merchantBusinessHours ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {merchantBusinessPhone ? (
+                  <InfoTile icon={Phone} label={t("voucher.storePhone")}>
+                    <a
+                      href={`tel:${merchantBusinessPhone.replace(/\s/g, "")}`}
+                      className="text-primary hover:underline break-all"
+                    >
+                      {merchantBusinessPhone}
+                    </a>
+                  </InfoTile>
+                ) : null}
+                {merchantBusinessHours ? (
+                  <InfoTile icon={Clock} label={t("voucher.storeHours")}>
+                    {merchantBusinessHours}
+                  </InfoTile>
+                ) : null}
+              </div>
+            ) : null}
+
             {merchantStoreLocation ? (
-              <div className="mt-2.5 space-y-2">
+              <div className="space-y-3 pt-1 border-t border-border/50">
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${merchantStoreLocation.lat},${merchantStoreLocation.lng}`}
                   target="_blank"
@@ -450,31 +466,38 @@ export function VoucherDisplay({
                   className="block"
                 >
                   <Button
-                    variant="outline"
-                    className="w-full gap-2 shadow-sm"
+                    className="w-full justify-start gap-3 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
                     data-testid="button-get-directions"
                   >
-                    <MapPin className="w-4 h-4 text-primary" />
-                    {t("voucher.getDirections")}
+                    <MapPin className="w-4 h-4 shrink-0 opacity-90" />
+                    <span className="text-left flex-1 min-w-0 font-medium leading-snug">
+                      {t("voucher.getDirections")}
+                    </span>
+                    <ExternalLink className="w-4 h-4 shrink-0 opacity-80 ml-auto" />
                   </Button>
                 </a>
                 {merchantStoreLocation.address ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+                  <div className="flex items-start gap-3 rounded-xl border border-dashed border-primary/25 bg-background/60 px-3.5 py-3 text-sm text-foreground">
                     <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
-                    <span className="leading-relaxed">
+                    <span className="leading-relaxed text-left min-w-0">
                       {merchantStoreLocation.address}
                     </span>
                   </div>
                 ) : null}
                 {merchantStoreLocation.landmark ? (
-                  <p className="text-xs text-muted-foreground text-center leading-relaxed">
-                    {t("voucher.landmark")}: {merchantStoreLocation.landmark}
-                  </p>
+                  <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/25 px-3.5 py-3 text-sm">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0 pt-0.5 w-20 sm:w-24">
+                      {t("voucher.landmark")}
+                    </span>
+                    <span className="text-foreground/90 leading-relaxed text-left min-w-0 flex-1">
+                      {merchantStoreLocation.landmark}
+                    </span>
+                  </div>
                 ) : null}
                 {merchantStoreLocation.howToReach ? (
-                  <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 px-3.5 py-3 text-sm text-foreground/90 leading-relaxed text-left">
                     {merchantStoreLocation.howToReach}
-                  </p>
+                  </div>
                 ) : null}
               </div>
             ) : null}
