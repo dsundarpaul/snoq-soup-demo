@@ -105,20 +105,17 @@ function Calendar({
           defaultClassNames.caption_label
         ),
         dropdowns: cn(
-          "flex w-full text-sm font-medium",
+          "flex w-full text-sm font-medium mt-1",
           captionLayout === "label"
             ? "h-8 items-center justify-center gap-1.5"
-            : "min-h-9 min-w-0 flex-col gap-2 py-0.5",
+            : "min-h-9 min-w-0 gap-2 py-0.5",
           defaultClassNames.dropdowns
         ),
         months_dropdown: cn(
           "w-full min-w-0",
           defaultClassNames.months_dropdown
         ),
-        years_dropdown: cn(
-          "w-full min-w-0",
-          defaultClassNames.years_dropdown
-        ),
+        years_dropdown: cn("w-full min-w-0", defaultClassNames.years_dropdown),
         dropdown_root: cn(
           "relative h-9 w-full min-w-0 rounded-md border border-input bg-muted/50 text-sm shadow-xs transition-colors hover:bg-muted focus-within:border-ring focus-within:bg-background focus-within:ring-[3px] focus-within:ring-ring/40",
           defaultClassNames.dropdown_root
@@ -183,14 +180,14 @@ function Calendar({
           />
         ),
         Chevron: ({ className, orientation, ...chevronProps }) => {
-          const iconClass = cn("size-4", className)
+          const iconClass = cn("size-4", className);
           if (orientation === "left") {
-            return <ChevronLeft className={iconClass} {...chevronProps} />
+            return <ChevronLeft className={iconClass} {...chevronProps} />;
           }
           if (orientation === "right") {
-            return <ChevronRight className={iconClass} {...chevronProps} />
+            return <ChevronRight className={iconClass} {...chevronProps} />;
           }
-          return <ChevronDown className={iconClass} {...chevronProps} />
+          return <ChevronDown className={iconClass} {...chevronProps} />;
         },
         DayButton: CalendarDayButton,
         ...components,
@@ -198,7 +195,7 @@ function Calendar({
       {...props}
       navLayout={navLayout}
     />
-  )
+  );
 }
 
 function CalendarDayButton({

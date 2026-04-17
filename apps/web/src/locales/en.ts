@@ -22,7 +22,7 @@ const en = {
   "home.subtitle": "Hunt rewards near you",
   "home.myRewards": "My Rewards",
   "home.readyToClaim": "Ready to Claim!",
-  "home.nearbyDrops": "Nearby Treasures",
+  "home.browseActiveDrops": "All active hunts",
   "home.alreadyClaimed": "Already Claimed",
   "home.activeDropsSection": "Active hunts",
   "home.startingSoon": "Starting soon",
@@ -36,6 +36,10 @@ const en = {
   "home.hunt": "Hunt",
   "home.directions": "Directions",
   "home.dropDetails": "Drop details",
+  "home.dropFacts": "At a glance",
+  "home.captureZone": "Capture zone",
+  "home.yourDistance": "Your distance",
+  "home.aboutDrop": "About this hunt",
   "home.captureLimit": "Spots remaining",
   "home.availability": "Schedule",
   "home.view": "View",
@@ -86,8 +90,10 @@ const en = {
   "auth.enterNewPassword": "Enter new password",
   "auth.confirmNewPassword": "Confirm new password",
   "auth.enterYourNewPassword": "Enter your new password below",
-  "auth.resetLinkDesc": "Enter your email address and we'll send you a link to reset your password",
-  "auth.needVerification": "Need a new verification email? Enter your email below:",
+  "auth.resetLinkDesc":
+    "Enter your email address and we'll send you a link to reset your password",
+  "auth.needVerification":
+    "Need a new verification email? Enter your email below:",
   "auth.alreadyHaveAccount": "Already have an account?",
   "auth.dontHaveAccount": "Don't have an account?",
   "auth.signInLink": "Sign in",
@@ -96,7 +102,8 @@ const en = {
   // Merchant Portal
   "merchant.portal": "Merchant Portal",
   "merchant.login": "Merchant Login",
-  "merchant.loginDesc": "Sign in to manage your treasures and scan customer vouchers",
+  "merchant.loginDesc":
+    "Sign in to manage your treasures and scan customer vouchers",
   "merchant.newToSouqSnap": "New to Souq-Snap?",
   "merchant.createAccount": "Create a merchant account",
   "merchant.businessName": "Business Name",
@@ -107,8 +114,7 @@ const en = {
     "3–30 characters: letters, numbers, and underscores only. Fills from your business name until you edit it.",
   "merchant.youAtBusiness": "you@business.com",
   "merchant.atLeast6Chars": "At least 6 characters",
-  "merchant.passwordRequirements":
-    "Min 8 characters, 1 uppercase, 1 number",
+  "merchant.passwordRequirements": "Min 8 characters, 1 uppercase, 1 number",
   "merchant.becomeMerchant": "Become a Merchant",
   "merchant.createMerchantAccount": "Create Merchant Account",
   "merchant.startRewarding": "Start rewarding your customers",
@@ -151,7 +157,8 @@ const en = {
   "profile.redeemed": "redeemed",
   "profile.viewRewards": "View your claimed rewards",
   "profile.seeTopHunters": "See top treasure hunters",
-  "profile.syncProgress": "Create an account to sync your progress across devices",
+  "profile.syncProgress":
+    "Create an account to sync your progress across devices",
   "profile.saveProgress": "Save your progress across devices",
   "profile.welcomeBack": "Welcome back!",
 
@@ -192,7 +199,8 @@ const en = {
   "voucher.voucherId": "Voucher ID",
   "voucher.loading": "Loading your voucher...",
   "voucher.notFound": "Voucher Not Found",
-  "voucher.notFoundDesc": "This magic link is invalid or has expired. The voucher may have been removed.",
+  "voucher.notFoundDesc":
+    "This magic link is invalid or has expired. The voucher may have been removed.",
   "voucher.yourRewardAwaits": "Your Reward Awaits",
   "voucher.startYourHunt": "Start your own hunt",
   "voucher.partnerCode": "Partner Code",
@@ -215,23 +223,26 @@ const en = {
   "scanner.alreadyUsed": "This voucher was already used",
   "scanner.invalid": "INVALID",
   "scanner.howToScan": "How to scan:",
-  "scanner.step1": "Click \"Start Scanner\" to activate camera",
+  "scanner.step1": 'Click "Start Scanner" to activate camera',
   "scanner.step2": "Ask customer to show their voucher QR code",
   "scanner.step3": "Point camera at QR code until detected",
   "scanner.step4": "Verify SUCCESS message before providing reward",
   "scanner.invalidLink": "Invalid Scanner Link",
-  "scanner.invalidLinkDesc": "This scanner link is no longer valid. Please ask your manager for a new link.",
+  "scanner.invalidLinkDesc":
+    "This scanner link is no longer valid. Please ask your manager for a new link.",
   "scanner.verifyingLink": "Verifying scanner link...",
   "scanner.tapToStart": "Tap below to start scanning",
   "scanner.clickToStart": "Click button below to start scanning",
   "scanner.cameraViewfinder": "Camera Viewfinder",
   "scanner.scanCustomerQr": "Scan Customer QR Code",
   "scanner.tryAgain": "Try Again",
-  "scanner.cameraDenied": "Camera access was denied. Please allow camera access in your browser settings and reload the page.",
+  "scanner.cameraDenied":
+    "Camera access was denied. Please allow camera access in your browser settings and reload the page.",
   "scanner.noCamera": "No camera found on this device.",
   "scanner.cameraInUse": "Camera is in use by another application.",
   "scanner.cameraError": "Camera error",
-  "scanner.cameraPermissionDenied": "Camera permission denied. Please allow camera access in your browser settings.",
+  "scanner.cameraPermissionDenied":
+    "Camera permission denied. Please allow camera access in your browser settings.",
   "scanner.scannerError": "Scanner error",
   "scanner.couldNotStartCamera": "Could not start camera",
   "scanner.unknownError": "Unknown error",
@@ -263,7 +274,8 @@ const en = {
 
   "profile.hunterId": "Hunter ID",
   "profile.copyHunterId": "Copy ID",
-  "profile.hunterIdHint": "Share this with your merchant to enable staff scanning.",
+  "profile.hunterIdHint":
+    "Share this with your merchant to enable staff scanning.",
   "profile.scanToRedeem": "Scan vouchers (staff)",
   "profile.scanToRedeemDesc": "Redeem customer QR codes when linked to a store",
 
@@ -282,7 +294,8 @@ const en = {
   "ar.tapToStartAr": "Tap to start AR",
   "ar.tapToStartArDesc":
     "Safari only unlocks the camera and compass after you tap. You may need to tap again after each full page reload; this is normal on iPhone and iPad.",
-  "ar.compassDesc": "Allow compass access to see rewards floating in the real world",
+  "ar.compassDesc":
+    "Allow compass access to see rewards floating in the real world",
   "ar.calibrating": "Calibrating compass... Move your phone in a figure-8",
   "ar.captured": "CAPTURED!",
   "ar.rewardClaimed": "Reward claimed successfully",
@@ -318,7 +331,8 @@ const en = {
   // Welcome Page
   "welcome.heroTitle1": "Turn Foot Traffic Into ",
   "welcome.heroTitle2": "Treasure Hunts",
-  "welcome.heroDesc": "Drop virtual rewards at your store. Customers hunt them down with AR. Watch your foot traffic soar. It's that simple.",
+  "welcome.heroDesc":
+    "Drop virtual rewards at your store. Customers hunt them down with AR. Watch your foot traffic soar. It's that simple.",
   "welcome.startHunting": "Start Hunting",
   "welcome.getStartedFree": "Get Started Free",
   "welcome.exploreRewards": "Explore Rewards",
@@ -329,24 +343,32 @@ const en = {
   "welcome.redeemH": "Redeem.",
   "welcome.threeSteps": "Three steps to free rewards",
   "welcome.explore": "Explore",
-  "welcome.exploreDesc": "Open the app and see nearby rewards on your map. Head towards the closest one!",
+  "welcome.exploreDesc":
+    "Open the app and see nearby rewards on your map. Head towards the closest one!",
   "welcome.discoverInAr": "Discover in AR",
-  "welcome.discoverDesc": "Point your camera and watch the 3D reward float in front of you. Tap to claim!",
+  "welcome.discoverDesc":
+    "Point your camera and watch the 3D reward float in front of you. Tap to claim!",
   "welcome.redeem": "Redeem",
-  "welcome.redeemDesc": "Show your QR code at the store and enjoy your reward. Share with friends!",
+  "welcome.redeemDesc":
+    "Show your QR code at the store and enjoy your reward. Share with friends!",
   "welcome.forMerchants": "For Merchants",
   "welcome.driveCustomers1": "Drive Real Customers To Your ",
   "welcome.driveCustomers2": "Doorstep",
-  "welcome.driveDesc": "Traditional ads show impressions. Souq-Snap delivers actual visitors. Create irresistible rewards that pull customers right to your location.",
+  "welcome.driveDesc":
+    "Traditional ads show impressions. Souq-Snap delivers actual visitors. Create irresistible rewards that pull customers right to your location.",
   "welcome.fiveMinSetup": "5-Minute Setup",
-  "welcome.fiveMinDesc": "Create your first treasure in minutes. No technical skills needed.",
+  "welcome.fiveMinDesc":
+    "Create your first treasure in minutes. No technical skills needed.",
   "welcome.realTimeAnalytics": "Real-Time Analytics",
-  "welcome.analyticsDesc": "Track claims, redemptions, and ROI from your dashboard.",
+  "welcome.analyticsDesc":
+    "Track claims, redemptions, and ROI from your dashboard.",
   "welcome.easyVerification": "Easy Verification",
-  "welcome.verificationDesc": "Scan customer QR codes to verify and track redemptions.",
+  "welcome.verificationDesc":
+    "Scan customer QR codes to verify and track redemptions.",
   "welcome.whySouqSnap": "Why Souq-Snap?",
   "welcome.gamified": "Gamified",
-  "welcome.gamifiedDesc": "Pokémon GO-style treasure hunting keeps customers engaged",
+  "welcome.gamifiedDesc":
+    "Pokémon GO-style treasure hunting keeps customers engaged",
   "welcome.locationBased": "Location-Based",
   "welcome.locationDesc": "Rewards only claimable at your physical location",
   "welcome.saudiFirst": "Saudi-First",
@@ -354,7 +376,8 @@ const en = {
   "welcome.noAppDownload": "No App Download",
   "welcome.noAppDesc": "Works instantly in any mobile browser",
   "welcome.readyToStart": "Ready to Start?",
-  "welcome.readyDesc": "Join the future of location-based marketing in Saudi Arabia. Start hunting rewards or create your first treasure today.",
+  "welcome.readyDesc":
+    "Join the future of location-based marketing in Saudi Arabia. Start hunting rewards or create your first treasure today.",
   "welcome.claimRadius": "Claim Radius",
   "welcome.liveCamera": "Live Camera",
   "welcome.easyRedeem": "Easy Redeem",
@@ -374,17 +397,21 @@ const en = {
   "verify.invalidLink": "Invalid verification link",
   "verify.emailSent": "Verification Email Sent",
   "verify.sentLinkTo": "We've sent a verification link to:",
-  "verify.clickLink": "Click the link in the email to activate your merchant account.",
+  "verify.clickLink":
+    "Click the link in the email to activate your merchant account.",
   "verify.checkYourEmail": "Check Your Email",
 
   // Password Reset
   "reset.checkEmail": "Check Your Email",
-  "reset.checkEmailDesc": "If an account exists with this email, you will receive a password reset link shortly.",
+  "reset.checkEmailDesc":
+    "If an account exists with this email, you will receive a password reset link shortly.",
   "reset.success": "Password Reset Successful",
-  "reset.successDesc": "Your password has been reset. You can now login with your new password.",
+  "reset.successDesc":
+    "Your password has been reset. You can now login with your new password.",
   "reset.failedToSend": "Failed to send reset email. Please try again.",
   "reset.invalidLink": "Invalid Reset Link",
-  "reset.invalidLinkDesc": "This password reset link is invalid. Please request a new reset link.",
+  "reset.invalidLinkDesc":
+    "This password reset link is invalid. Please request a new reset link.",
   "reset.requestNewLink": "Request New Link",
 
   // Toast Messages - Success
@@ -392,9 +419,11 @@ const en = {
   "toast.scannerLinkDesc": "You can now share this link with your staff.",
   "toast.linkCopied": "Link copied!",
   "toast.dropCreated": "Treasure Created!",
-  "toast.dropCreatedDesc": "Shareable link copied to clipboard. Share it on social media!",
+  "toast.dropCreatedDesc":
+    "Shareable link copied to clipboard. Share it on social media!",
   "toast.dropUpdated": "Treasure Updated!",
-  "toast.dropUpdatedDesc": "Your reward treasure has been updated successfully.",
+  "toast.dropUpdatedDesc":
+    "Your reward treasure has been updated successfully.",
   "toast.dropDeleted": "Treasure Deleted",
   "toast.dropDeletedDesc": "The treasure has been removed successfully.",
   "toast.accountCreated": "Account created!",
@@ -466,8 +495,6 @@ const en = {
   "merchant.form.location.arDesc":
     "Place the reward in augmented reality; saves that spot as the drop.",
   "merchant.form.location.advancedToggle": "Fine-tune coordinates",
-  "merchant.form.location.mapHint":
-    "Drag the map pin or use the options above; radius ring updates below.",
   "merchant.form.location.or": "OR",
   "merchant.form.datetime.saudiIntent":
     "Schedule is intended for Saudi Arabia (AST, UTC+3).",
@@ -476,13 +503,13 @@ const en = {
   "merchant.form.schedule.clearStart": "Clear start",
   "merchant.form.schedule.clearEnd": "Clear end",
   "merchant.form.logo.remove": "Remove logo",
-  "merchant.form.logo.uploadHint": "Upload an image file (no URL paste).",
+  "merchant.form.logo.uploadHint":
+    "Upload an image in .jpg or .jpeg or .png format.",
   "merchant.form.terms.label": "Terms and conditions (optional)",
   "merchant.form.terms.placeholder":
     "Shown to users when they view or redeem the voucher…",
   "merchant.form.validation.toastTitle": "Check highlighted fields",
-  "merchant.form.validation.toastDesc":
-    "Fix the errors below and try again.",
+  "merchant.form.validation.toastDesc": "Fix the errors below and try again.",
   "merchant.sheet.deleteDrop": "Delete drop",
   "merchant.sheet.deleteConfirm":
     "Delete this drop permanently? This cannot be undone.",
@@ -507,11 +534,13 @@ const en = {
   // Merchant Store
   "store.activeRewards": "Active Rewards",
   "store.noActiveDrops": "No Active Rewards",
-  "store.noActiveDropsDesc": "This merchant doesn't have any active rewards at the moment. Check back soon!",
+  "store.noActiveDropsDesc":
+    "This merchant doesn't have any active rewards at the moment. Check back soon!",
   "store.huntReward": "Hunt This Reward",
   "store.viewDetails": "View Details",
   "store.notFound": "Store Not Found",
-  "store.notFoundDesc": "This merchant store doesn't exist or is no longer available.",
+  "store.notFoundDesc":
+    "This merchant store doesn't exist or is no longer available.",
   "store.exploreAll": "Explore All Rewards",
   "store.poweredBy": "Powered by Souq-Snap",
   "store.availableRewards": "available rewards",

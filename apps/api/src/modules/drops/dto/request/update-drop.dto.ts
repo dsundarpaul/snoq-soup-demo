@@ -71,7 +71,7 @@ export class UpdateDropDto {
   @IsNumber()
   @IsOptional()
   @Min(5)
-  @Max(1000)
+  @Max(2000)
   radius?: number;
 
   @ApiProperty({

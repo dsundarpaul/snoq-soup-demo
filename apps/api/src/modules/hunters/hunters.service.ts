@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Types } from "mongoose";
+import { DropsService } from "../drops/drops.service";
+import { ActiveDropsResponseDto } from "../drops/dto/response/active-drops-response.dto";
 import { DatabaseService } from "../../database/database.service";
 import { Hunter } from "../../database/schemas/hunter.schema";
 import { UpdateProfileDto } from "./dto/request/update-profile.dto";
@@ -37,7 +39,14 @@ interface VoucherQuery {
 
 @Injectable()
 export class HuntersService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly dropsService: DropsService
+  ) {}
+
+  async getActiveDropsForHunt(hunterId: string): Promise<ActiveDropsResponseDto> {
+    return this.dropsService.findAllActiveExcludingHunterClaims(hunterId);
+  }
 
   async findOrCreateByDevice(deviceId: string): Promise<HunterResponseDto> {
     let hunter = await this.database.hunters.findOne({

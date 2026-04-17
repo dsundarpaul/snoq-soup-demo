@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch, throwIfResNotOk } from "@/lib/api-client";
+import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import { mapActiveDropsPayload } from "@/lib/nest-mappers";
 
 export const dropQueryKeys = {
   all: ["active-drops"] as const,
   active: () => ["active-drops"] as const,
+  activeForHunt: () => ["active-drops", "hunt"] as const,
   activeNear: (lat: number, lng: number, maxDistanceMeters: number) =>
     ["active-drops", "near", lat, lng, maxDistanceMeters] as const,
 };
@@ -25,6 +26,27 @@ export function useActiveDropsQuery(options?: { enabled?: boolean }) {
       return mapActiveDropsPayload(json);
     },
     enabled: options?.enabled !== false,
+  });
+}
+
+export function useHomeActiveDropsQuery(hunterAuthenticated: boolean) {
+  return useQuery({
+    queryKey: hunterAuthenticated
+      ? dropQueryKeys.activeForHunt()
+      : dropQueryKeys.active(),
+    queryFn: async () => {
+      const path = hunterAuthenticated
+        ? "/api/v1/hunters/me/active-drops"
+        : "/api/v1/drops/active";
+      const res = await apiFetchMaybeRetry("GET", path, {
+        auth: hunterAuthenticated ? "hunter" : undefined,
+      });
+      await throwIfResNotOk(res, path, hunterAuthenticated ? "hunter" : undefined);
+      const json = (await res.json()) as {
+        drops?: Record<string, unknown>[];
+      };
+      return mapActiveDropsPayload(json);
+    },
   });
 }
 

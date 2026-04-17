@@ -22,7 +22,7 @@ const ar = {
   "home.subtitle": "اكتشف المكافآت القريبة منك",
   "home.myRewards": "مكافآتي",
   "home.readyToClaim": "جاهز للاقتناص!",
-  "home.nearbyDrops": "كنوز قريبة",
+  "home.browseActiveDrops": "جميع الصيد النشط",
   "home.alreadyClaimed": "تم الاقتناص",
   "home.activeDropsSection": "صيد نشط",
   "home.startingSoon": "يبدأ قريباً",
@@ -36,6 +36,10 @@ const ar = {
   "home.hunt": "ابدأ",
   "home.directions": "الاتجاهات",
   "home.dropDetails": "تفاصيل الكنز",
+  "home.dropFacts": "نظرة سريعة",
+  "home.captureZone": "نطاق الالتقاط",
+  "home.yourDistance": "بعدك",
+  "home.aboutDrop": "عن هذا الصيد",
   "home.captureLimit": "الأماكن المتبقية",
   "home.availability": "الجدول الزمني",
   "home.view": "عرض",
@@ -86,7 +90,8 @@ const ar = {
   "auth.enterNewPassword": "أدخل كلمة المرور الجديدة",
   "auth.confirmNewPassword": "تأكيد كلمة المرور الجديدة",
   "auth.enterYourNewPassword": "أدخل كلمة المرور الجديدة أدناه",
-  "auth.resetLinkDesc": "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور",
+  "auth.resetLinkDesc":
+    "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور",
   "auth.needVerification": "تحتاج بريد تحقق جديد؟ أدخل بريدك أدناه:",
   "auth.alreadyHaveAccount": "لديك حساب بالفعل؟",
   "auth.dontHaveAccount": "ليس لديك حساب؟",
@@ -192,7 +197,8 @@ const ar = {
   "voucher.voucherId": "رقم القسيمة",
   "voucher.loading": "جاري تحميل القسيمة...",
   "voucher.notFound": "القسيمة غير موجودة",
-  "voucher.notFoundDesc": "هذا الرابط السحري غير صالح أو منتهي الصلاحية. قد تكون القسيمة محذوفة.",
+  "voucher.notFoundDesc":
+    "هذا الرابط السحري غير صالح أو منتهي الصلاحية. قد تكون القسيمة محذوفة.",
   "voucher.yourRewardAwaits": "مكافأتك بانتظارك",
   "voucher.startYourHunt": "ابدأ رحلة الصيد",
   "voucher.partnerCode": "كود الشريك",
@@ -215,23 +221,26 @@ const ar = {
   "scanner.alreadyUsed": "هذه القسيمة مستخدمة مسبقاً",
   "scanner.invalid": "غير صالح",
   "scanner.howToScan": "طريقة المسح:",
-  "scanner.step1": "اضغط \"تشغيل الماسح\" لتفعيل الكاميرا",
+  "scanner.step1": 'اضغط "تشغيل الماسح" لتفعيل الكاميرا',
   "scanner.step2": "اطلب من العميل إظهار رمز QR",
   "scanner.step3": "وجّه الكاميرا نحو الرمز حتى يتم الكشف",
   "scanner.step4": "تأكد من رسالة النجاح قبل تقديم المكافأة",
   "scanner.invalidLink": "رابط ماسح غير صالح",
-  "scanner.invalidLinkDesc": "هذا الرابط لم يعد صالحاً. اطلب رابطاً جديداً من المدير.",
+  "scanner.invalidLinkDesc":
+    "هذا الرابط لم يعد صالحاً. اطلب رابطاً جديداً من المدير.",
   "scanner.verifyingLink": "جاري التحقق من رابط الماسح...",
   "scanner.tapToStart": "اضغط أدناه لبدء المسح",
   "scanner.clickToStart": "اضغط الزر أدناه لبدء المسح",
   "scanner.cameraViewfinder": "عدسة الكاميرا",
   "scanner.scanCustomerQr": "مسح رمز QR للعميل",
   "scanner.tryAgain": "حاول مرة أخرى",
-  "scanner.cameraDenied": "تم رفض الوصول للكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح وإعادة تحميل الصفحة.",
+  "scanner.cameraDenied":
+    "تم رفض الوصول للكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح وإعادة تحميل الصفحة.",
   "scanner.noCamera": "لم يتم العثور على كاميرا في هذا الجهاز.",
   "scanner.cameraInUse": "الكاميرا مستخدمة من تطبيق آخر.",
   "scanner.cameraError": "خطأ في الكاميرا",
-  "scanner.cameraPermissionDenied": "تم رفض إذن الكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح.",
+  "scanner.cameraPermissionDenied":
+    "تم رفض إذن الكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح.",
   "scanner.scannerError": "خطأ في الماسح",
   "scanner.couldNotStartCamera": "تعذر تشغيل الكاميرا",
   "scanner.unknownError": "خطأ غير معروف",
@@ -317,7 +326,8 @@ const ar = {
   // Welcome Page
   "welcome.heroTitle1": "حوّل زوار المتجر إلى ",
   "welcome.heroTitle2": "صائدي كنوز",
-  "welcome.heroDesc": "ضع مكافآت افتراضية في متجرك. العملاء يصطادونها بالواقع المعزز. شاهد زوارك يتضاعفون. بكل بساطة.",
+  "welcome.heroDesc":
+    "ضع مكافآت افتراضية في متجرك. العملاء يصطادونها بالواقع المعزز. شاهد زوارك يتضاعفون. بكل بساطة.",
   "welcome.startHunting": "ابدأ الصيد",
   "welcome.getStartedFree": "ابدأ مجاناً",
   "welcome.exploreRewards": "استكشف المكافآت",
@@ -328,15 +338,19 @@ const ar = {
   "welcome.redeemH": "استرد.",
   "welcome.threeSteps": "ثلاث خطوات لمكافآت مجانية",
   "welcome.explore": "استكشف",
-  "welcome.exploreDesc": "افتح التطبيق وشاهد المكافآت القريبة على الخريطة. توجه نحو الأقرب!",
+  "welcome.exploreDesc":
+    "افتح التطبيق وشاهد المكافآت القريبة على الخريطة. توجه نحو الأقرب!",
   "welcome.discoverInAr": "اكتشف بالواقع المعزز",
-  "welcome.discoverDesc": "وجّه الكاميرا وشاهد المكافأة ثلاثية الأبعاد أمامك. اضغط للاقتناص!",
+  "welcome.discoverDesc":
+    "وجّه الكاميرا وشاهد المكافأة ثلاثية الأبعاد أمامك. اضغط للاقتناص!",
   "welcome.redeem": "استرد",
-  "welcome.redeemDesc": "أظهر رمز QR في المتجر واسترد مكافأتك. شاركها مع أصدقائك!",
+  "welcome.redeemDesc":
+    "أظهر رمز QR في المتجر واسترد مكافأتك. شاركها مع أصدقائك!",
   "welcome.forMerchants": "للتجار",
   "welcome.driveCustomers1": "اجذب عملاء حقيقيين إلى ",
   "welcome.driveCustomers2": "متجرك",
-  "welcome.driveDesc": "الإعلانات التقليدية تعرض مشاهدات. سوق سناب يجلب زوار فعليين. أنشئ مكافآت لا تُقاوم تجذب العملاء إلى موقعك.",
+  "welcome.driveDesc":
+    "الإعلانات التقليدية تعرض مشاهدات. سوق سناب يجلب زوار فعليين. أنشئ مكافآت لا تُقاوم تجذب العملاء إلى موقعك.",
   "welcome.fiveMinSetup": "إعداد في 5 دقائق",
   "welcome.fiveMinDesc": "أنشئ أول كنز في دقائق. لا تحتاج خبرة تقنية.",
   "welcome.realTimeAnalytics": "تحليلات فورية",
@@ -345,7 +359,8 @@ const ar = {
   "welcome.verificationDesc": "امسح رمز QR للتحقق وتتبع الاستخدام.",
   "welcome.whySouqSnap": "لماذا سوق سناب؟",
   "welcome.gamified": "تجربة ممتعة",
-  "welcome.gamifiedDesc": "صيد الكنوز على طريقة بوكيمون جو يبقي العملاء منجذبين",
+  "welcome.gamifiedDesc":
+    "صيد الكنوز على طريقة بوكيمون جو يبقي العملاء منجذبين",
   "welcome.locationBased": "مبني على الموقع",
   "welcome.locationDesc": "المكافآت تُقتنص فقط في موقعك الفعلي",
   "welcome.saudiFirst": "صُنع للسعودية",
@@ -353,7 +368,8 @@ const ar = {
   "welcome.noAppDownload": "بدون تحميل تطبيق",
   "welcome.noAppDesc": "يعمل فوراً في أي متصفح",
   "welcome.readyToStart": "مستعد للبدء؟",
-  "welcome.readyDesc": "انضم لمستقبل التسويق المبني على الموقع في السعودية. ابدأ صيد المكافآت أو أنشئ أول كنز اليوم.",
+  "welcome.readyDesc":
+    "انضم لمستقبل التسويق المبني على الموقع في السعودية. ابدأ صيد المكافآت أو أنشئ أول كنز اليوم.",
   "welcome.claimRadius": "نطاق الاقتناص",
   "welcome.liveCamera": "كاميرا مباشرة",
   "welcome.easyRedeem": "استرداد سهل",
@@ -378,12 +394,15 @@ const ar = {
 
   // Password Reset
   "reset.checkEmail": "تحقق من بريدك",
-  "reset.checkEmailDesc": "إذا كان هناك حساب بهذا البريد، ستتلقى رابط إعادة تعيين قريباً.",
+  "reset.checkEmailDesc":
+    "إذا كان هناك حساب بهذا البريد، ستتلقى رابط إعادة تعيين قريباً.",
   "reset.success": "تم إعادة تعيين كلمة المرور",
-  "reset.successDesc": "تم إعادة تعيين كلمة المرور. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
+  "reset.successDesc":
+    "تم إعادة تعيين كلمة المرور. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
   "reset.failedToSend": "فشل إرسال بريد إعادة التعيين. يرجى المحاولة مرة أخرى.",
   "reset.invalidLink": "رابط إعادة تعيين غير صالح",
-  "reset.invalidLinkDesc": "رابط إعادة تعيين كلمة المرور غير صالح. يرجى طلب رابط جديد.",
+  "reset.invalidLinkDesc":
+    "رابط إعادة تعيين كلمة المرور غير صالح. يرجى طلب رابط جديد.",
   "reset.requestNewLink": "طلب رابط جديد",
 
   // Toast Messages - Success
@@ -435,15 +454,15 @@ const ar = {
   "toast.fillAllFields": "يرجى ملء جميع الحقول المطلوبة",
   "toast.failedToSendEmail": "فشل إرسال البريد",
 
-  "merchant.form.tooltip.name": "عنوان قصير يظهر على البطاقات وفي صيد الواقع المعزز.",
+  "merchant.form.tooltip.name":
+    "عنوان قصير يظهر على البطاقات وفي صيد الواقع المعزز.",
   "merchant.form.tooltip.description":
     "ما يراه الصيادون قبل الاقتناص؛ اجعله واضحاً ومثيراً.",
   "merchant.form.tooltip.reward":
     "نص العرض (خصم أو هدية مجانية)؛ بحد أقصى ٢٠ حرفاً.",
   "merchant.form.tooltip.logo":
     "صورة اختيارية على بطاقة الكنز والقسيمة؛ ارفع شعاراً مربعاً.",
-  "merchant.form.tooltip.radius":
-    "مدى القرب بالمتر (٥–١٠٠٠) المطلوب للاقتناص.",
+  "merchant.form.tooltip.radius": "مدى القرب بالمتر (٥–١٠٠٠) المطلوب للاقتناص.",
   "merchant.form.tooltip.redemption": "قواعد صلاحية القسيمة بعد الاقتناص.",
   "merchant.form.tooltip.availability":
     "غير محدود أو حد أقصى لعدد من يمكنهم الاقتناص.",
@@ -462,23 +481,23 @@ const ar = {
   "merchant.form.location.arDesc":
     "ضع المكافأة في الواقع المعزز؛ يُحفظ ذلك كموقع الكنز.",
   "merchant.form.location.advancedToggle": "ضبط الإحداثيات يدوياً",
-  "merchant.form.location.mapHint":
-    "اسحب الدبوس على الخريطة أو استخدم الخيارات أعلاه.",
   "merchant.form.location.or": "أو",
-  "merchant.form.datetime.saudiIntent": "الجدول يُقصد به توقيت السعودية (٣+ توقيت عالمي).",
-  "merchant.form.datetime.localInputNote": "حقول التاريخ والوقت تستخدم توقيت جهازك.",
+  "merchant.form.datetime.saudiIntent":
+    "الجدول يُقصد به توقيت السعودية (٣+ توقيت عالمي).",
+  "merchant.form.datetime.localInputNote":
+    "حقول التاريخ والوقت تستخدم توقيت جهازك.",
   "merchant.form.schedule.clearStart": "مسح البداية",
   "merchant.form.schedule.clearEnd": "مسح النهاية",
   "merchant.form.logo.remove": "إزالة الشعار",
-  "merchant.form.logo.uploadHint": "ارفع ملف صورة (بدون لصق رابط).",
+  "merchant.form.logo.uploadHint":
+    "ارفع صورة بصيغة ‎.jpg‎ أو ‎.jpeg‎ أو ‎.png‎.",
   "merchant.form.terms.label": "الشروط والأحكام (اختياري)",
   "merchant.form.terms.placeholder":
     "يُعرض للمستخدمين عند عرض القسيمة أو استبدالها…",
   "merchant.form.validation.toastTitle": "راجع الحقول المحددة",
   "merchant.form.validation.toastDesc": "صحح الأخطاء أدناه ثم أعد المحاولة.",
   "merchant.sheet.deleteDrop": "حذف الكنز",
-  "merchant.sheet.deleteConfirm":
-    "حذف هذا الكنز نهائياً؟ لا يمكن التراجع.",
+  "merchant.sheet.deleteConfirm": "حذف هذا الكنز نهائياً؟ لا يمكن التراجع.",
 
   // PWA Install
   "pwa.huntClaimReward": "اكتشف. اقتنص. استرد.",

@@ -423,9 +423,11 @@ function ARCameraView({
 
                 <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
                   <span className="bg-black/70 text-white text-xs px-2 py-1 rounded-full backdrop-blur">
-                    {distance < 1000
-                      ? `${Math.round(distance)}m`
-                      : `${(distance / 1000).toFixed(1)}km`}
+                    {isInRange
+                      ? t("status.inRange")
+                      : distance < 1000
+                        ? `${Math.round(distance)}m`
+                        : `${(distance / 1000).toFixed(1)}km`}
                   </span>
                 </div>
               </div>
@@ -575,13 +577,10 @@ function CaptureAnimationInner({ onComplete }: { onComplete: () => void }) {
 
 export default function ARGamePage() {
   const { t } = useLanguage();
-  const geo = useGeolocation();
+  const geo = useGeolocation({ watch: true, enableHighAccuracy: true });
   const locationReady =
-    !geo.loading &&
-    geo.latitude !== null &&
-    geo.longitude !== null &&
-    !geo.error;
-  const locationBlocked = !geo.loading && geo.error !== null;
+    geo.latitude !== null && geo.longitude !== null && !geo.error;
+  const locationBlocked = !geo.loading && geo.error !== null && !locationReady;
   const deviceId = useDeviceId();
   const searchParams = useSearchParams();
   const targetDropId = searchParams.get("drop");
@@ -1216,9 +1215,11 @@ export default function ARGamePage() {
                         isInRange ? "text-green-400" : "text-white"
                       }`}
                     >
-                      {distance < 1000
-                        ? `${Math.round(distance)}m ${t("ar.away")}`
-                        : `${(distance / 1000).toFixed(1)}km ${t("ar.away")}`}
+                      {isInRange
+                        ? t("status.inRange")
+                        : distance < 1000
+                          ? `${Math.round(distance)}m ${t("ar.away")}`
+                          : `${(distance / 1000).toFixed(1)}km ${t("ar.away")}`}
                     </p>
                   )}
                 </div>

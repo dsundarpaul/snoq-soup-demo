@@ -30,6 +30,7 @@ import {
   Calendar,
   Info,
   ChevronDown,
+  X,
 } from "lucide-react";
 import {
   Collapsible,
@@ -180,7 +181,7 @@ export function MerchantDropForm({
         <div className="flex items-center gap-2">
           <Label className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4" />
-            Drop Logo (Optional)
+            Drop Card (Optional)
           </Label>
           <FieldTip text={t("merchant.form.tooltip.logo")} />
         </div>
@@ -245,9 +246,6 @@ export function MerchantDropForm({
             {t("merchant.form.location.sectionTitle")}
           </h3>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {t("merchant.form.location.mapHint")}
-        </p>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 rounded-md border border-border/80 bg-muted/15 p-3 md:rounded-e-none md:border-e-0">
           <p className="text-sm font-medium text-foreground">
@@ -601,7 +599,7 @@ export function MerchantDropForm({
         />
         <p className="text-xs text-muted-foreground">
           {availabilitySelectValue === "unlimited" &&
-            "Anyone can claim this drop at any time"}
+            "No cap on the number of people to claim"}
           {availabilitySelectValue === "captureLimit" &&
             "Limited number of users can claim this drop"}
         </p>
@@ -669,25 +667,39 @@ export function MerchantDropForm({
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <DatetimePicker
-              label="Start Date/Time"
-              id="startTime"
-              value={form.watch("startTime") || ""}
-              onChange={(v) => form.setValue("startTime", v)}
-              data-testid="input-start-time"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                form.setValue("startTime", "");
-                form.clearErrors("startTime");
-              }}
-            >
-              {t("merchant.form.schedule.clearStart")}
-            </Button>
+            <Label htmlFor="startTime">Start Date/Time</Label>
+            <div className="flex gap-2 items-center">
+              <div className="min-w-0 flex-1">
+                <DatetimePicker
+                  showLabel={false}
+                  label="Start Date/Time"
+                  id="startTime"
+                  value={form.watch("startTime") || ""}
+                  onChange={(v) => form.setValue("startTime", v)}
+                  data-testid="input-start-time"
+                />
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    aria-label={t("merchant.form.schedule.clearStart")}
+                    onClick={() => {
+                      form.setValue("startTime", "");
+                      form.clearErrors("startTime");
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {t("merchant.form.schedule.clearStart")}
+                </TooltipContent>
+              </Tooltip>
+            </div>
             {err.startTime && (
               <p className="text-sm text-destructive">
                 {err.startTime.message}
@@ -695,25 +707,39 @@ export function MerchantDropForm({
             )}
           </div>
           <div className="space-y-2">
-            <DatetimePicker
-              label="End Date/Time"
-              id="endTime"
-              value={form.watch("endTime") || ""}
-              onChange={(v) => form.setValue("endTime", v)}
-              data-testid="input-end-time"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                form.setValue("endTime", "");
-                form.clearErrors("endTime");
-              }}
-            >
-              {t("merchant.form.schedule.clearEnd")}
-            </Button>
+            <Label htmlFor="endTime">End Date/Time</Label>
+            <div className="flex gap-2 items-center">
+              <div className="min-w-0 flex-1">
+                <DatetimePicker
+                  showLabel={false}
+                  label="End Date/Time"
+                  id="endTime"
+                  value={form.watch("endTime") || ""}
+                  onChange={(v) => form.setValue("endTime", v)}
+                  data-testid="input-end-time"
+                />
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    aria-label={t("merchant.form.schedule.clearEnd")}
+                    onClick={() => {
+                      form.setValue("endTime", "");
+                      form.clearErrors("endTime");
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {t("merchant.form.schedule.clearEnd")}
+                </TooltipContent>
+              </Tooltip>
+            </div>
             {err.endTime && (
               <p className="text-sm text-destructive">{err.endTime.message}</p>
             )}

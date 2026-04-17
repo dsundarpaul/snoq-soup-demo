@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
+import { DropsModule } from "../drops/drops.module";
 import { HuntersService } from "./hunters.service";
 import { HuntersController } from "./hunters.controller";
 import { Hunter, HunterSchema } from "../../database/schemas/hunter.schema";
@@ -12,6 +13,7 @@ import {
 
 @Module({
   imports: [
+    DropsModule,
     MongooseModule.forFeature([
       { name: Hunter.name, schema: HunterSchema },
       { name: Voucher.name, schema: VoucherSchema },

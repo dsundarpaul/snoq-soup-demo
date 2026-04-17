@@ -15,7 +15,7 @@ export const createDropSchema = z
     radius: z.coerce
       .number()
       .min(5, "Radius must be at least 5 meters")
-      .max(1000, "Radius must be at most 1000 meters")
+      .max(2000, "Radius must be at most 1000 meters")
       .default(15),
     rewardValue: z
       .string()
@@ -42,12 +42,7 @@ export const createDropSchema = z
     endTime: z.string().optional(),
     voucherAbsoluteExpiresAt: z.string().optional(),
     voucherTtlHoursAfterClaim: z
-      .union([
-        z.coerce.number().min(1),
-        z.literal(""),
-        z.undefined(),
-        z.null(),
-      ])
+      .union([z.coerce.number().min(1), z.literal(""), z.undefined(), z.null()])
       .optional()
       .nullable()
       .transform((v) =>

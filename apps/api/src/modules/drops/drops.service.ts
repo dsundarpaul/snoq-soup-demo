@@ -191,6 +191,8 @@ export class DropsService {
       return [
         dto.name,
         dto.rewardValue,
+        this.formatCsvInstant(dto.schedule?.start),
+        this.formatCsvInstant(dto.schedule?.end),
         dto.active ? "yes" : "no",
         dto.location?.lat ?? "",
         dto.location?.lng ?? "",
@@ -202,6 +204,8 @@ export class DropsService {
       [
         "Name",
         "Reward",
+        "Start",
+        "End",
         "Active",
         "Latitude",
         "Longitude",
@@ -382,19 +386,106 @@ export class DropsService {
     return result;
   }
 
+  async findAllActiveExcludingHunterClaims(
+    hunterId: string
+  ): Promise<ActiveDropsResponseDto> {
+    let excludeIds: Types.ObjectId[] = [];
+    try {
+      const hunterOid = new Types.ObjectId(hunterId);
+      const rawIds = await this.database.vouchers.distinct("dropId", {
+        deletedAt: null,
+        "claimedBy.hunterId": hunterOid,
+      });
+      excludeIds = rawIds
+        .filter((id) => id != null)
+        .map((id) =>
+          id instanceof Types.ObjectId ? id : new Types.ObjectId(String(id))
+        );
+    } catch {
+      excludeIds = [];
+    }
+
+    const currentTime = new Date();
+    const baseMatch: Record<string, unknown> = {
+      active: true,
+      deletedAt: null,
+      $and: [
+        {
+          $or: [
+            { "schedule.start": { $exists: false } },
+            { "schedule.start": null },
+            { "schedule.start": { $lte: currentTime } },
+          ],
+        },
+        {
+          $or: [
+            { "schedule.end": { $exists: false } },
+            { "schedule.end": null },
+            { "schedule.end": { $gte: currentTime } },
+          ],
+        },
+      ],
+    };
+    if (excludeIds.length > 0) {
+      baseMatch._id = { $nin: excludeIds };
+    }
+
+    const pipeline: PipelineStage[] = [
+      { $match: baseMatch },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "merchants",
+          localField: "merchantId",
+          foreignField: "_id",
+          as: "merchant",
+        },
+      },
+      {
+        $unwind: "$merchant",
+      },
+      {
+        $project: {
+          id: "$_id",
+          name: 1,
+          description: 1,
+          location: {
+            lat: { $arrayElemAt: ["$location.coordinates", 1] },
+            lng: { $arrayElemAt: ["$location.coordinates", 0] },
+          },
+          radius: 1,
+          rewardValue: 1,
+          logoUrl: 1,
+          termsAndConditions: 1,
+          merchantId: 1,
+          merchantName: "$merchant.name",
+          merchantLogoUrl: "$merchant.logoUrl",
+        },
+      },
+    ];
+
+    const drops = await this.database.drops.aggregate<ActiveDropDto>(pipeline);
+
+    return {
+      drops,
+      total: drops.length,
+    };
+  }
+
   async findActiveNear(
     lat: number,
     lng: number,
     maxDistanceMeters: number
   ): Promise<ActiveDropsResponseDto> {
     const currentTime = new Date();
+    const cappedMax = Math.min(300_000, Math.max(1_000, maxDistanceMeters));
 
     const pipeline: PipelineStage[] = [
       {
         $geoNear: {
           near: { type: "Point", coordinates: [lng, lat] },
           distanceField: "distance",
-          maxDistance: 1500,
+          maxDistance: cappedMax,
           spherical: true,
           query: {
             active: true,
@@ -871,6 +962,22 @@ export class DropsService {
 
   private toRad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+
+  private formatCsvInstant(value: unknown): string {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (typeof value === "string" || typeof value === "number") {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime())
+        ? String(value)
+        : parsed.toISOString();
+    }
+    return "";
   }
 
   toResponseDto(drop: Drop | DropDocument): DropResponseDto {

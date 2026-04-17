@@ -408,6 +408,17 @@ describe("SouqSnap E2E Flows", () => {
       expect(Array.isArray(response.body.unredeemed)).toBe(true);
       expect(Array.isArray(response.body.redeemed)).toBe(true);
     });
+
+    it("GET /api/v1/hunters/me/active-drops - should list active drops excluding hunter claims", async () => {
+      const response = await request(app.getHttpServer())
+        .get("/api/v1/hunters/me/active-drops")
+        .set("Authorization", `Bearer ${hunterToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty("drops");
+      expect(response.body).toHaveProperty("total");
+      expect(Array.isArray(response.body.drops)).toBe(true);
+    });
   });
 
   describe("5. Scanner Flow", () => {

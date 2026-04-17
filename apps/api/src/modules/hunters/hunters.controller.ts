@@ -17,6 +17,7 @@ import { UpdateNicknameDto } from "./dto/request/update-nickname.dto";
 import { HunterResponseDto } from "./dto/response/hunter-response.dto";
 import { HunterHistoryResponseDto } from "./dto/response/hunter-history-response.dto";
 import { LeaderboardEntryDto } from "./dto/response/leaderboard-entry.dto";
+import { ActiveDropsResponseDto } from "../drops/dto/response/active-drops-response.dto";
 
 @ApiTags("Hunters")
 @Controller()
@@ -46,6 +47,21 @@ export class HuntersController {
     @CurrentUser("userId") hunterId: string,
   ): Promise<HunterHistoryResponseDto> {
     return this.huntersService.getHistory(hunterId);
+  }
+
+  @Get("hunters/me/active-drops")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("hunter")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "List active drops excluding drops this hunter has already claimed",
+  })
+  @ApiResponse({ status: 200, type: ActiveDropsResponseDto })
+  async getActiveDropsForHunt(
+    @CurrentUser("userId") hunterId: string,
+  ): Promise<ActiveDropsResponseDto> {
+    return this.huntersService.getActiveDropsForHunt(hunterId);
   }
 
   @Patch("hunters/me/profile")

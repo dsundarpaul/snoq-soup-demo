@@ -88,13 +88,13 @@ export function getInRangeHuntableDrops(
   );
 }
 
-export function getNearbyHuntableDrops(
-  dropsWithMeta: DropWithDistanceClaimed[]
+export function getBrowseActiveDrops(
+  dropsWithMeta: DropWithDistanceClaimed[],
+  inRangeDrops: DropWithDistanceClaimed[]
 ): DropWithDistanceClaimed[] {
-  const huntable = dropsWithMeta.filter(
-    (d) => !d.claimed && !isSoldOutDrop(d) && isDropActive(d)
-  );
-  return huntable.filter(
-    (d) => d.distance !== null && d.distance > d.radius
+  const inRangeIds = new Set(inRangeDrops.map((d) => d.id));
+  return dropsWithMeta.filter(
+    (d) =>
+      !inRangeIds.has(d.id) && !isSoldOutDrop(d) && isDropActive(d)
   );
 }

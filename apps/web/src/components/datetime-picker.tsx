@@ -171,8 +171,8 @@ export function DatetimePicker({
       </PopoverTrigger>
       <PopoverContent
         className={cn(
-          "w-auto overflow-hidden rounded-xl border-border/80 p-0 shadow-lg",
-          popoverWiden && "min-w-[19rem] sm:min-w-[21rem]"
+          "w-auto overflow-hidden rounded-xl border-border/80 p-0 shadow-lg"
+          // popoverWiden && "min-w-[19rem] sm:min-w-[21rem]"
         )}
         align="start"
       >
@@ -200,7 +200,7 @@ export function DatetimePicker({
           />
         </div>
       </PopoverContent>
-      </Popover>
+    </Popover>
   );
 
   if (!showLabel) {

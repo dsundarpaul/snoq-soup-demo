@@ -109,7 +109,7 @@ export class Drop {
   @IsNumber()
   @Min(5)
   @Max(1000)
-  @Prop({ type: Number, required: true, min: 5, max: 1000, default: 15 })
+  @Prop({ type: Number, required: true, min: 5, max: 2000, default: 15 })
   radius!: number;
 
   @ApiProperty({ example: "50% Discount", description: "Reward value" })

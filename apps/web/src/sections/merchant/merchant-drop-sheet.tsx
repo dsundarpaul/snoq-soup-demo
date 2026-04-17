@@ -29,7 +29,10 @@ import { publicUrls } from "@/lib/app-config";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
-import { mapNestDropToLegacy, createDropFormToNestDto } from "@/lib/nest-mappers";
+import {
+  mapNestDropToLegacy,
+  createDropFormToNestDto,
+} from "@/lib/nest-mappers";
 import { useToast } from "@/hooks/use-toast";
 import { validateImageFile } from "@/lib/upload-validation";
 import type { Drop } from "@shared/schema";

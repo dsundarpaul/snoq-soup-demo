@@ -66,7 +66,7 @@ export class CreateDropDto {
   @IsNumber()
   @IsOptional()
   @Min(5)
-  @Max(1000)
+  @Max(2000)
   radius?: number;
 
   @ApiProperty({ example: "50% Discount", description: "Reward value" })

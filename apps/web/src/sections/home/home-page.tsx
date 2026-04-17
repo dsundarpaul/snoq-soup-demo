@@ -12,446 +12,51 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { VoucherDisplay } from "@/components/voucher-display";
 import {
-  MapPin,
   Navigation,
-  Trophy,
   Loader2,
   Clock,
   Gift,
-  ArrowRight,
   Target,
   Sparkles,
-  ExternalLink,
   Ticket,
   QrCode,
   Timer,
-  AlertTriangle,
-  Check,
   History,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { HomeHeader } from "@/sections/home/home-header";
-import type { Drop, Voucher } from "@shared/schema";
+import { DropCard } from "@/sections/home/drop-card";
 import {
-  useActiveDropsQuery,
-  useActiveDropsNearQuery,
-} from "@/hooks/api/drop/use-drop";
+  type StoredVoucher,
+  isVoucherActive,
+  formatRedemptionCountdown,
+  voucherRedemptionTimerRowClass,
+} from "@/sections/home/home-voucher-helpers";
+import { cn } from "@/lib/utils";
+import { useHomeActiveDropsQuery } from "@/hooks/api/drop/use-drop";
+import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
 import {
   useHunterVouchersQuery,
   useTreasureHunterProfileQuery,
   type HunterVoucherRow,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import { clearSessionsExcept } from "@/lib/auth-session";
-import type { TranslationKey } from "@/locales/en";
 import {
-  type DropWithCount,
-  getCaptureRemaining,
   isSoldOutDrop,
   isScheduledNotYetLive,
-  isDropActive,
   buildDropsWithDistanceClaimed,
   getInRangeHuntableDrops,
-  getNearbyHuntableDrops,
+  getBrowseActiveDrops,
 } from "@/lib/hunt-drop-filters";
-
-type TFunc = (
-  key: TranslationKey,
-  params?: Record<string, string | number>
-) => string;
-
-function formatDistance(meters: number): string {
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`;
-  }
-  return `${(meters / 1000).toFixed(1)}km`;
-}
-
-function DropCard({
-  drop,
-  distance,
-  claimed,
-  hunterSignedIn,
-}: {
-  drop: DropWithCount;
-  distance: number | null;
-  claimed: boolean;
-  hunterSignedIn: boolean;
-}) {
-  const { t } = useLanguage();
-  const isInRange = distance !== null && distance <= drop.radius;
-  const isActive = isDropActive(drop);
-  const remaining = getCaptureRemaining(drop);
-  const isSoldOut = remaining !== null && remaining <= 0;
-  const timeWindowInfo = getTimeWindowInfo(drop, t);
-
-  const handleGetDirections = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${drop.latitude},${drop.longitude}`;
-    window.open(url, "_blank");
-  };
-
-  return (
-    <Card
-      className={`p-4 hover-elevate transition-all ${
-        claimed ? "opacity-60" : ""
-      } ${isInRange ? "border-primary border-2" : ""}`}
-    >
-      <div className="flex items-start gap-4">
-        {drop.logoUrl ? (
-          <img
-            src={drop.logoUrl}
-            alt="Merchant logo"
-            className="w-14 h-14 rounded-lg object-cover bg-white"
-            data-testid={`img-drop-logo-${drop.id}`}
-          />
-        ) : (
-          <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Trophy className="w-7 h-7 text-primary" />
-          </div>
-        )}
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-foreground truncate">
-              {drop.name}
-            </h3>
-            {isInRange && !claimed && (
-              <Badge className="bg-primary text-primary-foreground shrink-0">
-                <Sparkles className="w-3 h-3 mr-1" />
-                {t("status.inRange")}
-              </Badge>
-            )}
-          </div>
-
-          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-            {drop.description}
-          </p>
-
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
-            <Badge
-              variant="secondary"
-              className="bg-teal/10 text-teal border-teal/20"
-            >
-              <Gift className="w-3 h-3 mr-1" />
-              {drop.rewardValue}
-            </Badge>
-
-            {distance !== null && (
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <Navigation className="w-3 h-3" />
-                {formatDistance(distance)}
-              </span>
-            )}
-
-            {drop.redemptionType === "timer" && drop.redemptionMinutes && (
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {drop.redemptionMinutes >= 60
-                  ? `${drop.redemptionMinutes / 60}hr`
-                  : `${drop.redemptionMinutes}min`}{" "}
-                {t("voucher.toRedeem")}
-              </span>
-            )}
-
-            {remaining !== null && (
-              <span
-                className={`text-sm flex items-center gap-1 ${
-                  isSoldOut ? "text-destructive" : "text-muted-foreground"
-                }`}
-              >
-                <Target className="w-3 h-3" />
-                {isSoldOut
-                  ? t("status.soldOut")
-                  : `${remaining} ${t("voucher.left")}`}
-              </span>
-            )}
-
-            {timeWindowInfo && (
-              <span
-                className={`text-sm flex items-center gap-1 ${
-                  timeWindowInfo.isExpired
-                    ? "text-destructive"
-                    : timeWindowInfo.notYetActive
-                    ? "text-amber-500"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <Clock className="w-3 h-3" />
-                {timeWindowInfo.status}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="shrink-0 flex flex-col gap-2">
-          {claimed ? (
-            <Badge variant="outline" className="text-muted-foreground">
-              {t("status.claimed")}
-            </Badge>
-          ) : isSoldOut ? (
-            <Badge
-              variant="outline"
-              className="text-destructive border-destructive"
-            >
-              {t("status.soldOut")}
-            </Badge>
-          ) : timeWindowInfo?.isExpired ? (
-            <Badge
-              variant="outline"
-              className="text-destructive border-destructive"
-            >
-              {t("status.expired")}
-            </Badge>
-          ) : timeWindowInfo?.notYetActive ? (
-            <Badge
-              variant="outline"
-              className="text-amber-500 border-amber-500"
-            >
-              {t("status.comingSoon")}
-            </Badge>
-          ) : (
-            <Link
-              href={
-                hunterSignedIn
-                  ? `/hunt?drop=${drop.id}`
-                  : `/login?next=${encodeURIComponent(`/hunt?drop=${drop.id}`)}`
-              }
-              onClick={
-                hunterSignedIn ? undefined : () => clearSessionsExcept("hunter")
-              }
-            >
-              <Button
-                size="sm"
-                className="gap-1 w-full"
-                disabled={!isActive}
-                data-testid={`button-hunt-${drop.id}`}
-              >
-                {t("home.hunt")}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1"
-            onClick={handleGetDirections}
-            data-testid={`button-directions-${drop.id}`}
-          >
-            <Navigation className="w-3 h-3" />
-            {t("home.directions")}
-          </Button>
-        </div>
-      </div>
-
-      <Accordion type="single" collapsible className="w-full mt-3 border-t pt-1">
-        <AccordionItem value="details" className="border-0">
-          <AccordionTrigger
-            className="py-2 text-sm text-muted-foreground hover:no-underline"
-            data-testid={`accordion-drop-details-${drop.id}`}
-          >
-            {t("home.dropDetails")}
-          </AccordionTrigger>
-          <AccordionContent className="text-sm space-y-3 text-muted-foreground pb-2">
-            <p className="text-foreground whitespace-pre-wrap">{drop.description}</p>
-            {drop.termsAndConditions ? (
-              <div className="space-y-1">
-                <p className="font-medium text-foreground">
-                  {t("voucher.termsTitle")}
-                </p>
-                <p className="whitespace-pre-wrap">{drop.termsAndConditions}</p>
-              </div>
-            ) : null}
-            {remaining !== null ? (
-              <p>
-                <span className="font-medium text-foreground">
-                  {t("home.captureLimit")}:{" "}
-                </span>
-                {isSoldOut
-                  ? t("status.soldOut")
-                  : `${remaining} ${t("voucher.left")}`}
-              </p>
-            ) : null}
-            {drop.redemptionType === "timer" && drop.redemptionMinutes ? (
-              <p>
-                <span className="font-medium text-foreground">
-                  {t("voucher.timeRemaining")}:{" "}
-                </span>
-                {drop.redemptionMinutes >= 60
-                  ? `${drop.redemptionMinutes / 60}hr`
-                  : `${drop.redemptionMinutes}min`}{" "}
-                {t("voucher.toRedeem")}
-              </p>
-            ) : null}
-            {drop.redemptionType === "window" && drop.redemptionDeadline ? (
-              <p>
-                <span className="font-medium text-foreground">
-                  {t("voucher.deadline")}:{" "}
-                </span>
-                {new Date(drop.redemptionDeadline).toLocaleString()}
-              </p>
-            ) : null}
-            {timeWindowInfo ? (
-              <p>
-                <span className="font-medium text-foreground">
-                  {t("home.availability")}:{" "}
-                </span>
-                {timeWindowInfo.status}
-              </p>
-            ) : null}
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </Card>
-  );
-}
-
-function getTimeWindowInfo(
-  drop: Drop,
-  t: TFunc
-): { status: string; isExpired: boolean; notYetActive: boolean } | null {
-  if (drop.availabilityType !== "timeWindow") return null;
-
-  const now = new Date();
-
-  if (drop.startTime && new Date(drop.startTime) > now) {
-    const startDate = new Date(drop.startTime);
-    return {
-      status: `${t(
-        "voucher.starts"
-      )} ${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      isExpired: false,
-      notYetActive: true,
-    };
-  }
-
-  if (drop.endTime) {
-    const endDate = new Date(drop.endTime);
-    if (endDate < now) {
-      return {
-        status: t("status.expired"),
-        isExpired: true,
-        notYetActive: false,
-      };
-    }
-    return {
-      status: `${t(
-        "voucher.ends"
-      )} ${endDate.toLocaleDateString()} ${endDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      isExpired: false,
-      notYetActive: false,
-    };
-  }
-
-  return null;
-}
-
-function isVoucherActive(
-  voucher: Voucher,
-  drop: Drop,
-  t: TFunc
-): { active: boolean; status: string; timeRemaining: number | null } {
-  if (voucher.redeemed) {
-    return { active: false, status: t("status.redeemed"), timeRemaining: null };
-  }
-
-  const now = Date.now();
-
-  if (voucher.expiresAt) {
-    const expiryMs = new Date(voucher.expiresAt).getTime();
-    const remaining = Math.floor((expiryMs - now) / 1000);
-    if (remaining <= 0) {
-      return { active: false, status: t("status.expired"), timeRemaining: 0 };
-    }
-    return {
-      active: true,
-      status: t("status.active"),
-      timeRemaining: remaining,
-    };
-  }
-
-  if (
-    drop.redemptionType === "timer" &&
-    drop.redemptionMinutes &&
-    voucher.claimedAt
-  ) {
-    const claimedTime = new Date(voucher.claimedAt).getTime();
-    const expiryTime = claimedTime + drop.redemptionMinutes * 60 * 1000;
-    const remaining = Math.floor((expiryTime - now) / 1000);
-    if (remaining <= 0) {
-      return { active: false, status: t("status.expired"), timeRemaining: 0 };
-    }
-    return {
-      active: true,
-      status: t("status.active"),
-      timeRemaining: remaining,
-    };
-  }
-
-  if (drop.redemptionType === "window" && drop.redemptionDeadline) {
-    const deadline = new Date(drop.redemptionDeadline).getTime();
-    const remaining = Math.floor((deadline - now) / 1000);
-    if (remaining <= 0) {
-      return { active: false, status: t("status.expired"), timeRemaining: 0 };
-    }
-    return {
-      active: true,
-      status: t("status.active"),
-      timeRemaining: remaining,
-    };
-  }
-
-  return { active: true, status: t("status.active"), timeRemaining: null };
-}
-
-function formatTimeShort(seconds: number, t: TFunc): string {
-  if (seconds <= 0) return t("status.expired");
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h ${t("voucher.left")}`;
-  if (hours > 0) return `${hours}h ${minutes}m ${t("voucher.left")}`;
-  return `${minutes}m ${t("voucher.left")}`;
-}
-
-interface StoredVoucher {
-  voucher: Voucher;
-  drop: Drop;
-  claimedAt: string;
-  businessName: string;
-  merchantStoreLocation: {
-    lat: number;
-    lng: number;
-    address?: string;
-    city?: string;
-    state?: string;
-    pincode?: string;
-    landmark?: string;
-    howToReach?: string;
-  } | null;
-  merchantBusinessPhone: string | null;
-  merchantBusinessHours: string | null;
-}
 
 const EMPTY_VOUCHER_ROWS: HunterVoucherRow[] = [];
 
 export default function HomePage() {
   const { t } = useLanguage();
   const geo = useGeolocation();
+  const hasHunterCreds = useHasRoleCredentials("hunter");
   const { data: hunterVoucherBuckets } = useHunterVouchersQuery();
 
   const { data: hunterProfile } = useTreasureHunterProfileQuery();
@@ -460,8 +65,7 @@ export default function HomePage() {
 
   const unredeemedVouchers =
     hunterVoucherBuckets?.unredeemed ?? EMPTY_VOUCHER_ROWS;
-  const redeemedVouchers =
-    hunterVoucherBuckets?.redeemed ?? EMPTY_VOUCHER_ROWS;
+  const redeemedVouchers = hunterVoucherBuckets?.redeemed ?? EMPTY_VOUCHER_ROWS;
 
   const claimedDropIdSet = useMemo(() => {
     const s = new Set<string>();
@@ -473,12 +77,12 @@ export default function HomePage() {
 
   const hasClaimedDrop = useCallback(
     (dropId: string) => claimedDropIdSet.has(dropId),
-    [claimedDropIdSet],
+    [claimedDropIdSet]
   );
 
   const voucherRowsForStatus = useMemo(
     () => [...unredeemedVouchers, ...redeemedVouchers],
-    [unredeemedVouchers, redeemedVouchers],
+    [unredeemedVouchers, redeemedVouchers]
   );
   const [selectedVoucher, setSelectedVoucher] = useState<StoredVoucher | null>(
     null
@@ -490,43 +94,8 @@ export default function HomePage() {
     >
   >({});
 
-  const hasGeoCoords =
-    geo.latitude != null &&
-    geo.longitude != null &&
-    Number.isFinite(geo.latitude) &&
-    Number.isFinite(geo.longitude);
-
-  const [homeNearbyQueryCoords, setHomeNearbyQueryCoords] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (homeNearbyQueryCoords !== null) return;
-    if (hasGeoCoords) {
-      setHomeNearbyQueryCoords({
-        lat: geo.latitude as number,
-        lng: geo.longitude as number,
-      });
-    }
-  }, [hasGeoCoords, geo.latitude, geo.longitude, homeNearbyQueryCoords]);
-
-  const { data: allDrops = [], isLoading: allDropsLoading } =
-    useActiveDropsQuery({
-      enabled: homeNearbyQueryCoords === null,
-    });
-
-  const { data: nearDrops = [], isLoading: nearDropsLoading } =
-    useActiveDropsNearQuery({
-      lat: homeNearbyQueryCoords?.lat ?? 0,
-      lng: homeNearbyQueryCoords?.lng ?? 0,
-      enabled: homeNearbyQueryCoords !== null,
-    });
-
-  const drops =
-    homeNearbyQueryCoords !== null ? nearDrops : allDrops;
-  const isLoading =
-    homeNearbyQueryCoords !== null ? nearDropsLoading : allDropsLoading;
+  const { data: drops = [], isLoading } =
+    useHomeActiveDropsQuery(hasHunterCreds);
 
   useEffect(() => {
     const updateStatuses = () => {
@@ -557,16 +126,18 @@ export default function HomePage() {
     [drops, geo.latitude, geo.longitude, hasClaimedDrop]
   );
 
-  const inRangeDrops = getInRangeHuntableDrops(dropsWithDistance);
-  const nearbyDrops = getNearbyHuntableDrops(dropsWithDistance);
-
-  const nearbyDropsSorted = useMemo(
-    () =>
-      [...nearbyDrops].sort(
-        (a, b) => (a.distance ?? 0) - (b.distance ?? 0)
-      ),
-    [nearbyDrops]
+  const inRangeDrops = useMemo(
+    () => getInRangeHuntableDrops(dropsWithDistance),
+    [dropsWithDistance]
   );
+
+  const { browseActiveDrops, browseActiveDropsSorted } = useMemo(() => {
+    const browse = getBrowseActiveDrops(dropsWithDistance, inRangeDrops);
+    const sorted = [...browse].sort(
+      (a, b) => (a.distance ?? 0) - (b.distance ?? 0)
+    );
+    return { browseActiveDrops: browse, browseActiveDropsSorted: sorted };
+  }, [dropsWithDistance, inRangeDrops]);
 
   const scheduledDrops = useMemo(
     () =>
@@ -605,87 +176,102 @@ export default function HomePage() {
                         merchantBusinessPhone,
                         merchantBusinessHours,
                       }) => {
-                      const status = voucherStatuses[voucher.id];
-                      return (
-                        <Card
-                          key={voucher.id}
-                          className="p-4 hover-elevate cursor-pointer border-teal/20"
-                          onClick={() =>
-                            setSelectedVoucher({
-                              voucher,
-                              drop,
-                              claimedAt: voucher.claimedAt?.toString() || "",
-                              businessName,
-                              merchantStoreLocation,
-                              merchantBusinessPhone,
-                              merchantBusinessHours,
-                            })
-                          }
-                          data-testid={`card-voucher-${voucher.id}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-teal/10 flex items-center justify-center shrink-0">
-                              {drop.logoUrl ? (
-                                <img
-                                  src={drop.logoUrl}
-                                  alt={drop.name}
-                                  className="w-full h-full rounded-lg object-cover bg-white"
-                                />
-                              ) : (
-                                <QrCode className="w-6 h-6 text-teal" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-foreground truncate">
-                                {drop.name}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-teal/10 text-teal text-xs"
-                                >
-                                  {drop.rewardValue}
-                                </Badge>
-                                {status?.timeRemaining !== null &&
-                                  status?.timeRemaining > 0 && (
-                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <Timer className="w-3 h-3" />
-                                      {t("home.timeToRedeem")}:{" "}
-                                      {formatTimeShort(
-                                        status.timeRemaining,
-                                        t
-                                      )}
-                                    </span>
-                                  )}
-                                {status?.timeRemaining === 0 && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-xs shrink-0"
-                                  >
-                                    {t("status.expired")}
-                                  </Badge>
+                        const status = voucherStatuses[voucher.id];
+                        return (
+                          <Card
+                            key={voucher.id}
+                            className="p-4 hover-elevate cursor-pointer border-teal/20"
+                            onClick={() =>
+                              setSelectedVoucher({
+                                voucher,
+                                drop,
+                                claimedAt: voucher.claimedAt?.toString() || "",
+                                businessName,
+                                merchantStoreLocation,
+                                merchantBusinessPhone,
+                                merchantBusinessHours,
+                              })
+                            }
+                            data-testid={`card-voucher-${voucher.id}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-lg bg-teal/10 flex items-center justify-center shrink-0">
+                                {drop.logoUrl ? (
+                                  <img
+                                    src={drop.logoUrl}
+                                    alt={drop.name}
+                                    className="w-full h-full rounded-lg object-cover bg-white"
+                                  />
+                                ) : (
+                                  <QrCode className="w-6 h-6 text-teal" />
                                 )}
-                                {status?.active &&
-                                  status.timeRemaining === null && (
-                                    <span className="text-xs text-muted-foreground">
-                                      {t("home.redeemAnytime")}
-                                    </span>
-                                  )}
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-foreground truncate">
+                                  {drop.name}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-teal/10 text-teal text-xs"
+                                  >
+                                    {drop.rewardValue}
+                                  </Badge>
+                                  {status?.timeRemaining === 0 && (
+                                    <Badge
+                                      variant="destructive"
+                                      className="text-xs shrink-0"
+                                    >
+                                      {t("status.expired")}
+                                    </Badge>
+                                  )}
+                                  {status?.active &&
+                                    status.timeRemaining === null && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {t("home.redeemAnytime")}
+                                      </span>
+                                    )}
+                                  {status?.timeRemaining !== null &&
+                                    status?.timeRemaining > 0 && (
+                                      <div
+                                        className={cn(
+                                          "inline-flex w-full max-w-full items-center gap-2 rounded-lg border px-2.5 py-1 text-xs font-medium tabular-nums sm:w-auto",
+                                          voucherRedemptionTimerRowClass(
+                                            status.timeRemaining
+                                          )
+                                        )}
+                                      >
+                                        <Timer
+                                          className="h-3 w-3 shrink-0"
+                                          aria-hidden
+                                        />
+                                        <span className="min-w-0 leading-snug">
+                                          <span className="mr-1.5 inline opacity-90">
+                                            {t("home.timeToRedeem")}
+                                          </span>
+                                          <span className="font-semibold">
+                                            {formatRedemptionCountdown(
+                                              status.timeRemaining
+                                            )}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0 gap-1"
+                                data-testid={`button-view-voucher-${voucher.id}`}
+                              >
+                                <QrCode className="w-4 h-4" />
+                                {t("home.view")}
+                              </Button>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="shrink-0 gap-1"
-                              data-testid={`button-view-voucher-${voucher.id}`}
-                            >
-                              <QrCode className="w-4 h-4" />
-                              {t("home.view")}
-                            </Button>
-                          </div>
-                        </Card>
-                      );
-                    }
+                          </Card>
+                        );
+                      }
                     )}
                   </div>
                 </section>
@@ -698,9 +284,7 @@ export default function HomePage() {
                     <h2 className="font-semibold text-lg text-foreground">
                       {t("home.redeemedRewards")}
                     </h2>
-                    <Badge variant="secondary">
-                      {redeemedVouchers.length}
-                    </Badge>
+                    <Badge variant="secondary">{redeemedVouchers.length}</Badge>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {redeemedVouchers.map(
@@ -712,56 +296,60 @@ export default function HomePage() {
                         merchantBusinessPhone,
                         merchantBusinessHours,
                       }) => (
-                      <Card
-                        key={voucher.id}
-                        className="p-4 border-muted cursor-pointer hover-elevate"
-                        onClick={() =>
-                          setSelectedVoucher({
-                            voucher,
-                            drop,
-                            claimedAt: voucher.claimedAt?.toString() || "",
-                            businessName,
-                            merchantStoreLocation,
-                            merchantBusinessPhone,
-                            merchantBusinessHours,
-                          })
-                        }
-                        data-testid={`card-redeemed-voucher-${voucher.id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                            {drop.logoUrl ? (
-                              <img
-                                src={drop.logoUrl}
-                                alt={drop.name}
-                                className="w-full h-full rounded-lg object-cover bg-white"
-                              />
-                            ) : (
-                              <QrCode className="w-6 h-6 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-foreground truncate">
-                              {drop.name}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <Badge variant="secondary" className="text-xs">
-                                {drop.rewardValue}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="text-xs text-muted-foreground"
-                              >
-                                {t("status.redeemed")}
-                              </Badge>
+                        <Card
+                          key={voucher.id}
+                          className="p-4 border-muted cursor-pointer hover-elevate"
+                          onClick={() =>
+                            setSelectedVoucher({
+                              voucher,
+                              drop,
+                              claimedAt: voucher.claimedAt?.toString() || "",
+                              businessName,
+                              merchantStoreLocation,
+                              merchantBusinessPhone,
+                              merchantBusinessHours,
+                            })
+                          }
+                          data-testid={`card-redeemed-voucher-${voucher.id}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              {drop.logoUrl ? (
+                                <img
+                                  src={drop.logoUrl}
+                                  alt={drop.name}
+                                  className="w-full h-full rounded-lg object-cover bg-white"
+                                />
+                              ) : (
+                                <QrCode className="w-6 h-6 text-muted-foreground" />
+                              )}
                             </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-foreground truncate">
+                                {drop.name}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <Badge variant="secondary" className="text-xs">
+                                  {drop.rewardValue}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs text-muted-foreground"
+                                >
+                                  {t("status.redeemed")}
+                                </Badge>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="shrink-0"
+                            >
+                              {t("home.view")}
+                            </Button>
                           </div>
-                          <Button size="sm" variant="ghost" className="shrink-0">
-                            {t("home.view")}
-                          </Button>
-                        </div>
-                      </Card>
-                    )
+                        </Card>
+                      )
                     )}
                   </div>
                 </section>
@@ -784,7 +372,7 @@ export default function HomePage() {
           </Card>
         ) : (
           <>
-            {(inRangeDrops.length > 0 || nearbyDrops.length > 0) && (
+            {(inRangeDrops.length > 0 || browseActiveDrops.length > 0) && (
               <section className="space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Target className="w-5 h-5 text-primary" />
@@ -795,7 +383,7 @@ export default function HomePage() {
                     variant="secondary"
                     className="bg-primary/10 text-primary"
                   >
-                    {inRangeDrops.length + nearbyDrops.length}
+                    {inRangeDrops.length + browseActiveDrops.length}
                   </Badge>
                 </div>
 
@@ -824,19 +412,19 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {nearbyDropsSorted.length > 0 && (
+                {browseActiveDropsSorted.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Navigation className="w-4 h-4 text-muted-foreground" />
                       <h3 className="text-sm font-medium text-muted-foreground">
-                        {t("home.nearbyDrops")}
+                        {t("home.browseActiveDrops")}
                       </h3>
                       <Badge variant="secondary" className="text-xs">
-                        {nearbyDropsSorted.length}
+                        {browseActiveDropsSorted.length}
                       </Badge>
                     </div>
                     <div className="space-y-3">
-                      {nearbyDropsSorted.map((drop) => (
+                      {browseActiveDropsSorted.map((drop) => (
                         <DropCard
                           key={drop.id}
                           drop={drop}
@@ -878,7 +466,6 @@ export default function HomePage() {
                 </div>
               </section>
             )}
-
           </>
         )}
 
