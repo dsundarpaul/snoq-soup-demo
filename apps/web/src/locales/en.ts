@@ -28,7 +28,7 @@ const en = {
   "home.startingSoon": "Starting soon",
   "home.claimedDrops": "Claimed rewards",
   "home.redeemedRewards": "Redeemed rewards",
-  "home.showMore": "Show more",
+  "home.showMore": "View more",
   "home.timeToRedeem": "Time to redeem",
   "home.redeemAnytime": "Redeem anytime",
   "home.loadingDrops": "Loading treasures...",

@@ -28,7 +28,7 @@ const ar = {
   "home.startingSoon": "يبدأ قريباً",
   "home.claimedDrops": "مكافآت مُقتَنصة",
   "home.redeemedRewards": "مكافآت مُستَردّة",
-  "home.showMore": "عرض المزيد",
+  "home.showMore": "شاهد المزيد",
   "home.timeToRedeem": "الوقت للاسترداد",
   "home.redeemAnytime": "استرداد في أي وقت",
   "home.loadingDrops": "جاري تحميل الكنوز...",
