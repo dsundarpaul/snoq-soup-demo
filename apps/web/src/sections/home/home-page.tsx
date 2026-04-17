@@ -23,6 +23,7 @@ import {
   QrCode,
   Timer,
   History,
+  ChevronRight,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { HomeHeader } from "@/sections/home/home-header";
@@ -234,7 +235,7 @@ export default function HomePage() {
                                     status?.timeRemaining > 0 && (
                                       <div
                                         className={cn(
-                                          "inline-flex w-full max-w-full items-center gap-2 rounded-lg border px-2.5 py-1 text-xs font-medium tabular-nums sm:w-auto",
+                                          "inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-xs font-medium tabular-nums w-auto",
                                           voucherRedemptionTimerRowClass(
                                             status.timeRemaining
                                           )
@@ -259,13 +260,14 @@ export default function HomePage() {
                                 </div>
                               </div>
                               <Button
-                                size="sm"
-                                variant="outline"
-                                className="shrink-0 gap-1"
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="shrink-0 h-8 w-8"
                                 data-testid={`button-view-voucher-${voucher.id}`}
+                                aria-label={t("home.view")}
                               >
-                                <QrCode className="w-4 h-4" />
-                                {t("home.view")}
+                                <ChevronRight className="w-4 h-4" aria-hidden />
                               </Button>
                             </div>
                           </Card>
@@ -340,11 +342,13 @@ export default function HomePage() {
                               </div>
                             </div>
                             <Button
-                              size="sm"
+                              type="button"
+                              size="icon"
                               variant="ghost"
-                              className="shrink-0"
+                              className="shrink-0 h-8 w-8"
+                              aria-label={t("home.view")}
                             >
-                              {t("home.view")}
+                              <ChevronRight className="w-4 h-4" aria-hidden />
                             </Button>
                           </div>
                         </Card>
