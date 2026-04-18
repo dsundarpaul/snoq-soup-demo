@@ -27,7 +27,10 @@ import {
   Navigation,
   Check,
 } from "lucide-react";
-import { GooglePlacesAutocomplete } from "@/components/google-places-autocomplete";
+import {
+  GooglePlacesAutocomplete,
+  type GooglePlaceStructuredAddress,
+} from "@/components/google-places-autocomplete";
 import { MapPickerLazy } from "@/components/map-picker-lazy";
 import { useMerchantStoreLocationMutation } from "@/hooks/api/merchant/use-merchant";
 import { useToast } from "@/hooks/use-toast";
@@ -114,19 +117,38 @@ export function MerchantStoreLocationSheet({
   const handlePlaceSelect = (
     newLat: number,
     newLng: number,
-    addr: string
+    addr: string,
+    structured?: GooglePlaceStructuredAddress
   ) => {
     setLat(parseFloat(newLat.toFixed(6)));
     setLng(parseFloat(newLng.toFixed(6)));
     setMapKey((k) => k + 1);
-
-    const parts = addr.split(",").map((s) => s.trim());
     setAddress(addr);
-    if (parts.length >= 2) {
-      setCity(parts[parts.length - 2] ?? "");
+
+    const hasStructured =
+      structured &&
+      (structured.city.trim() ||
+        structured.state.trim() ||
+        structured.pincode.trim());
+
+    if (hasStructured) {
+      if (structured.city.trim()) setCity(structured.city.trim());
+      if (structured.state.trim()) setState(structured.state.trim());
+      if (structured.pincode.trim()) setPincode(structured.pincode.trim());
+      return;
     }
-    if (parts.length >= 1) {
-      setState(parts[parts.length - 1] ?? "");
+
+    const parts = addr
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const n = parts.length;
+    if (n === 2) {
+      setCity(parts[0] ?? "");
+      setState(parts[1] ?? "");
+    } else if (n >= 3) {
+      setCity(parts[n - 3] ?? "");
+      setState(parts[n - 2] ?? "");
     }
   };
 

@@ -28,12 +28,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { publicUrls } from "@/lib/app-config";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
-import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   mapNestDropToLegacy,
   createDropFormToNestDto,
 } from "@/lib/nest-mappers";
 import { useToast } from "@/hooks/use-toast";
+import { useUpload } from "@/hooks/use-upload";
 import { validateImageFile } from "@/lib/upload-validation";
 import type { Drop } from "@shared/schema";
 import { ARDropPlacer } from "@/components/ar-drop-placer";
@@ -140,9 +140,13 @@ export function MerchantDropSheet({
   const form = useMerchantDropForm();
   const [showPreview, setShowPreview] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [arPlacerOpen, setArPlacerOpen] = useState(false);
   const [mapPickerEpoch, setMapPickerEpoch] = useState(0);
+  const logoUploader = useUpload({
+    namespace: "drops",
+    auth: isAdminMode ? "admin" : "merchant",
+  });
+  const isUploadingLogo = logoUploader.isUploading;
 
   useEffect(() => {
     if (!open) {
@@ -309,41 +313,26 @@ export function MerchantDropSheet({
       toast({ title: check.message, variant: "destructive" });
       return;
     }
-    setIsUploadingLogo(true);
     toast({
       title: "Uploading...",
       description: "Please wait while your logo is being uploaded.",
     });
-    try {
-      const uploadPath = "/api/v1/s3/upload";
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("namespace", "drops");
-      const uploadRes = await apiFetchMaybeRetry("POST", uploadPath, {
-        auth: isAdminMode ? "admin" : "merchant",
-        body: formData,
-        json: false,
-      });
-      await throwIfResNotOk(
-        uploadRes,
-        uploadPath,
-        isAdminMode ? "admin" : "merchant"
-      );
-      const { publicUrl } = (await uploadRes.json()) as { publicUrl: string };
-      form.setValue("logoUrl", publicUrl);
-      toast({
-        title: "Logo uploaded!",
-        description: "Your logo has been uploaded successfully.",
-      });
-    } catch {
+    const result = await logoUploader.uploadFile(file);
+    if (!result) {
       toast({
         title: "Upload failed",
-        description: "Failed to upload logo. Please try again.",
+        description:
+          logoUploader.error?.message ??
+          "Failed to upload logo. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsUploadingLogo(false);
+      return;
     }
+    form.setValue("logoUrl", result.publicUrl);
+    toast({
+      title: "Logo uploaded!",
+      description: "Your logo has been uploaded successfully.",
+    });
   };
 
   const handleUseCurrentLocation = () => {

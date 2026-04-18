@@ -102,11 +102,13 @@ function ARCameraView({
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
-  const [arSessionStarted, setArSessionStarted] = useState(false);
-  const [startingAr, setStartingAr] = useState(false);
+  const [startingCamera, setStartingCamera] = useState(true);
+  const [needsOrientationGesture, setNeedsOrientationGesture] = useState(false);
+  const [requestingOrientation, setRequestingOrientation] = useState(false);
   const {
     heading,
     requestPermission,
+    permissionGranted: orientationGranted,
     hasValidHeading,
     isCalibrating,
     error: orientationError,
@@ -129,9 +131,9 @@ function ARCameraView({
     };
   }, [stopCameraStream]);
 
-  const attachCameraStream = useCallback(async (): Promise<boolean> => {
+  const startCamera = useCallback(async (): Promise<boolean> => {
     setCameraError(null);
-    setCameraActive(false);
+    setStartingCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -142,7 +144,6 @@ function ARCameraView({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
-        setArSessionStarted(true);
         return true;
       }
       stream.getTracks().forEach((track) => track.stop());
@@ -152,15 +153,40 @@ function ARCameraView({
       setCameraError(t("ar.cameraDenied"));
       setCameraActive(false);
       return false;
+    } finally {
+      setStartingCamera(false);
     }
   }, [stopCameraStream, t]);
 
-  const handleStartArSession = useCallback(async () => {
-    setStartingAr(true);
-    await requestPermission();
-    await attachCameraStream();
-    setStartingAr(false);
-  }, [requestPermission, attachCameraStream]);
+  const iosOrientationGestureRequired =
+    typeof window !== "undefined" &&
+    typeof (
+      DeviceOrientationEvent as unknown as {
+        requestPermission?: () => Promise<string>;
+      }
+    ).requestPermission === "function";
+
+  useEffect(() => {
+    void startCamera();
+    if (iosOrientationGestureRequired) {
+      setNeedsOrientationGesture(true);
+    } else {
+      void requestPermission();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleEnableCompass = useCallback(async () => {
+    setRequestingOrientation(true);
+    try {
+      await requestPermission();
+    } finally {
+      setRequestingOrientation(false);
+    }
+    if (!cameraActive && !startingCamera) {
+      void startCamera();
+    }
+  }, [requestPermission, cameraActive, startingCamera, startCamera]);
 
   const bearing = useMemo(() => {
     return calculateBearing(userLat, userLon, targetLat, targetLon);
@@ -225,7 +251,7 @@ function ARCameraView({
           </p>
           <Button
             className="bg-primary text-white"
-            onClick={() => void attachCameraStream()}
+            onClick={() => void startCamera()}
           >
             {t("scanner.tryAgain")}
           </Button>
@@ -233,6 +259,12 @@ function ARCameraView({
       </div>
     );
   }
+
+  const showCompassGate =
+    cameraActive &&
+    iosOrientationGestureRequired &&
+    needsOrientationGesture &&
+    !orientationGranted;
 
   return (
     <div className="absolute inset-0">
@@ -243,21 +275,30 @@ function ARCameraView({
         muted
         className={cn(
           "absolute inset-0 w-full h-full object-cover",
-          !arSessionStarted && "opacity-0 pointer-events-none"
+          !cameraActive && "opacity-0 pointer-events-none"
         )}
         data-testid="camera-view"
       />
 
-      {!arSessionStarted ? (
-        <div className="absolute inset-0 z-20 bg-gradient-to-b from-slate-900 via-primary/20 to-slate-900 flex items-center justify-center">
+      {startingCamera && !cameraActive ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-b from-slate-900 via-primary/20 to-slate-900">
+          <div className="flex flex-col items-center gap-3 text-white/80">
+            <Loader2 className="w-8 h-8 animate-spin text-teal" />
+            <p className="text-sm">{t("ar.cameraRequired")}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {showCompassGate ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <Card className="p-6 m-4 max-w-sm bg-background/95 backdrop-blur">
             <div className="text-center">
               <Compass className="w-12 h-12 text-teal mx-auto mb-3" />
               <h3 className="text-lg font-semibold mb-2">
-                {t("ar.tapToStartAr")}
+                {t("ar.enableCompass")}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {t("ar.tapToStartArDesc")}
+                {t("ar.compassDesc")}
               </p>
               {orientationError ? (
                 <p className="text-sm text-destructive mb-4">
@@ -266,16 +307,16 @@ function ARCameraView({
               ) : null}
               <Button
                 className="bg-primary text-white w-full"
-                disabled={startingAr}
-                onClick={() => void handleStartArSession()}
+                disabled={requestingOrientation}
+                onClick={() => void handleEnableCompass()}
               >
-                {startingAr ? (
+                {requestingOrientation ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                    {t("ar.enableArMode")}
+                    {t("ar.enableCompass")}
                   </>
                 ) : (
-                  t("ar.enableArMode")
+                  t("ar.enableCompass")
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-3">
@@ -286,7 +327,7 @@ function ARCameraView({
         </div>
       ) : null}
 
-      {arSessionStarted && cameraActive && (
+      {cameraActive && (
         <>
           {isCalibrating || angleDiff === null ? (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

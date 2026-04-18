@@ -12,9 +12,47 @@ import { Loader2, MapPin, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { loadGoogleMapsScript } from "@/lib/google-maps-script";
 
+export type GooglePlaceStructuredAddress = {
+  city: string;
+  state: string;
+  pincode: string;
+};
+
+function parsePlaceAddressComponents(
+  components: google.maps.GeocoderAddressComponent[] | undefined
+): GooglePlaceStructuredAddress {
+  const longNameFor = (...types: string[]): string => {
+    if (!components?.length) return "";
+    for (const t of types) {
+      const hit = components.find((c) => c.types.includes(t));
+      if (hit?.long_name) return hit.long_name;
+    }
+    return "";
+  };
+
+  const city =
+    longNameFor(
+      "locality",
+      "postal_town",
+      "sublocality_level_1",
+      "sublocality"
+    ) || longNameFor("administrative_area_level_2");
+
+  return {
+    city,
+    state: longNameFor("administrative_area_level_1"),
+    pincode: longNameFor("postal_code"),
+  };
+}
+
 export interface GooglePlacesAutocompleteProps {
   apiKey: string | undefined;
-  onPlaceSelect: (lat: number, lng: number, address: string) => void;
+  onPlaceSelect: (
+    lat: number,
+    lng: number,
+    address: string,
+    structured?: GooglePlaceStructuredAddress
+  ) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -144,7 +182,12 @@ export function GooglePlacesAutocomplete({
       svc.getDetails(
         {
           placeId: prediction.place_id,
-          fields: ["geometry", "formatted_address", "name"],
+          fields: [
+            "geometry",
+            "formatted_address",
+            "name",
+            "address_components",
+          ],
         },
         (place, status) => {
           setDetailsLoading(false);
@@ -155,11 +198,12 @@ export function GooglePlacesAutocomplete({
             return;
           }
           const loc = place.geometry.location;
-          onSelectRef.current(
-            loc.lat(),
-            loc.lng(),
-            place.formatted_address || place.name || prediction.description
+          const formatted =
+            place.formatted_address || place.name || prediction.description;
+          const structured = parsePlaceAddressComponents(
+            place.address_components
           );
+          onSelectRef.current(loc.lat(), loc.lng(), formatted, structured);
         }
       );
     },

@@ -1,67 +1,82 @@
-import { useState, useCallback } from "react";
-import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
-import type { AuthRole } from "@/lib/auth-tokens";
+import { useCallback, useState } from "react";
+import { upload } from "@vercel/blob/client";
+import { API_ORIGIN } from "@/lib/app-config";
+import { type AuthRole, getAccessToken } from "@/lib/auth-tokens";
 
-interface UploadResponse {
+const CLIENT_UPLOAD_PATH = "/api/v1/s3/blob/client-upload";
+const ALLOWED_NAMESPACE = /^[a-zA-Z0-9_-]+$/;
+
+export interface UploadResult {
   publicUrl: string;
+  pathname: string;
+  contentType?: string;
 }
 
-interface UseUploadOptions {
+export interface UseUploadOptions {
+  namespace: string;
   auth?: AuthRole;
-  namespace?: string;
-  onSuccess?: (response: UploadResponse) => void;
+  onSuccess?: (result: UploadResult) => void;
   onError?: (error: Error) => void;
 }
 
-const UPLOAD_PATH = "/api/v1/s3/upload";
+function buildUploadPathname(namespace: string, file: File): string {
+  const dot = file.name.lastIndexOf(".");
+  const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
+  const safe = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${ext}`;
+  return `${namespace}/${safe}`;
+}
 
-export function useUpload(options: UseUploadOptions = {}) {
+export function useUpload(options: UseUploadOptions) {
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<Error | null>(null);
 
   const uploadFile = useCallback(
-    async (file: File): Promise<UploadResponse | null> => {
+    async (file: File): Promise<UploadResult | null> => {
       setIsUploading(true);
       setError(null);
       setProgress(0);
 
       try {
-        setProgress(10);
-        const namespace = options.namespace ?? "general";
-        const authRole = options.auth ?? "merchant";
+        const { namespace } = options;
+        if (!ALLOWED_NAMESPACE.test(namespace)) {
+          throw new Error("Invalid upload namespace");
+        }
+        const role = options.auth ?? "merchant";
+        const token = getAccessToken(role);
+        if (!token) {
+          throw new Error("You must be signed in to upload files");
+        }
 
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("namespace", namespace);
-
-        const response = await apiFetchMaybeRetry("POST", UPLOAD_PATH, {
-          auth: authRole,
-          body: formData,
-          json: false,
+        const pathname = buildUploadPathname(namespace, file);
+        const blob = await upload(pathname, file, {
+          access: "public",
+          contentType: file.type || undefined,
+          handleUploadUrl: `${API_ORIGIN}${CLIENT_UPLOAD_PATH}`,
+          clientPayload: JSON.stringify({ namespace }),
+          headers: { Authorization: `Bearer ${token}` },
+          onUploadProgress: ({ percentage }) => setProgress(percentage),
         });
-        await throwIfResNotOk(response, UPLOAD_PATH, authRole);
 
-        setProgress(100);
-        const data = (await response.json()) as UploadResponse;
-        options.onSuccess?.(data);
-        return data;
+        const result: UploadResult = {
+          publicUrl: blob.url,
+          pathname: blob.pathname,
+          contentType: blob.contentType,
+        };
+        options.onSuccess?.(result);
+        return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Upload failed");
-        setError(error);
-        options.onError?.(error);
+        const wrapped =
+          err instanceof Error ? err : new Error("Upload failed");
+        setError(wrapped);
+        options.onError?.(wrapped);
         return null;
       } finally {
         setIsUploading(false);
       }
     },
-    [options.auth, options.namespace, options.onSuccess, options.onError]
+    [options.namespace, options.auth, options.onSuccess, options.onError],
   );
 
-  return {
-    uploadFile,
-    isUploading,
-    error,
-    progress,
-  };
+  return { uploadFile, isUploading, progress, error };
 }

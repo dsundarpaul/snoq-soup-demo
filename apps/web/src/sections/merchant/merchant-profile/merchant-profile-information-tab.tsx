@@ -32,6 +32,7 @@ import {
 } from "@/hooks/api/merchant/use-merchant";
 import { publicUrls } from "@/lib/app-config";
 import { useToast } from "@/hooks/use-toast";
+import { useUpload } from "@/hooks/use-upload";
 import {
   validateImageFile,
   ACCEPTED_IMAGE_TYPES,
@@ -99,6 +100,11 @@ export function MerchantProfileInformationTab({
     onError: () => {
       toast({ title: "Failed to save", variant: "destructive" });
     },
+  });
+
+  const logoUploader = useUpload({
+    namespace: "merchants",
+    auth: "merchant",
   });
 
   return (
@@ -194,25 +200,22 @@ export function MerchantProfileInformationTab({
                     }
                     try {
                       toast({ title: "Uploading…" });
-                      const uploadPath = "/api/v1/s3/upload";
-                      const formData = new FormData();
-                      formData.append("file", file);
-                      formData.append("namespace", "merchants");
-                      const uploadRes = await apiFetchMaybeRetry(
-                        "POST",
-                        uploadPath,
-                        { auth: "merchant", body: formData, json: false }
-                      );
-                      await throwIfResNotOk(uploadRes, uploadPath, "merchant");
-                      const { publicUrl: logoUrl } =
-                        (await uploadRes.json()) as { publicUrl: string };
+                      const result = await logoUploader.uploadFile(file);
+                      if (!result) {
+                        toast({
+                          title: "Upload failed",
+                          description: logoUploader.error?.message,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
                       const logoPath = "/api/v1/merchants/me/logo";
                       const saveRes = await apiFetchMaybeRetry(
                         "PATCH",
                         logoPath,
                         {
                           auth: "merchant",
-                          body: { logoUrl },
+                          body: { logoUrl: result.publicUrl },
                         }
                       );
                       await throwIfResNotOk(saveRes, logoPath, "merchant");

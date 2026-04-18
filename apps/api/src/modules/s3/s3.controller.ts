@@ -5,25 +5,22 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  UseInterceptors,
-  UploadedFile,
-  BadRequestException,
+  Req,
 } from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
+import type { Request } from "express";
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiConsumes,
   ApiBody,
 } from "@nestjs/swagger";
+import type { HandleUploadBody } from "@vercel/blob/client";
 import { BlobService } from "./blob.service";
 import { S3Service } from "./s3.service";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { GetSignedUrlDto } from "./dto/request/get-signed-url.dto";
 import { SignedUrlResponseDto } from "./dto/response/signed-url-response.dto";
-import { AllowedMimeType } from "./dto/request/get-signed-url.dto";
 
 @ApiTags("S3")
 @Controller("s3")
@@ -53,50 +50,26 @@ export class S3Controller {
     );
   }
 
-  @Post("upload")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @UseInterceptors(
-    FileInterceptor("file", { limits: { fileSize: 5 * 1024 * 1024 } }),
-  )
-  @ApiConsumes("multipart/form-data")
-  @ApiOperation({ summary: "Upload file to Vercel Blob storage" })
+  @Post("blob/client-upload")
+  @ApiOperation({
+    summary:
+      "Vercel Blob client-upload endpoint. Issues short-lived upload tokens and receives upload-completion callbacks.",
+    description:
+      "For `blob.generate-client-token` events the caller must send a valid Bearer token in the Authorization header. `blob.upload-completed` events are verified by Vercel's request signature.",
+  })
   @ApiBody({
-    schema: {
-      type: "object",
-      required: ["file", "namespace"],
-      properties: {
-        file: { type: "string", format: "binary" },
-        namespace: { type: "string", example: "merchants" },
-      },
-    },
+    description:
+      "HandleUploadBody from @vercel/blob/client. Forwarded as-is to the SDK.",
+    schema: { type: "object" },
   })
-  @ApiResponse({
-    status: 201,
-    schema: { properties: { publicUrl: { type: "string" } } },
-  })
-  @ApiResponse({ status: 400, description: "Invalid file type or size" })
+  @ApiResponse({ status: 201, description: "Client token or upload ack" })
+  @ApiResponse({ status: 400, description: "Invalid file type, size, or namespace" })
+  @ApiResponse({ status: 401, description: "Missing or invalid auth token" })
   @HttpCode(HttpStatus.CREATED)
-  async uploadFile(
-    @UploadedFile() file: Express.Multer.File | undefined,
-    @Body("namespace") namespace: string,
-  ): Promise<{ publicUrl: string }> {
-    if (!file) {
-      throw new BadRequestException("File is required");
-    }
-
-    if (!namespace || !/^[a-zA-Z0-9_-]+$/.test(namespace)) {
-      throw new BadRequestException(
-        "Namespace is required and must be alphanumeric",
-      );
-    }
-
-    return this.blobService.upload(
-      namespace,
-      file.originalname,
-      file.mimetype as AllowedMimeType,
-      file.size,
-      file.buffer,
-    );
+  async handleBlobClientUpload(
+    @Req() req: Request,
+    @Body() body: HandleUploadBody,
+  ): Promise<unknown> {
+    return this.blobService.handleClientUpload(body, req);
   }
 }
