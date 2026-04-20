@@ -268,6 +268,24 @@ const en = {
   "merchantVouchers.prev": "Previous",
   "merchantVouchers.next": "Next",
 
+  "promoCodes.partnerTitle": "Partner promo codes",
+  "promoCodes.description":
+    "Upload codes that will be assigned one per user when they claim this drop.",
+  "promoCodes.total": "Total",
+  "promoCodes.available": "Available",
+  "promoCodes.assigned": "Assigned",
+  "promoCodes.addCodes": "Add codes",
+  "promoCodes.placeholder":
+    "Paste codes here, one per line or comma-separated...",
+  "promoCodes.uploadCodes": "Upload codes",
+  "promoCodes.importCsv": "Import CSV",
+  "promoCodes.codeList": "Code list",
+  "promoCodes.deleteAll": "Delete all",
+  "promoCodes.statusAvailable": "Available",
+  "promoCodes.statusAssigned": "Assigned",
+  "promoCodes.deleteOneTitle": "Delete code",
+  "promoCodes.claimedBy": "Claimed by",
+
   "staffHunter.linkTitle": "Staff hunter (JWT scan)",
   "staffHunter.linkDesc":
     "Paste a signed-in hunter’s ID so they can redeem vouchers for your store from the app.",

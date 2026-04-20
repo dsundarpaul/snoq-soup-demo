@@ -266,6 +266,24 @@ const ar = {
   "merchantVouchers.prev": "السابق",
   "merchantVouchers.next": "التالي",
 
+  "promoCodes.partnerTitle": "أكواد الشركاء الترويجية",
+  "promoCodes.description":
+    "ارفع الأكواد التي تُخصَّص لمستخدم واحد عند اقتناص هذا الكنز.",
+  "promoCodes.total": "الإجمالي",
+  "promoCodes.available": "متاح",
+  "promoCodes.assigned": "مُخصَّص",
+  "promoCodes.addCodes": "إضافة أكواد",
+  "promoCodes.placeholder":
+    "الصق الأكواد هنا، سطرًا لكل كود أو مفصولة بفواصل...",
+  "promoCodes.uploadCodes": "رفع الأكواد",
+  "promoCodes.importCsv": "استيراد CSV",
+  "promoCodes.codeList": "قائمة الأكواد",
+  "promoCodes.deleteAll": "حذف الكل",
+  "promoCodes.statusAvailable": "متاح",
+  "promoCodes.statusAssigned": "مُخصَّص",
+  "promoCodes.deleteOneTitle": "حذف الكود",
+  "promoCodes.claimedBy": "اقتُنص بواسطة",
+
   "staffHunter.linkTitle": "صيّاد طاقم (مسح JWT)",
   "staffHunter.linkDesc": "ألصق معرّف صيّاد مسجّل ليستطيع استرداد قسائم متجرك.",
   "staffHunter.hunterIdPlaceholder": "معرّف الصيّاد",

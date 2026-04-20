@@ -191,27 +191,54 @@ export function mapStorePublicPayload(
   };
 }
 
-export function mapPromoListToLegacy(json: {
-  items?: { id?: string; code?: string; status?: string }[];
-  total?: number;
-  page?: number;
-  limit?: number;
-  totalPages?: number;
-}): {
-  codes: { id: string; code: string; status: string }[];
+function unwrapNestPagedPayload(
+  json: Record<string, unknown>
+): Record<string, unknown> {
+  const inner = json.data;
+  if (
+    json.success === true &&
+    inner &&
+    typeof inner === "object" &&
+    !Array.isArray(inner) &&
+    "items" in (inner as object)
+  ) {
+    return inner as Record<string, unknown>;
+  }
+  return json;
+}
+
+export function mapPromoListToLegacy(json: Record<string, unknown>): {
+  codes: {
+    id: string;
+    code: string;
+    status: string;
+    assignedToName: string | null;
+  }[];
   stats: { total: number; available: number; assigned: number };
 } {
-  const items = json.items ?? [];
+  const root = unwrapNestPagedPayload(json);
+  const items = (root.items as
+    | {
+        id?: string;
+        code?: string;
+        status?: string;
+        assignedToName?: string | null;
+      }[]
+    | undefined) ?? [];
   const codes = items.map((p) => ({
     id: String(p.id ?? ""),
     code: String(p.code ?? ""),
     status: String(p.status ?? ""),
+    assignedToName:
+      p.assignedToName != null && String(p.assignedToName).trim() !== ""
+        ? String(p.assignedToName)
+        : null,
   }));
   const assigned = codes.filter((c) => c.status === "assigned").length;
   return {
     codes,
     stats: {
-      total: json.total ?? codes.length,
+      total: (root.total as number | undefined) ?? codes.length,
       available: codes.length - assigned,
       assigned,
     },

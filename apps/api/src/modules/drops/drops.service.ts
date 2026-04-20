@@ -839,6 +839,10 @@ export class DropsService {
     await this.cacheManager.del(ACTIVE_DROPS_CACHE_KEY);
   }
 
+  async notifyActiveDropsListingChanged(): Promise<void> {
+    await this.invalidateActiveDropsCache();
+  }
+
   async checkAvailability(
     dropId: string
   ): Promise<{ available: boolean; remainingClaims?: number }> {

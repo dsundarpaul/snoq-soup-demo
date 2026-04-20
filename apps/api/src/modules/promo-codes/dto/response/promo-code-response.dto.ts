@@ -29,10 +29,24 @@ export class PromoCodeResponseDto {
   voucherId!: string | null;
 
   @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "Hunter assigned to this code when claimed",
+  })
+  hunterId!: string | null;
+
+  @ApiProperty({
     nullable: true,
     description: "Timestamp when code was assigned",
   })
   assignedAt!: Date | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "Hunter display name (nickname, else email)",
+  })
+  assignedToName!: string | null;
 
   @ApiProperty({ description: "Timestamp when document was created" })
   createdAt!: Date;

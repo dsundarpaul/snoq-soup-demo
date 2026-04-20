@@ -18,9 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { PromoCodesManageBlock } from "@/components/promo-codes-manage-block";
+import { useLanguage } from "@/contexts/language-context";
 import { useToast } from "@/hooks/use-toast";
 import {
   useAdminDropsListQuery,
@@ -40,14 +39,13 @@ import {
   Plus,
   Download,
   Loader2,
-  Upload,
-  FileText,
   Tag,
 } from "lucide-react";
 
 export function AdminDropsTab(props: { hasSession: boolean }) {
   const { hasSession } = props;
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [dropsPage, setDropsPage] = useState(1);
   const [dropsSearch, setDropsSearch] = useState("");
@@ -358,113 +356,21 @@ export function AdminDropsTab(props: { hasSession: boolean }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5 text-teal-500" />
-              Partner Promo Codes
+              {t("promoCodes.partnerTitle")}
             </DialogTitle>
-            <DialogDescription>
-              Upload codes that will be assigned one-per-user when they claim
-              this drop.
-            </DialogDescription>
+            <DialogDescription>{t("promoCodes.description")}</DialogDescription>
           </DialogHeader>
 
-          {adminCodesQuery.isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg bg-muted p-3 text-center">
-                  <div className="text-2xl font-bold">
-                    {adminCodesQuery.data?.stats?.total || 0}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Total</div>
-                </div>
-                <div className="rounded-lg bg-green-500/10 p-3 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {adminCodesQuery.data?.stats?.available || 0}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Available</div>
-                </div>
-                <div className="rounded-lg bg-blue-500/10 p-3 text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {adminCodesQuery.data?.stats?.assigned || 0}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Assigned</div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Add Codes</Label>
-                <Textarea
-                  placeholder="Paste codes here, one per line or comma-separated..."
-                  value={adminCodesText}
-                  onChange={(e) => setAdminCodesText(e.target.value)}
-                  rows={5}
-                  className="font-mono text-sm"
-                  data-testid="textarea-admin-promo-codes"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleAdminUploadCodes}
-                    disabled={
-                      !adminCodesText.trim() ||
-                      adminUploadCodesMutation.isPending
-                    }
-                    className="flex-1"
-                    data-testid="button-admin-upload-codes"
-                  >
-                    {adminUploadCodesMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="mr-2 h-4 w-4" />
-                    )}
-                    Upload Codes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="relative"
-                    data-testid="button-admin-import-csv"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Import CSV
-                    <input
-                      type="file"
-                      accept=".csv,.txt"
-                      onChange={handleAdminFileImportCodes}
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                    />
-                  </Button>
-                </div>
-              </div>
-
-              {(adminCodesQuery.data?.codes?.length || 0) > 0 ? (
-                <div className="space-y-2">
-                  <Label>Code List</Label>
-                  <div className="max-h-40 divide-y overflow-y-auto rounded-lg border">
-                    {adminCodesQuery.data?.codes.map(
-                      (code: { id?: string; code: string; status: string }) => (
-                        <div
-                          key={code.id ?? code.code}
-                          className="flex items-center justify-between px-3 py-2 text-sm"
-                        >
-                          <span className="font-mono">{code.code}</span>
-                          <Badge
-                            variant={
-                              code.status === "available"
-                                ? "secondary"
-                                : "default"
-                            }
-                          >
-                            {code.status}
-                          </Badge>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
+          <PromoCodesManageBlock
+            variant="admin"
+            isLoading={adminCodesQuery.isLoading}
+            data={adminCodesQuery.data}
+            codesText={adminCodesText}
+            onCodesTextChange={setAdminCodesText}
+            uploadPending={adminUploadCodesMutation.isPending}
+            onUploadCodes={handleAdminUploadCodes}
+            onImportFile={handleAdminFileImportCodes}
+          />
         </DialogContent>
       </Dialog>
     </>

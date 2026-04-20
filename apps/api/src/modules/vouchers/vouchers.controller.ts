@@ -49,7 +49,7 @@ export class VouchersController {
 
   @Post("vouchers/claim")
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for claims
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: "Claim a voucher from a drop" })
   @ApiResponse({ status: 201, type: ClaimVoucherResponseDto })
   @ApiResponse({

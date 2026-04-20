@@ -50,6 +50,7 @@ export interface PromoCodeRow {
   id: string;
   code: string;
   status: string;
+  assignedToName: string | null;
 }
 
 export interface PromoCodesResponse {

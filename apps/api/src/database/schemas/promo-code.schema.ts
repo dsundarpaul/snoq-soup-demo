@@ -50,6 +50,15 @@ export class PromoCode {
   voucherId!: Types.ObjectId | null;
 
   @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "Hunter who claimed the voucher (denormalized for lookups)",
+  })
+  @IsOptional()
+  @Prop({ type: Types.ObjectId, ref: "Hunter", default: null })
+  hunterId!: Types.ObjectId | null;
+
+  @ApiProperty({
     nullable: true,
     description: "Timestamp when code was assigned",
   })
@@ -79,5 +88,6 @@ export const PromoCodeSchema = SchemaFactory.createForClass(PromoCode);
 PromoCodeSchema.index({ dropId: 1, status: 1 });
 PromoCodeSchema.index({ dropId: 1, code: 1 }, { unique: true });
 PromoCodeSchema.index({ voucherId: 1 }, { sparse: true });
+PromoCodeSchema.index({ hunterId: 1 }, { sparse: true });
 PromoCodeSchema.index({ merchantId: 1 });
 PromoCodeSchema.index({ deletedAt: 1 });

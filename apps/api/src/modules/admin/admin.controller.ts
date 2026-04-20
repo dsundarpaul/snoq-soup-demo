@@ -11,6 +11,8 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from "@nestjs/common";
 import type { Response } from "express";
 import {
@@ -38,11 +40,19 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { csvAttachmentFilename } from "../../common/utils/csv";
+import { PromoCodesService } from "../promo-codes/promo-codes.service";
+import { BulkCreatePromoCodesDto } from "../promo-codes/dto/request/bulk-create-promo-codes.dto";
+import { PromoCodeListDto } from "../promo-codes/dto/response/promo-code-list.dto";
+import { PromoCodeResponseDto } from "../promo-codes/dto/response/promo-code-response.dto";
+import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 
 @ApiTags("Admin")
 @Controller("admin")
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly promoCodesService: PromoCodesService,
+  ) {}
 
   @Get("stats")
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -376,6 +386,42 @@ export class AdminController {
   @ApiResponse({ status: 404, description: "Drop not found" })
   async updateDropAsAdmin(@Param("id") id: string, @Body() dto: any) {
     return this.adminService.updateDropAsAdmin(id, dto);
+  }
+
+  @Get("drops/:dropId/codes")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "List promo codes for a drop (admin)" })
+  @ApiResponse({ status: 200, type: PromoCodeListDto })
+  @ApiQuery({
+    name: "status",
+    enum: PromoCodeStatus,
+    required: false,
+  })
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  async adminListDropCodes(
+    @Param("dropId") dropId: string,
+    @Query("status") status?: PromoCodeStatus,
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit = 20,
+  ): Promise<PromoCodeListDto> {
+    return this.promoCodesService.findByDropAsAdmin(dropId, status, page, limit);
+  }
+
+  @Post("drops/:dropId/codes")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Bulk upload promo codes for a drop (admin)" })
+  @ApiResponse({ status: 201, type: [PromoCodeResponseDto] })
+  @HttpCode(HttpStatus.CREATED)
+  async adminBulkCreateDropCodes(
+    @Param("dropId") dropId: string,
+    @Body() dto: BulkCreatePromoCodesDto,
+  ): Promise<PromoCodeResponseDto[]> {
+    return this.promoCodesService.bulkCreateAsAdmin(dropId, dto);
   }
 
   @Delete("drops/:id")

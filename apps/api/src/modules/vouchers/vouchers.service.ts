@@ -118,14 +118,19 @@ export class VouchersService {
       throw new ConflictException("Voucher already claimed by this hunter");
     }
 
-    // Check capture limit (availability)
-    if (drop.availability?.type === "limited") {
-      const claimedCount = await this.database.vouchers.countDocuments({
+    const cap = this.getLimitedAvailabilityCap(drop);
+    let claimedCountBefore = 0;
+    if (cap != null) {
+      claimedCountBefore = await this.database.vouchers.countDocuments({
         dropId: new Types.ObjectId(dropId),
         deletedAt: null,
       });
 
-      if (claimedCount >= (drop.availability.limit || 0)) {
+      if (claimedCountBefore >= cap) {
+        await this.deactivateLimitedDropIfAtOrOverCount(
+          drop,
+          claimedCountBefore
+        );
         throw new BadRequestException("Drop capture limit reached");
       }
     }
@@ -150,6 +155,13 @@ export class VouchersService {
       redeemedAt: null,
       redeemedBy: {},
     });
+
+    if (cap != null) {
+      await this.deactivateLimitedDropIfAtOrOverCount(
+        drop,
+        claimedCountBefore + 1
+      );
+    }
 
     // Assign promo code if available
     await this.assignPromoCode(
@@ -1013,5 +1025,34 @@ export class VouchersService {
       businessPhone: (merchant.businessPhone as string | null) ?? null,
       businessHours: (merchant.businessHours as string | null) ?? null,
     };
+  }
+
+  private getLimitedAvailabilityCap(drop: DropDocument): number | null {
+    const a = drop.availability;
+    if (!a || a.type !== "limited") {
+      return null;
+    }
+    const n = Number(a.limit);
+    if (!Number.isFinite(n) || n < 1) {
+      return null;
+    }
+    return n;
+  }
+
+  private async deactivateLimitedDropIfAtOrOverCount(
+    drop: DropDocument,
+    voucherCount: number
+  ): Promise<void> {
+    const cap = this.getLimitedAvailabilityCap(drop);
+    if (cap == null || voucherCount < cap) {
+      return;
+    }
+    const updated = await this.database.drops.findOneAndUpdate(
+      { _id: drop._id, active: true, deletedAt: null },
+      { $set: { active: false } }
+    );
+    if (updated) {
+      await this.dropsService.notifyActiveDropsListingChanged();
+    }
   }
 }

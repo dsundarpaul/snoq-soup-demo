@@ -10,6 +10,7 @@ import {
   PromoCode,
   PromoCodeStatus,
 } from "../../database/schemas/promo-code.schema";
+import { Voucher } from "../../database/schemas/voucher.schema";
 import { CreatePromoCodeDto } from "./dto/request/create-promo-code.dto";
 import { BulkCreatePromoCodesDto } from "./dto/request/bulk-create-promo-codes.dto";
 import { PromoCodeResponseDto } from "./dto/response/promo-code-response.dto";
@@ -56,6 +57,7 @@ export class PromoCodesService {
       code: codeUpper,
       status: PromoCodeStatus.AVAILABLE,
       voucherId: null,
+      hunterId: null,
       assignedAt: null,
       deletedAt: null,
     });
@@ -102,6 +104,7 @@ export class PromoCodesService {
       code,
       status: PromoCodeStatus.AVAILABLE,
       voucherId: null,
+      hunterId: null,
       assignedAt: null,
       deletedAt: null,
     }));
@@ -125,8 +128,37 @@ export class PromoCodesService {
     limit = 20,
   ): Promise<PromoCodeListDto> {
     await this.verifyDropOwnership(dropId, merchantId);
+    return this.listPromoCodesForDropPage(dropId, status, page, limit);
+  }
 
-    // Type-safe refactor: use proper filter type
+  async findByDropAsAdmin(
+    dropId: string,
+    status?: PromoCodeStatus,
+    page = 1,
+    limit = 20,
+  ): Promise<PromoCodeListDto> {
+    await this.verifyDropExists(dropId);
+    return this.listPromoCodesForDropPage(dropId, status, page, limit);
+  }
+
+  async bulkCreateAsAdmin(
+    dropId: string,
+    dto: BulkCreatePromoCodesDto,
+  ): Promise<PromoCodeResponseDto[]> {
+    const drop = await this.database.drops.findById(dropId).lean();
+    if (!drop || drop.deletedAt) {
+      throw new NotFoundException("Drop not found");
+    }
+    const merchantId = (drop.merchantId as Types.ObjectId).toString();
+    return this.bulkCreate(merchantId, dropId, dto);
+  }
+
+  private async listPromoCodesForDropPage(
+    dropId: string,
+    status: PromoCodeStatus | undefined,
+    page: number,
+    limit: number,
+  ): Promise<PromoCodeListDto> {
     const filter: PromoCodeFilter = {
       dropId: new Types.ObjectId(dropId),
       deletedAt: null,
@@ -138,9 +170,10 @@ export class PromoCodesService {
 
     const skip = (page - 1) * limit;
 
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.database.promoCodes
         .find(filter)
+        .populate({ path: "hunterId", select: "nickname email" })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -148,13 +181,142 @@ export class PromoCodesService {
       this.database.promoCodes.countDocuments(filter),
     ]);
 
+    const fallbackByPromoId = await this.resolveAssigneeNamesFromVouchers(
+      rawItems as Record<string, unknown>[],
+    );
+
     return {
-      items: items.map((pc) => this.toResponseDto(pc as PromoCode)),
+      items: (rawItems as Record<string, unknown>[]).map((doc) => {
+        const dto = this.toResponseDto(doc as unknown as PromoCode);
+        const promoId =
+          this.normalizeObjectIdString(doc._id) ?? dto.id;
+        const fromPopulate = this.nameFromPopulatedHunterField(doc.hunterId);
+        dto.assignedToName =
+          fromPopulate ?? fallbackByPromoId.get(promoId) ?? null;
+        return dto;
+      }),
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     };
+  }
+
+  private normalizeObjectIdString(value: unknown): string | null {
+    if (value == null) return null;
+    if (typeof value === "string") {
+      const t = value.trim();
+      return /^[a-f\d]{24}$/i.test(t) ? t : null;
+    }
+    if (typeof value === "object" && value !== null && "toString" in value) {
+      const s = (value as { toString(): string }).toString();
+      return /^[a-f\d]{24}$/i.test(s) ? s : null;
+    }
+    return null;
+  }
+
+  private hunterIdForApi(hunterField: unknown): string | null {
+    if (hunterField == null) return null;
+    if (typeof hunterField === "object" && hunterField !== null && "_id" in hunterField) {
+      return this.normalizeObjectIdString(
+        (hunterField as { _id: unknown })._id,
+      );
+    }
+    return this.normalizeObjectIdString(hunterField);
+  }
+
+  private nameFromPopulatedHunterField(hunterField: unknown): string | null {
+    if (
+      hunterField == null ||
+      typeof hunterField !== "object" ||
+      (!("nickname" in hunterField) && !("email" in hunterField))
+    ) {
+      return null;
+    }
+    return this.formatHunterLabel(
+      hunterField as { nickname?: string | null; email?: string | null },
+    );
+  }
+
+  private formatHunterLabel(h: {
+    nickname?: string | null;
+    email?: string | null;
+  }): string | null {
+    const nick = h.nickname?.trim();
+    if (nick) return nick;
+    const em = h.email?.trim();
+    if (em) return em;
+    return null;
+  }
+
+  private async resolveAssigneeNamesFromVouchers(
+    docs: Record<string, unknown>[],
+  ): Promise<Map<string, string | null>> {
+    const result = new Map<string, string | null>();
+    const needVoucher: { promoId: string; voucherId: string }[] = [];
+
+    for (const doc of docs) {
+      const promoId = this.normalizeObjectIdString(doc._id);
+      if (!promoId) continue;
+      if (doc.status !== "assigned") continue;
+      if (this.nameFromPopulatedHunterField(doc.hunterId)) continue;
+      const vid = this.normalizeObjectIdString(doc.voucherId);
+      if (vid) needVoucher.push({ promoId, voucherId: vid });
+    }
+
+    if (needVoucher.length === 0) {
+      return result;
+    }
+
+    const voucherIds = [...new Set(needVoucher.map((n) => n.voucherId))].map(
+      (id) => new Types.ObjectId(id),
+    );
+    const vouchers = await this.database.vouchers
+      .find({ _id: { $in: voucherIds } })
+      .select({ claimedBy: 1 })
+      .lean();
+
+    const hunterIds = new Set<string>();
+    const voucherById = new Map<string, { claimedBy?: Voucher["claimedBy"] }>();
+    for (const v of vouchers) {
+      voucherById.set(v._id.toString(), v);
+      const hid = this.normalizeObjectIdString(v.claimedBy?.hunterId);
+      if (hid) hunterIds.add(hid);
+    }
+
+    const hunters =
+      hunterIds.size > 0
+        ? await this.database.hunters
+            .find({
+              _id: { $in: [...hunterIds].map((id) => new Types.ObjectId(id)) },
+            })
+            .select({ nickname: 1, email: 1 })
+            .lean()
+        : [];
+
+    const labelByHunterId = new Map<string, string | null>();
+    for (const h of hunters) {
+      labelByHunterId.set(h._id.toString(), this.formatHunterLabel(h));
+    }
+
+    for (const { promoId, voucherId } of needVoucher) {
+      const v = voucherById.get(voucherId);
+      let name: string | null = null;
+      const hid = this.normalizeObjectIdString(v?.claimedBy?.hunterId);
+      if (hid) {
+        name = labelByHunterId.get(hid) ?? null;
+      }
+      if (!name && v?.claimedBy) {
+        const em = v.claimedBy.email?.trim();
+        const ph = v.claimedBy.phone?.trim();
+        name = em || ph || null;
+      }
+      if (!result.has(promoId)) {
+        result.set(promoId, name);
+      }
+    }
+
+    return result;
   }
 
   async findAvailableForDrop(
@@ -321,6 +483,8 @@ export class PromoCodesService {
         : (promoCode.voucherId as { toString(): string }).toString()
       : null;
 
+    const hunterRaw = (promoCode as { hunterId?: unknown }).hunterId;
+
     return {
       id,
       dropId: dropIdStr,
@@ -328,9 +492,18 @@ export class PromoCodesService {
       code: promoCode.code,
       status: promoCode.status as PromoCodeStatus,
       voucherId: voucherIdStr,
+      hunterId: this.hunterIdForApi(hunterRaw),
       assignedAt: promoCode.assignedAt,
+      assignedToName: null,
       createdAt: promoCode.createdAt,
       updatedAt: promoCode.updatedAt,
     };
+  }
+
+  private async verifyDropExists(dropId: string): Promise<void> {
+    const drop = await this.database.drops.findById(dropId).lean();
+    if (!drop || drop.deletedAt) {
+      throw new NotFoundException("Drop not found or access denied");
+    }
   }
 }

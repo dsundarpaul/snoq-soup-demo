@@ -25,7 +25,9 @@ import {
   mapAdminStatsToPlatform,
   mapAdminUserItem,
   mapPromoListToLegacy,
+  toNestBulkPromoPayload,
 } from "@/lib/nest-mappers";
+import type { PromoCodesResponse } from "@/sections/merchant/merchant-dashboard.types";
 
 export const ADMIN_TABLE_PAGE_SIZE = 20;
 export const ADMIN_DROPS_PAGE_SIZE = ADMIN_TABLE_PAGE_SIZE;
@@ -330,7 +332,7 @@ export function useAdminDeleteDropMutation(
 }
 
 export function useAdminDropCodesQuery(dropId: string | null) {
-  return useQuery({
+  return useQuery<PromoCodesResponse>({
     queryKey: dropId
       ? adminQueryKeys.dropCodes(dropId)
       : ["admin-drop-codes-off"],
@@ -338,10 +340,11 @@ export function useAdminDropCodesQuery(dropId: string | null) {
       const path = `/api/v1/admin/drops/${dropId}/codes`;
       const res = await apiFetchMaybeRetry("GET", path, { auth: "admin" });
       if (res.status === 404) {
-        return {
-          codes: [] as { code: string; status: string }[],
+        const empty: PromoCodesResponse = {
+          codes: [],
           stats: { total: 0, available: 0, assigned: 0 },
         };
+        return empty;
       }
       await throwIfResNotOk(res, path, "admin");
       return mapPromoListToLegacy(
@@ -365,7 +368,7 @@ export function useAdminUploadDropCodesMutation(
       const res = await apiRequest(
         "POST",
         `/api/v1/admin/drops/${dropId}/codes`,
-        { codes },
+        toNestBulkPromoPayload(codes),
         {
           auth: "admin",
         }
