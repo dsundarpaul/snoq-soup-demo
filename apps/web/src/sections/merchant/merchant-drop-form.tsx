@@ -69,18 +69,19 @@ export function useMerchantDropForm(): UseFormReturn<CreateDropForm> {
 }
 
 function FieldTip({ text }: { text: string }) {
+  const { t } = useLanguage();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           className="inline-flex shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label="Info"
+          aria-label={t("merchant.form.fieldTipAria")}
         >
           <Info className="h-3.5 w-3.5" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs text-left">
+      <TooltipContent side="top" className="max-w-xs text-start">
         {text}
       </TooltipContent>
     </Tooltip>
@@ -142,12 +143,12 @@ export function MerchantDropForm({
     >
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="name">Drop Name</Label>
+          <Label htmlFor="name">{t("merchant.form.label.dropName")}</Label>
           <FieldTip text={t("merchant.form.tooltip.name")} />
         </div>
         <Input
           id="name"
-          placeholder="e.g., Golden Cup Challenge"
+          placeholder={t("merchant.form.placeholder.dropName")}
           maxLength={100}
           className={cn(err.name && "border-destructive")}
           {...form.register("name")}
@@ -160,12 +161,14 @@ export function MerchantDropForm({
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">
+            {t("merchant.form.label.description")}
+          </Label>
           <FieldTip text={t("merchant.form.tooltip.description")} />
         </div>
         <Textarea
           id="description"
-          placeholder="Describe what users will find..."
+          placeholder={t("merchant.form.placeholder.description")}
           maxLength={250}
           className={cn(err.description && "border-destructive")}
           {...form.register("description")}
@@ -178,12 +181,14 @@ export function MerchantDropForm({
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="rewardValue">Reward Value</Label>
+          <Label htmlFor="rewardValue">
+            {t("merchant.form.label.rewardValue")}
+          </Label>
           <FieldTip text={t("merchant.form.tooltip.reward")} />
         </div>
         <Input
           id="rewardValue"
-          placeholder="e.g., 50% OFF"
+          placeholder={t("merchant.form.placeholder.rewardValue")}
           maxLength={20}
           className={cn(err.rewardValue && "border-destructive")}
           {...form.register("rewardValue")}
@@ -198,7 +203,7 @@ export function MerchantDropForm({
         <div className="flex items-center gap-2">
           <Label className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4" />
-            Drop Card (Optional)
+            {t("merchant.form.label.dropCard")}
           </Label>
           <FieldTip text={t("merchant.form.tooltip.logo")} />
         </div>
@@ -212,7 +217,7 @@ export function MerchantDropForm({
             ) : (
               <Upload className="w-4 h-4" />
             )}
-            Upload image
+            {t("merchant.form.logo.uploadButton")}
             <input
               type="file"
               accept={ACCEPTED_IMAGE_TYPES}
@@ -278,7 +283,7 @@ export function MerchantDropForm({
               form.setValue("longitude", parseFloat(lng.toFixed(6)));
             }}
             label={t("merchant.form.location.searchInputLabel")}
-            placeholder="Type an address to move the pin…"
+            placeholder={t("merchant.form.location.searchPlaceholder")}
           />
         </div>
         <div className="flex w-full shrink-0 items-center gap-2 py-2">
@@ -306,13 +311,13 @@ export function MerchantDropForm({
             >
               {isGettingLocation ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Getting...
+                  <Loader2 className="w-4 h-4 me-2 animate-spin" />
+                  {t("merchant.form.location.gettingLocation")}
                 </>
               ) : (
                 <>
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Use My GPS
+                  <MapPin className="w-4 h-4 me-2" />
+                  {t("merchant.form.location.gpsTitle")}
                 </>
               )}
             </Button>
@@ -351,8 +356,8 @@ export function MerchantDropForm({
               onClick={onOpenArPlacer}
               data-testid="button-ar-placement"
             >
-              <Camera className="w-4 h-4 mr-2" />
-              AR Placement
+              <Camera className="w-4 h-4 me-2" />
+              {t("merchant.form.location.arButton")}
             </Button>
           </div>
         </div>
@@ -378,7 +383,7 @@ export function MerchantDropForm({
         <CollapsibleContent className="space-y-3 pt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude</Label>
+              <Label htmlFor="latitude">{t("merchant.form.label.latitude")}</Label>
               <Input
                 id="latitude"
                 type="number"
@@ -389,13 +394,14 @@ export function MerchantDropForm({
               />
               {err.latitude && (
                 <p className="text-sm text-destructive">
-                  {err.latitude.message ??
-                    "Valid latitude required (-90 to 90)"}
+                  {err.latitude.message ?? t("merchant.form.error.latitudeRange")}
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="longitude">Longitude</Label>
+              <Label htmlFor="longitude">
+                {t("merchant.form.label.longitude")}
+              </Label>
               <Input
                 id="longitude"
                 type="number"
@@ -407,7 +413,7 @@ export function MerchantDropForm({
               {err.longitude && (
                 <p className="text-sm text-destructive">
                   {err.longitude.message ??
-                    "Valid longitude required (-180 to 180)"}
+                    t("merchant.form.error.longitudeRange")}
                 </p>
               )}
             </div>
@@ -417,7 +423,7 @@ export function MerchantDropForm({
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="radius">Claim Radius (meters)</Label>
+          <Label htmlFor="radius">{t("merchant.form.label.radius")}</Label>
           <FieldTip text={t("merchant.form.tooltip.radius")} />
         </div>
         <Controller
@@ -478,7 +484,7 @@ export function MerchantDropForm({
         <div className="flex items-center gap-2">
           <Label className="flex items-center gap-2">
             <Timer className="w-4 h-4" />
-            Redemption Rules
+            {t("merchant.form.label.redemptionRules")}
           </Label>
           <FieldTip text={t("merchant.form.tooltip.redemption")} />
         </div>
@@ -500,15 +506,19 @@ export function MerchantDropForm({
                   data-testid="select-redemption-type"
                   disabled={hasClaims}
                 >
-                  <SelectValue placeholder="Select redemption type" />
+                  <SelectValue
+                    placeholder={t("merchant.form.redemption.selectPlaceholder")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="anytime">
-                    Anytime (within drop dates)
+                    {t("merchant.form.redemption.typeAnytime")}
                   </SelectItem>
-                  <SelectItem value="timer">Timed (short countdown)</SelectItem>
+                  <SelectItem value="timer">
+                    {t("merchant.form.redemption.typeTimer")}
+                  </SelectItem>
                   <SelectItem value="window">
-                    Redemption Window (hours/days)
+                    {t("merchant.form.redemption.typeWindow")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -531,26 +541,32 @@ export function MerchantDropForm({
             />
             <p className="min-w-0 text-sm leading-snug text-foreground">
               <span className="font-medium text-amber-950 dark:text-amber-100">
-                Redemption rules are locked.{" "}
+                {t("merchant.form.redemption.lockedLead")}{" "}
               </span>
-              {captureCount} voucher{captureCount === 1 ? " has" : "s have"}{" "}
-              already been claimed, so this field cannot be edited.
+              {captureCount === 1
+                ? t("merchant.form.redemption.lockedDetailOne", {
+                    count: captureCount,
+                  })
+                : t("merchant.form.redemption.lockedDetailMany", {
+                    count: captureCount,
+                  })}
             </p>
           </div>
         )}
         <p className="text-xs text-muted-foreground">
           {redemptionType === "anytime" &&
-            "Users can redeem anytime within the drop's start and end dates"}
-          {redemptionType === "timer" &&
-            "Users must redeem within minutes of claiming (creates urgency)"}
+            t("merchant.form.redemption.hintAnytime")}
+          {redemptionType === "timer" && t("merchant.form.redemption.hintTimer")}
           {redemptionType === "window" &&
-            "Users have a set number of hours/days after claiming to redeem"}
+            t("merchant.form.redemption.hintWindow")}
         </p>
       </div>
 
       {redemptionType === "timer" && (
         <div className="space-y-2">
-          <Label htmlFor="redemptionMinutes">Redemption Time Limit</Label>
+          <Label htmlFor="redemptionMinutes">
+            {t("merchant.form.label.redemptionTimeLimit")}
+          </Label>
           <Select
             value={String(form.watch("redemptionMinutes") || 30)}
             onValueChange={(value) =>
@@ -562,13 +578,23 @@ export function MerchantDropForm({
               data-testid="select-redemption-minutes"
               disabled={hasClaims}
             >
-              <SelectValue placeholder="Select time limit" />
+              <SelectValue
+                placeholder={t("merchant.form.redemption.timeLimitPlaceholder")}
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="15">15 minutes</SelectItem>
-              <SelectItem value="30">30 minutes</SelectItem>
-              <SelectItem value="60">1 hour</SelectItem>
-              <SelectItem value="120">2 hours</SelectItem>
+              <SelectItem value="15">
+                {t("merchant.form.redemption.minutes", { n: 15 })}
+              </SelectItem>
+              <SelectItem value="30">
+                {t("merchant.form.redemption.minutes", { n: 30 })}
+              </SelectItem>
+              <SelectItem value="60">
+                {t("merchant.form.redemption.oneHour")}
+              </SelectItem>
+              <SelectItem value="120">
+                {t("merchant.form.redemption.twoHours")}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -577,7 +603,7 @@ export function MerchantDropForm({
       {redemptionType === "window" && (
         <div className="space-y-2">
           <DatetimePicker
-            label="Redemption Deadline"
+            label={t("merchant.form.label.redemptionDeadline")}
             id="redemptionDeadline"
             value={form.watch("redemptionDeadline") || ""}
             onChange={(v) => form.setValue("redemptionDeadline", v)}
@@ -589,7 +615,7 @@ export function MerchantDropForm({
             {t("merchant.form.datetime.localInputNote")}
           </p>
           <p className="text-xs text-muted-foreground">
-            All vouchers must be redeemed by this date and time
+            {t("merchant.form.redemption.deadlineHelp")}
           </p>
         </div>
       )}
@@ -598,7 +624,7 @@ export function MerchantDropForm({
         <div className="flex items-center gap-2">
           <Label htmlFor="availabilityType" className="flex items-center gap-2">
             <Target className="w-4 h-4" />
-            Availability Type
+            {t("merchant.form.label.availabilityType")}
           </Label>
           <FieldTip text={t("merchant.form.tooltip.availability")} />
         </div>
@@ -624,15 +650,21 @@ export function MerchantDropForm({
                   className={cn(fieldState.error && "border-destructive")}
                   data-testid="select-availability-type"
                 >
-                  <SelectValue placeholder="Select availability type" />
+                  <SelectValue
+                    placeholder={t(
+                      "merchant.form.availability.selectPlaceholder"
+                    )}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unlimited">Unlimited</SelectItem>
+                  <SelectItem value="unlimited">
+                    {t("merchant.form.availability.unlimited")}
+                  </SelectItem>
                   <SelectItem
                     value="captureLimit"
                     disabled={lockToUnlimitedOnly}
                   >
-                    Capture Limit
+                    {t("merchant.form.availability.captureLimit")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -646,32 +678,35 @@ export function MerchantDropForm({
         />
         <p className="text-xs text-muted-foreground">
           {availabilitySelectValue === "unlimited" &&
-            "No cap on the number of people to claim"}
+            t("merchant.form.availability.hintUnlimited")}
           {availabilitySelectValue === "captureLimit" &&
-            "Limited number of users can claim this drop"}
+            t("merchant.form.availability.hintCapped")}
         </p>
         {hasClaims && originalAvailabilityType === "captureLimit" && (
           <p className="text-xs text-muted-foreground">
-            {captureCount} claimed. You can only increase the capture limit or
-            switch to Unlimited.
+            {t("merchant.form.availability.claimedIncreaseOnly", {
+              count: captureCount,
+            })}
           </p>
         )}
         {lockToUnlimitedOnly && (
           <p className="text-xs text-muted-foreground">
-            Cannot switch to Capture Limit after vouchers have been claimed.
+            {t("merchant.form.availability.cannotSwitchToLimit")}
           </p>
         )}
       </div>
 
       {availabilitySelectValue === "captureLimit" && (
         <div className="space-y-2">
-          <Label htmlFor="captureLimit">Maximum Captures</Label>
+          <Label htmlFor="captureLimit">
+            {t("merchant.form.label.maxCaptures")}
+          </Label>
           <Input
             id="captureLimit"
             type="number"
             min={minCaptureLimit}
             max={99999}
-            placeholder="Enter limit"
+            placeholder={t("merchant.form.placeholder.captureLimit")}
             className={cn(err.captureLimit && "border-destructive")}
             {...form.register("captureLimit")}
             data-testid="input-capture-limit"
@@ -711,22 +746,23 @@ export function MerchantDropForm({
         <div className="flex items-center gap-2">
           <Label className="flex items-center gap-2 text-base font-medium">
             <Calendar className="w-4 h-4" />
-            Drop Schedule (Optional)
+            {t("merchant.form.label.dropSchedule")}
           </Label>
           <FieldTip text={t("merchant.form.tooltip.schedule")} />
         </div>
         <p className="text-xs text-muted-foreground">
-          Set when this drop becomes available and expires. Leave empty for no
-          time restrictions.
+          {t("merchant.form.schedule.sectionIntro")}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="startTime">Start Date/Time</Label>
+            <Label htmlFor="startTime">
+              {t("merchant.form.label.startDateTime")}
+            </Label>
             <div className="flex gap-2 items-center">
               <div className="min-w-0 flex-1">
                 <DatetimePicker
                   showLabel={false}
-                  label="Start Date/Time"
+                  label={t("merchant.form.label.startDateTime")}
                   id="startTime"
                   value={form.watch("startTime") || ""}
                   onChange={(v) => form.setValue("startTime", v)}
@@ -761,12 +797,14 @@ export function MerchantDropForm({
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="endTime">End Date/Time</Label>
+            <Label htmlFor="endTime">
+              {t("merchant.form.label.endDateTime")}
+            </Label>
             <div className="flex gap-2 items-center">
               <div className="min-w-0 flex-1">
                 <DatetimePicker
                   showLabel={false}
-                  label="End Date/Time"
+                  label={t("merchant.form.label.endDateTime")}
                   id="endTime"
                   value={form.watch("endTime") || ""}
                   onChange={(v) => form.setValue("endTime", v)}

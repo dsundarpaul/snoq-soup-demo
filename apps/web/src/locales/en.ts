@@ -538,6 +538,66 @@ const en = {
     "Shown to users when they view or redeem the voucher…",
   "merchant.form.validation.toastTitle": "Check highlighted fields",
   "merchant.form.validation.toastDesc": "Fix the errors below and try again.",
+  "merchant.form.fieldTipAria": "Info",
+  "merchant.form.label.dropName": "Drop Name",
+  "merchant.form.label.description": "Description",
+  "merchant.form.label.rewardValue": "Reward Value",
+  "merchant.form.label.dropCard": "Drop Card (Optional)",
+  "merchant.form.label.latitude": "Latitude",
+  "merchant.form.label.longitude": "Longitude",
+  "merchant.form.label.radius": "Claim Radius (meters)",
+  "merchant.form.label.redemptionRules": "Redemption Rules",
+  "merchant.form.label.redemptionTimeLimit": "Redemption Time Limit",
+  "merchant.form.label.redemptionDeadline": "Redemption Deadline",
+  "merchant.form.label.availabilityType": "Availability Type",
+  "merchant.form.label.maxCaptures": "Maximum Captures",
+  "merchant.form.label.dropSchedule": "Drop Schedule (Optional)",
+  "merchant.form.label.startDateTime": "Start Date/Time",
+  "merchant.form.label.endDateTime": "End Date/Time",
+  "merchant.form.placeholder.dropName": "e.g., Golden Cup Challenge",
+  "merchant.form.placeholder.description": "Describe what users will find...",
+  "merchant.form.placeholder.rewardValue": "e.g., 50% OFF",
+  "merchant.form.placeholder.captureLimit": "Enter limit",
+  "merchant.form.logo.uploadButton": "Upload image",
+  "merchant.form.location.searchPlaceholder": "Type an address to move the pin…",
+  "merchant.form.location.gettingLocation": "Getting...",
+  "merchant.form.location.arButton": "AR Placement",
+  "merchant.form.error.latitudeRange": "Valid latitude required (-90 to 90)",
+  "merchant.form.error.longitudeRange": "Valid longitude required (-180 to 180)",
+  "merchant.form.redemption.selectPlaceholder": "Select redemption type",
+  "merchant.form.redemption.typeAnytime": "Anytime (within drop dates)",
+  "merchant.form.redemption.typeTimer": "Timed (short countdown)",
+  "merchant.form.redemption.typeWindow": "Redemption Window (hours/days)",
+  "merchant.form.redemption.hintAnytime":
+    "Users can redeem anytime within the drop's start and end dates",
+  "merchant.form.redemption.hintTimer":
+    "Users must redeem within minutes of claiming (creates urgency)",
+  "merchant.form.redemption.hintWindow":
+    "Users have a set number of hours/days after claiming to redeem",
+  "merchant.form.redemption.lockedLead": "Redemption rules are locked.",
+  "merchant.form.redemption.lockedDetailOne":
+    "{count} voucher has already been claimed, so this field cannot be edited.",
+  "merchant.form.redemption.lockedDetailMany":
+    "{count} vouchers have already been claimed, so this field cannot be edited.",
+  "merchant.form.redemption.timeLimitPlaceholder": "Select time limit",
+  "merchant.form.redemption.minutes": "{n} minutes",
+  "merchant.form.redemption.oneHour": "1 hour",
+  "merchant.form.redemption.twoHours": "2 hours",
+  "merchant.form.redemption.deadlineHelp":
+    "All vouchers must be redeemed by this date and time",
+  "merchant.form.availability.selectPlaceholder": "Select availability type",
+  "merchant.form.availability.unlimited": "Unlimited",
+  "merchant.form.availability.captureLimit": "Capture Limit",
+  "merchant.form.availability.hintUnlimited":
+    "No cap on the number of people to claim",
+  "merchant.form.availability.hintCapped":
+    "Limited number of users can claim this drop",
+  "merchant.form.availability.claimedIncreaseOnly":
+    "{count} claimed. You can only increase the capture limit or switch to Unlimited.",
+  "merchant.form.availability.cannotSwitchToLimit":
+    "Cannot switch to Capture Limit after vouchers have been claimed.",
+  "merchant.form.schedule.sectionIntro":
+    "Set when this drop becomes available and expires. Leave empty for no time restrictions.",
   "merchant.sheet.deleteDrop": "Delete drop",
   "merchant.sheet.deleteConfirm":
     "Delete this drop permanently? This cannot be undone.",

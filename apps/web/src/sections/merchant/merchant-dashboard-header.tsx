@@ -2,8 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Home, LogOut, User } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useLanguage } from "@/contexts/language-context";
+import { useTheme } from "@/hooks/use-theme";
+import { Home, LogOut, Moon, Settings2, Sun, User } from "lucide-react";
 import type { Merchant } from "@shared/schema";
 
 const appLogoSrc = "/images/clean_trophy_logo_no_text.png";
@@ -18,6 +29,8 @@ export function MerchantDashboardHeader({
   onLogout,
 }: MerchantDashboardHeaderProps) {
   const router = useRouter();
+  const { t, language, setLanguage } = useLanguage();
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="border-b border-border bg-card">
@@ -63,7 +76,62 @@ export function MerchantDashboardHeader({
             <Home className="w-4 h-4" />
             Home
           </Button>
-          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                data-testid="button-merchant-display-menu"
+                title={`${t("home.theme")}, ${t("common.language")}`}
+              >
+                <Settings2 className="h-4 w-4" />
+                <span className="sr-only">
+                  {t("home.theme")}, {t("common.language")}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Sun className="mr-2 h-4 w-4" />
+                  {t("home.theme")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    value={theme}
+                    onValueChange={(v) => setTheme(v as "light" | "dark")}
+                  >
+                    <DropdownMenuRadioItem value="light">
+                      <Sun className="mr-2 h-4 w-4" />
+                      {t("home.light")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark">
+                      <Moon className="mr-2 h-4 w-4" />
+                      {t("home.dark")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  {t("common.language")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    value={language}
+                    onValueChange={(v) => setLanguage(v as "en" | "ar")}
+                  >
+                    <DropdownMenuRadioItem value="en">
+                      {t("common.english")}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="ar">
+                      {t("common.arabic")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="ghost"
             size="icon"
