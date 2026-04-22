@@ -16,6 +16,11 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
+const STRIPPED_RESPONSE_HEADERS = new Set([
+  "content-encoding",
+  "content-length",
+]);
+
 const FORWARD_REQUEST_HEADERS = [
   "accept",
   "accept-language",
@@ -100,6 +105,7 @@ function applyUpstreamHeaders(res: NextResponse, upstream: Response) {
     const lower = key.toLowerCase();
     if (lower === "set-cookie") return;
     if (HOP_BY_HOP.has(lower)) return;
+    if (STRIPPED_RESPONSE_HEADERS.has(lower)) return;
     res.headers.set(key, value);
   });
 }
