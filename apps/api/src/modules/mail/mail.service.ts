@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import * as nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
@@ -11,16 +11,24 @@ import {
 
 @Injectable()
 export class MailService {
-  private createTransporter(): nodemailer.Transporter<SMTPTransport.SentMessageInfo> {
-    return nodemailer.createTransport({
-      host: config.smtp.host,
-      port: config.smtp.port,
-      secure: config.smtp.secure,
-      auth: {
-        user: config.smtp.user,
-        pass: config.smtp.pass,
-      },
-    });
+  private readonly logger = new Logger(MailService.name);
+
+  private transporter: nodemailer.Transporter<SMTPTransport.SentMessageInfo> | null =
+    null;
+
+  private getTransporter(): nodemailer.Transporter<SMTPTransport.SentMessageInfo> {
+    if (!this.transporter) {
+      this.transporter = nodemailer.createTransport({
+        host: config.smtp.host,
+        port: config.smtp.port,
+        secure: config.smtp.secure,
+        auth: {
+          user: config.smtp.user,
+          pass: config.smtp.pass,
+        },
+      });
+    }
+    return this.transporter;
   }
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
@@ -28,7 +36,7 @@ export class MailService {
     const verifyUrl = `${base}/merchant/verify-email/${encodeURIComponent(token)}`;
 
     if (!config.ENABLE_EMAIL || !config.smtp.host) {
-      console.log(`Verification email to ${email}: ${verifyUrl}`);
+      this.logger.debug(`Verification email would be sent to ${email}`);
       return;
     }
 
@@ -37,7 +45,7 @@ export class MailService {
       base,
     );
 
-    const transporter = this.createTransporter();
+    const transporter = this.getTransporter();
 
     await transporter.sendMail({
       from: config.smtp.from,
@@ -61,7 +69,7 @@ export class MailService {
     const resetUrl = `${base}${path}`;
 
     if (!config.ENABLE_EMAIL || !config.smtp.host) {
-      console.log(`Password reset email to ${email}: ${resetUrl}`);
+      this.logger.debug(`Password reset email would be sent to ${email}`);
       return;
     }
 
@@ -71,7 +79,7 @@ export class MailService {
       kind,
     );
 
-    const transporter = this.createTransporter();
+    const transporter = this.getTransporter();
 
     await transporter.sendMail({
       from: config.smtp.from,
@@ -90,7 +98,7 @@ export class MailService {
     const base = config.FRONTEND_URL.replace(/\/$/, "");
 
     if (!config.ENABLE_EMAIL || !config.smtp.host) {
-      console.log(`[MailService] voucher email to ${to}: ${magicLink}`);
+      this.logger.debug(`Voucher magic link email would be sent to ${to}`);
       return;
     }
 
@@ -100,7 +108,7 @@ export class MailService {
       base,
     );
 
-    const transporter = this.createTransporter();
+    const transporter = this.getTransporter();
     await transporter.sendMail({
       from: config.smtp.from,
       to,

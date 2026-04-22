@@ -6,17 +6,17 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { clearSessionsExcept } from "@/lib/auth-session";
 import {
-  setTokenBundle,
-  setStoredUser,
-  clearTokenBundle,
-  getRefreshToken,
-} from "@/lib/auth-tokens";
+  clearSessionsExcept,
+  clearAuthSessionHint,
+  setAuthSessionHint,
+  setHunterSuppressDeviceLoginAfterLogout,
+} from "@/lib/auth-session";
+import { clearTokenBundle } from "@/lib/auth-tokens";
 import { apiFetch, apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
+import { fetchMerchantMeCredential } from "@/hooks/auth-role-queries";
 import {
   mapAuthUserToMerchant,
-  mapMerchantMeToLegacy,
   mapMerchantAnalyticsToLegacy,
   mapMerchantPublicToStoreData,
   mapNestDropToLegacy,
@@ -90,18 +90,13 @@ export function useMerchantLoginMutation(
         { auth: undefined }
       );
       const body = (await response.json()) as {
-        accessToken: string;
-        refreshToken: string;
         user: Record<string, unknown>;
       };
-      setTokenBundle("merchant", {
-        accessToken: body.accessToken,
-        refreshToken: body.refreshToken,
-      });
-      setStoredUser("merchant", body.user);
+      setAuthSessionHint();
       return mapAuthUserToMerchant(body.user);
     },
     onSuccess: (...args) => {
+      void queryClient.invalidateQueries({ queryKey: merchantQueryKeys.me });
       clearMerchantSessionQueries();
       clearSessionsExcept("merchant");
       options?.onSuccess?.(...args);
@@ -130,18 +125,13 @@ export function useMerchantSignupMutation(
         { auth: undefined }
       );
       const body = (await response.json()) as {
-        accessToken: string;
-        refreshToken: string;
         user: Record<string, unknown>;
       };
-      setTokenBundle("merchant", {
-        accessToken: body.accessToken,
-        refreshToken: body.refreshToken,
-      });
-      setStoredUser("merchant", body.user);
+      setAuthSessionHint();
       return body;
     },
     onSuccess: (...args) => {
+      void queryClient.invalidateQueries({ queryKey: merchantQueryKeys.me });
       clearMerchantSessionQueries();
       clearSessionsExcept("merchant");
       options?.onSuccess?.(...args);
@@ -202,19 +192,13 @@ export function useMerchantResetPasswordMutation(token: string) {
 }
 
 export async function merchantLogout(): Promise<void> {
-  const refresh = getRefreshToken("merchant");
-  if (refresh) {
-    try {
-      await apiRequest(
-        "POST",
-        "/api/v1/auth/logout",
-        { refreshToken: refresh },
-        { auth: "merchant" }
-      );
-    } catch {
-      /* tokens cleared below */
-    }
+  setHunterSuppressDeviceLoginAfterLogout();
+  try {
+    await apiRequest("POST", "/api/v1/auth/logout", {}, { auth: "merchant" });
+  } catch {
+    /* ignore */
   }
+  clearAuthSessionHint();
   clearTokenBundle("merchant");
   clearMerchantSessionQueries();
 }
@@ -363,15 +347,7 @@ export function useMerchantMeQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: merchantQueryKeys.me,
     enabled: options?.enabled !== false,
-    queryFn: async () => {
-      const path = "/api/v1/merchants/me";
-      const res = await apiFetchMaybeRetry("GET", path, {
-        auth: "merchant",
-      });
-      await throwIfResNotOk(res, path, "merchant");
-      const json = (await res.json()) as Record<string, unknown>;
-      return mapMerchantMeToLegacy(json);
-    },
+    queryFn: fetchMerchantMeCredential,
   });
 }
 

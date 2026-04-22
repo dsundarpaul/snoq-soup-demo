@@ -5,6 +5,8 @@ import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { startE2eMongo } from "./mongo-test-server";
 import { Model } from "mongoose";
 import * as request from "supertest";
+import * as cookieParser from "cookie-parser";
+import { accessTokenFromSetCookie } from "./auth-cookie-helpers";
 import { ThrottlerStorage } from "@nestjs/throttler";
 import { Types } from "mongoose";
 import { AppModule } from "../../src/app.module";
@@ -140,7 +142,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
       .expect(200);
 
     return {
-      token: loginRes.body.accessToken,
+      token: accessTokenFromSetCookie(loginRes.headers["set-cookie"])!,
       id: registerRes.body.user.id,
       email,
     };
@@ -189,6 +191,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.setGlobalPrefix("api/v1");
     await app.init();
@@ -485,7 +488,10 @@ describe("Voucher Lifecycle E2E Tests", () => {
 
       const shareRes = await request(app.getHttpServer())
         .post("/api/v1/vouchers/send-email")
-        .set("Authorization", `Bearer ${hunterRes.body.accessToken}`)
+        .set(
+          "Authorization",
+          `Bearer ${accessTokenFromSetCookie(hunterRes.headers["set-cookie"])}`,
+        )
         .send({
           voucherId: claimRes.body.id,
           email: generateEmail("share"),
@@ -511,7 +517,10 @@ describe("Voucher Lifecycle E2E Tests", () => {
 
       const shareRes = await request(app.getHttpServer())
         .post("/api/v1/vouchers/send-whatsapp")
-        .set("Authorization", `Bearer ${hunterRes.body.accessToken}`)
+        .set(
+          "Authorization",
+          `Bearer ${accessTokenFromSetCookie(hunterRes.headers["set-cookie"])}`,
+        )
         .send({
           voucherId: claimRes.body.id,
           phone: "+966501234567",
@@ -635,7 +644,10 @@ describe("Voucher Lifecycle E2E Tests", () => {
 
       const vouchersRes = await request(app.getHttpServer())
         .get("/api/v1/hunters/me/vouchers")
-        .set("Authorization", `Bearer ${hunterRes.body.accessToken}`)
+        .set(
+          "Authorization",
+          `Bearer ${accessTokenFromSetCookie(hunterRes.headers["set-cookie"])}`,
+        )
         .expect(200);
 
       expect(vouchersRes.body).toHaveProperty("unredeemed");

@@ -52,8 +52,9 @@ export class PromoCode {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: "Hunter who claimed the voucher (denormalized for lookups)",
+    description: "Hunter ObjectId who claimed this code",
   })
+  @IsString()
   @IsOptional()
   @Prop({ type: Types.ObjectId, ref: "Hunter", default: null })
   hunterId!: Types.ObjectId | null;

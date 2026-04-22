@@ -1,11 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PipelineStage, Types, FlattenMaps } from "mongoose";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { MerchantDocument } from "../../database/schemas/merchant.schema";
 import { UpdateMerchantDto } from "./dto/request/update-merchant.dto";
@@ -118,7 +113,11 @@ export class MerchantsService {
     id: string,
     expiresInHours = 24,
   ): Promise<ScannerTokenResponseDto> {
-    const token = randomBytes(32).toString("hex");
+    // Generate plaintext token (shown to merchant once)
+    const plainToken = randomBytes(32).toString("hex");
+    // Hash for secure storage
+    const hashedToken = createHash("sha256").update(plainToken).digest("hex");
+
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
@@ -127,7 +126,7 @@ export class MerchantsService {
         { _id: id, deletedAt: null },
         {
           $set: {
-            "scannerToken.token": token,
+            "scannerToken.token": hashedToken,
             "scannerToken.createdAt": expiresAt,
           },
         },
@@ -139,8 +138,9 @@ export class MerchantsService {
       throw new NotFoundException("Merchant not found");
     }
 
+    // Return plaintext token - merchant sees it once
     return {
-      token: merchant.scannerToken?.token || token,
+      token: plainToken,
       expiresAt,
       createdAt: new Date(),
     };

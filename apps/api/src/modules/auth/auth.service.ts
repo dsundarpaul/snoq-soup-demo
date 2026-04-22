@@ -12,6 +12,7 @@ import { randomUUID, createHash } from "crypto";
 import * as bcrypt from "bcryptjs";
 import { Connection } from "mongoose";
 
+import { config } from "../../config/app.config";
 import { DatabaseService } from "../../database/database.service";
 import { MailService } from "../mail/mail.service";
 import { EmailVerificationTokenService } from "./email-verification-token.service";
@@ -21,19 +22,23 @@ import {
 } from "../../database/schemas/merchant.schema";
 import { Hunter, HunterDocument } from "../../database/schemas/hunter.schema";
 import { Admin, AdminDocument } from "../../database/schemas/admin.schema";
-import { UserType } from "../../database/schemas/refresh-token.schema";
+import { UserRole } from "../../common/enums/user-role.enum";
 import { RegisterMerchantDto } from "./dto/request/register-merchant.dto";
 import { RegisterHunterDto } from "./dto/request/register-hunter.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";
-import { TokenResponseDto } from "./dto/response/token-response.dto";
+
+type JwtPair = { accessToken: string; refreshToken: string };
+
+type AuthWithJwtPair = AuthResponseDto & JwtPair;
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly JWT_ACCESS_EXPIRY = "20m";
   private readonly JWT_REFRESH_EXPIRY_DAYS = 7;
-  private readonly MAX_LOGIN_ATTEMPTS = 5;
-  private readonly LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+  private readonly MERCHANT_MAX_LOGIN_ATTEMPTS = 5;
+  private readonly MERCHANT_LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+  private readonly HUNTER_MAX_LOGIN_ATTEMPTS = 5;
+  private readonly HUNTER_LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
   private readonly BCRYPT_ROUNDS = 12;
   private readonly RESET_EXPIRY_HOURS = 1;
 
@@ -95,7 +100,7 @@ export class AuthService {
     };
   }
 
-  async registerMerchant(dto: RegisterMerchantDto): Promise<AuthResponseDto> {
+  async registerMerchant(dto: RegisterMerchantDto): Promise<AuthWithJwtPair> {
     const existingEmail = await this.database.merchants.findOne({
       email: dto.email.toLowerCase(),
       deletedAt: null,
@@ -164,7 +169,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       merchant._id.toString(),
-      UserType.MERCHANT,
+      UserRole.MERCHANT,
     );
 
     return {
@@ -173,7 +178,7 @@ export class AuthService {
     };
   }
 
-  async registerHunter(dto: RegisterHunterDto): Promise<AuthResponseDto> {
+  async registerHunter(dto: RegisterHunterDto): Promise<AuthWithJwtPair> {
     if (dto.email) {
       const existingEmail = await this.database.hunters.findOne({
         email: dto.email.toLowerCase(),
@@ -201,7 +206,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       hunter._id.toString(),
-      UserType.HUNTER,
+      UserRole.HUNTER,
     );
 
     return {
@@ -213,7 +218,7 @@ export class AuthService {
   async loginMerchant(
     email: string,
     password: string,
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthWithJwtPair> {
     const merchant = await this.database.merchants
       .findOne({
         email: email.toLowerCase(),
@@ -246,8 +251,10 @@ export class AuthService {
         loginAttempts,
       };
 
-      if (loginAttempts >= this.MAX_LOGIN_ATTEMPTS) {
-        updateData.lockUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
+      if (loginAttempts >= this.MERCHANT_MAX_LOGIN_ATTEMPTS) {
+        updateData.lockUntil = new Date(
+          Date.now() + this.MERCHANT_LOCKOUT_DURATION_MS,
+        );
       }
 
       await this.database.merchants.updateOne(
@@ -271,7 +278,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       merchant._id.toString(),
-      UserType.MERCHANT,
+      UserRole.MERCHANT,
     );
 
     return {
@@ -280,16 +287,22 @@ export class AuthService {
     };
   }
 
-  async loginHunter(email: string, password: string): Promise<AuthResponseDto> {
+  async loginHunter(email: string, password: string): Promise<AuthWithJwtPair> {
     const hunter = await this.database.hunters
       .findOne({
         email: email.toLowerCase(),
         deletedAt: null,
       })
-      .select("+password");
+      .select("+password +loginAttempts +lockUntil");
 
     if (!hunter || !hunter.password) {
       throw new UnauthorizedException("Invalid credentials");
+    }
+
+    if (this.isLockedOut(hunter.lockUntil)) {
+      throw new ForbiddenException(
+        "Account temporarily locked. Try again later.",
+      );
     }
 
     const isValidPassword = await this.verifyPassword(
@@ -298,12 +311,33 @@ export class AuthService {
     );
 
     if (!isValidPassword) {
+      const loginAttempts = (hunter.loginAttempts || 0) + 1;
+      const updateData: { loginAttempts: number; lockUntil?: Date } = {
+        loginAttempts,
+      };
+
+      if (loginAttempts >= this.HUNTER_MAX_LOGIN_ATTEMPTS) {
+        updateData.lockUntil = new Date(
+          Date.now() + this.HUNTER_LOCKOUT_DURATION_MS,
+        );
+      }
+
+      await this.database.hunters.updateOne(
+        { _id: hunter._id },
+        { $set: updateData },
+      );
+
       throw new UnauthorizedException("Invalid credentials");
     }
 
+    await this.database.hunters.updateOne(
+      { _id: hunter._id },
+      { $set: { loginAttempts: 0, lockUntil: null } },
+    );
+
     const tokens = await this.generateTokenPair(
       hunter._id.toString(),
-      UserType.HUNTER,
+      UserRole.HUNTER,
     );
 
     return {
@@ -312,7 +346,7 @@ export class AuthService {
     };
   }
 
-  async loginByDevice(deviceId: string): Promise<AuthResponseDto> {
+  async loginByDevice(deviceId: string): Promise<AuthWithJwtPair> {
     let hunter = await this.database.hunters.findOne({
       deviceId,
       deletedAt: null,
@@ -333,7 +367,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       hunter._id.toString(),
-      UserType.HUNTER,
+      UserRole.HUNTER,
     );
 
     return {
@@ -342,7 +376,7 @@ export class AuthService {
     };
   }
 
-  async loginAdmin(email: string, password: string): Promise<AuthResponseDto> {
+  async loginAdmin(email: string, password: string): Promise<AuthWithJwtPair> {
     const admin = await this.database.admins
       .findOne({
         email: email.toLowerCase(),
@@ -366,8 +400,10 @@ export class AuthService {
         loginAttempts,
       };
 
-      if (loginAttempts >= this.MAX_LOGIN_ATTEMPTS) {
-        updateData.lockUntil = new Date(Date.now() + this.LOCKOUT_DURATION_MS);
+      if (loginAttempts >= this.MERCHANT_MAX_LOGIN_ATTEMPTS) {
+        updateData.lockUntil = new Date(
+          Date.now() + this.MERCHANT_LOCKOUT_DURATION_MS,
+        );
       }
 
       await this.database.admins.updateOne(
@@ -385,7 +421,7 @@ export class AuthService {
 
     const tokens = await this.generateTokenPair(
       admin._id.toString(),
-      UserType.ADMIN,
+      UserRole.ADMIN,
     );
 
     return {
@@ -577,15 +613,15 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(email: string, userType: UserType): Promise<void> {
+  async forgotPassword(email: string, userType: UserRole): Promise<void> {
     let user: MerchantDocument | HunterDocument | null = null;
 
-    if (userType === UserType.MERCHANT) {
+    if (userType === UserRole.MERCHANT) {
       user = await this.database.merchants.findOne({
         email: email.toLowerCase(),
         deletedAt: null,
       });
-    } else if (userType === UserType.HUNTER) {
+    } else if (userType === UserRole.HUNTER) {
       user = await this.database.hunters.findOne({
         email: email.toLowerCase(),
         deletedAt: null,
@@ -597,17 +633,18 @@ export class AuthService {
     }
 
     const resetToken = randomUUID();
+    const hashedResetToken = this.hashToken(resetToken);
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + this.RESET_EXPIRY_HOURS);
 
     const updateData = {
       passwordReset: {
-        token: resetToken,
+        token: hashedResetToken,
         expiresAt,
       },
     };
 
-    if (userType === UserType.MERCHANT) {
+    if (userType === UserRole.MERCHANT) {
       await this.database.merchants.updateOne(
         { _id: user._id },
         { $set: updateData },
@@ -624,7 +661,7 @@ export class AuthService {
     }
 
     const kind =
-      userType === UserType.MERCHANT
+      userType === UserRole.MERCHANT
         ? ("merchant" as const)
         : ("hunter" as const);
 
@@ -646,18 +683,19 @@ export class AuthService {
   async resetPassword(
     token: string,
     password: string,
-    userType: UserType,
+    userType: UserRole,
   ): Promise<void> {
+    const hashedToken = this.hashToken(token);
     let user: MerchantDocument | HunterDocument | null = null;
 
-    if (userType === UserType.MERCHANT) {
+    if (userType === UserRole.MERCHANT) {
       user = await this.database.merchants.findOne({
-        "passwordReset.token": token,
+        "passwordReset.token": hashedToken,
         deletedAt: null,
       });
-    } else if (userType === UserType.HUNTER) {
+    } else if (userType === UserRole.HUNTER) {
       user = await this.database.hunters.findOne({
-        "passwordReset.token": token,
+        "passwordReset.token": hashedToken,
         deletedAt: null,
       });
     }
@@ -675,7 +713,7 @@ export class AuthService {
 
     const hashedPassword = await this.hashPassword(password);
 
-    if (userType === UserType.MERCHANT) {
+    if (userType === UserRole.MERCHANT) {
       await this.database.merchants.updateOne(
         { _id: user._id },
         {
@@ -683,7 +721,7 @@ export class AuthService {
           $unset: { "passwordReset.token": 1, "passwordReset.expiresAt": 1 },
         },
       );
-      await this.revokeAllUserTokens(user._id.toString(), UserType.MERCHANT);
+      await this.revokeAllUserTokens(user._id.toString(), UserRole.MERCHANT);
     } else {
       await this.database.hunters.updateOne(
         { _id: user._id },
@@ -692,11 +730,11 @@ export class AuthService {
           $unset: { "passwordReset.token": 1, "passwordReset.expiresAt": 1 },
         },
       );
-      await this.revokeAllUserTokens(user._id.toString(), UserType.HUNTER);
+      await this.revokeAllUserTokens(user._id.toString(), UserRole.HUNTER);
     }
   }
 
-  async refreshTokens(refreshToken: string): Promise<TokenResponseDto> {
+  async refreshTokens(refreshToken: string): Promise<JwtPair> {
     const hashedToken = this.hashToken(refreshToken);
 
     // First find the token regardless of revocation status to check for reuse
@@ -725,7 +763,7 @@ export class AuthService {
       throw new UnauthorizedException("Refresh token has expired");
     }
 
-    if (tokenDoc.userType === UserType.MERCHANT) {
+    if (tokenDoc.userType === UserRole.MERCHANT) {
       const m = await this.database.merchants
         .findById(tokenDoc.userId)
         .select({ suspendedAt: 1, deletedAt: 1 })
@@ -767,9 +805,9 @@ export class AuthService {
 
   async generateTokenPair(
     userId: string,
-    userType: UserType,
+    userType: UserRole,
     existingFamily?: string,
-  ): Promise<TokenResponseDto> {
+  ): Promise<JwtPair> {
     const family = existingFamily || randomUUID();
     const refreshToken = randomUUID();
     const hashedRefreshToken = this.hashToken(refreshToken);
@@ -780,7 +818,7 @@ export class AuthService {
         type: userType,
       },
       {
-        expiresIn: this.JWT_ACCESS_EXPIRY,
+        expiresIn: config.jwt.expiresIn,
       },
     );
 
@@ -802,7 +840,7 @@ export class AuthService {
     };
   }
 
-  async revokeAllUserTokens(userId: string, userType: UserType): Promise<void> {
+  async revokeAllUserTokens(userId: string, userType: UserRole): Promise<void> {
     await this.database.refreshTokens.updateMany(
       { userId, userType, revokedAt: null },
       { $set: { revokedAt: new Date() } },
@@ -811,13 +849,13 @@ export class AuthService {
 
   async validateUser(
     userId: string,
-    userType: UserType,
+    userType: UserRole,
   ): Promise<Merchant | Hunter | Admin | null> {
-    if (userType === UserType.MERCHANT) {
+    if (userType === UserRole.MERCHANT) {
       return this.database.merchants.findById(userId);
-    } else if (userType === UserType.HUNTER) {
+    } else if (userType === UserRole.HUNTER) {
       return this.database.hunters.findById(userId);
-    } else if (userType === UserType.ADMIN) {
+    } else if (userType === UserRole.ADMIN) {
       return this.database.admins.findById(userId);
     }
     return null;

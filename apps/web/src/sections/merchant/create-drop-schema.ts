@@ -12,18 +12,15 @@ export const createDropSchema = z
       .max(250, "Description must be at most 250 characters"),
     latitude: z.coerce.number().min(-90).max(90),
     longitude: z.coerce.number().min(-180).max(180),
-    radius: z
-      .union([z.coerce.number(), z.undefined(), z.null()])
-      .optional()
-      .transform((v) =>
-        typeof v === "number" && Number.isFinite(v) ? v : undefined
-      )
-      .refine((v) => v === undefined || v >= 5, {
-        message: "Radius must be at least 5 meters",
-      })
-      .refine((v) => v === undefined || v <= 2000, {
-        message: "Radius must be at most 2000 meters",
-      }),
+    radius: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const n = Number(val);
+      return Number.isFinite(n) ? n : undefined;
+    }, z
+      .number()
+      .min(5, "Radius must be at least 5 meters")
+      .max(2000, "Radius must be at most 2000 meters")
+      .optional()),
     rewardValue: z
       .string()
       .min(1, "Reward value is required")
@@ -34,12 +31,10 @@ export const createDropSchema = z
       .refine((val) => !val || val === "" || /^https?:\/\/.+/.test(val), {
         message: "Must be a valid HTTP URL or empty",
       }),
-    redemptionType: z.enum(["anytime", "timer", "window"]).default("anytime"),
+    redemptionType: z.enum(["anytime", "timer", "window"]),
     redemptionMinutes: z.coerce.number().optional(),
     redemptionDeadline: z.string().optional(),
-    availabilityType: z
-      .enum(["unlimited", "captureLimit"])
-      .default("unlimited"),
+    availabilityType: z.enum(["unlimited", "captureLimit"]),
     captureLimit: z.preprocess((val) => {
       if (val === "" || val === null || val === undefined) return undefined;
       const n = Number(val);
@@ -48,13 +43,11 @@ export const createDropSchema = z
     startTime: z.string().optional(),
     endTime: z.string().optional(),
     voucherAbsoluteExpiresAt: z.string().optional(),
-    voucherTtlHoursAfterClaim: z
-      .union([z.coerce.number().min(1), z.literal(""), z.undefined(), z.null()])
-      .optional()
-      .nullable()
-      .transform((v) =>
-        typeof v === "number" && !Number.isNaN(v) ? v : undefined
-      ),
+    voucherTtlHoursAfterClaim: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      const n = Number(val);
+      return Number.isFinite(n) ? n : undefined;
+    }, z.number().min(1).optional()),
     termsAndConditions: z
       .string()
       .max(300, "Terms must be at most 300 characters")

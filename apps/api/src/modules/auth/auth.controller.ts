@@ -6,6 +6,9 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Res,
+  Req,
+  UnauthorizedException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -13,8 +16,10 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiCookieAuth,
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
+import { Request, Response } from "express";
 
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/request/login.dto";
@@ -24,11 +29,24 @@ import { ForgotPasswordDto } from "./dto/request/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/request/reset-password.dto";
 import { RefreshTokenDto } from "./dto/request/refresh-token.dto";
 import { VerifyEmailDto } from "./dto/request/verify-email.dto";
+import { DeviceLoginDto } from "./dto/request/device-login.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";
-import { TokenResponseDto } from "./dto/response/token-response.dto";
+import { RefreshSessionResponseDto } from "./dto/response/token-response.dto";
 import { ResendVerificationResponseDto } from "./dto/response/resend-verification-response.dto";
-import { UserType } from "../../database/schemas/refresh-token.schema";
+import { UserRole } from "../../common/enums/user-role.enum";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { config } from "../../config/app.config";
+
+const ACCESS_TOKEN_COOKIE = "access_token";
+const REFRESH_TOKEN_COOKIE = "refresh_token";
+
+function toAuthResponseBody(result: {
+  user: AuthResponseDto["user"];
+  accessToken: string;
+  refreshToken: string;
+}): AuthResponseDto {
+  return { user: result.user };
+}
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -37,6 +55,44 @@ export class AuthController {
 
   private static readonly resendVerificationMessage =
     "If the email exists, a verification link has been sent.";
+
+  private setAuthCookies(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+  ): void {
+    const isProduction = config.NODE_ENV === "production";
+    const sameSite = isProduction ? ("strict" as const) : ("lax" as const);
+
+    res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite,
+      maxAge: 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+  }
+
+  private clearAuthCookies(res: Response): void {
+    const isProduction = config.NODE_ENV === "production";
+    const sameSite = isProduction ? ("strict" as const) : ("lax" as const);
+    const opts = {
+      path: "/",
+      httpOnly: true,
+      secure: isProduction,
+      sameSite,
+    };
+    res.clearCookie(ACCESS_TOKEN_COOKIE, opts);
+    res.clearCookie(REFRESH_TOKEN_COOKIE, opts);
+  }
 
   @Post("verify-email")
   @HttpCode(HttpStatus.OK)
@@ -75,10 +131,14 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 409, description: "Email or username already exists" })
+  @ApiCookieAuth()
   async registerMerchant(
     @Body() dto: RegisterMerchantDto,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    return this.authService.registerMerchant(dto);
+    const result = await this.authService.registerMerchant(dto);
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return toAuthResponseBody(result);
   }
 
   @Post("merchant/login")
@@ -95,8 +155,17 @@ export class AuthController {
     status: 403,
     description: "Account locked or email not verified",
   })
-  async loginMerchant(@Body() dto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.loginMerchant(dto.email, dto.password);
+  @ApiCookieAuth()
+  async loginMerchant(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    const result = await this.authService.loginMerchant(
+      dto.email,
+      dto.password,
+    );
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return toAuthResponseBody(result);
   }
 
   @Post("merchant/verify-email/:token")
@@ -136,7 +205,7 @@ export class AuthController {
     description: "Reset email sent if account exists",
   })
   async forgotMerchantPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
-    return this.authService.forgotPassword(dto.email, UserType.MERCHANT);
+    return this.authService.forgotPassword(dto.email, UserRole.MERCHANT);
   }
 
   @Post("merchant/reset-password/:token")
@@ -152,7 +221,7 @@ export class AuthController {
     return this.authService.resetPassword(
       token,
       dto.password,
-      UserType.MERCHANT,
+      UserRole.MERCHANT,
     );
   }
 
@@ -169,10 +238,14 @@ export class AuthController {
     status: 409,
     description: "Device or email already registered",
   })
+  @ApiCookieAuth()
   async registerHunter(
     @Body() dto: RegisterHunterDto,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    return this.authService.registerHunter(dto);
+    const result = await this.authService.registerHunter(dto);
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return toAuthResponseBody(result);
   }
 
   @Post("hunter/login")
@@ -185,8 +258,14 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: "Invalid credentials" })
-  async loginHunter(@Body() dto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.loginHunter(dto.email, dto.password);
+  @ApiCookieAuth()
+  async loginHunter(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    const result = await this.authService.loginHunter(dto.email, dto.password);
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return toAuthResponseBody(result);
   }
 
   @Post("hunter/device-login")
@@ -198,10 +277,14 @@ export class AuthController {
     description: "Login successful",
     type: AuthResponseDto,
   })
+  @ApiCookieAuth()
   async loginByDevice(
-    @Body("deviceId") deviceId: string,
+    @Body() dto: DeviceLoginDto,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    return this.authService.loginByDevice(deviceId);
+    const result = await this.authService.loginByDevice(dto.deviceId);
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return toAuthResponseBody(result);
   }
 
   @Post("hunter/forgot-password")
@@ -213,7 +296,7 @@ export class AuthController {
     description: "Reset email sent if account exists",
   })
   async forgotHunterPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
-    return this.authService.forgotPassword(dto.email, UserType.HUNTER);
+    return this.authService.forgotPassword(dto.email, UserRole.HUNTER);
   }
 
   @Post("hunter/reset-password/:token")
@@ -226,7 +309,7 @@ export class AuthController {
     @Param("token") token: string,
     @Body() dto: ResetPasswordDto,
   ): Promise<void> {
-    return this.authService.resetPassword(token, dto.password, UserType.HUNTER);
+    return this.authService.resetPassword(token, dto.password, UserRole.HUNTER);
   }
 
   @Post("admin/login")
@@ -240,8 +323,14 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: "Invalid credentials" })
   @ApiResponse({ status: 403, description: "Account locked" })
-  async loginAdmin(@Body() dto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.loginAdmin(dto.email, dto.password);
+  @ApiCookieAuth()
+  async loginAdmin(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    const result = await this.authService.loginAdmin(dto.email, dto.password);
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return toAuthResponseBody(result);
   }
 
   @Post("refresh")
@@ -249,12 +338,25 @@ export class AuthController {
   @ApiOperation({ summary: "Refresh access and refresh tokens" })
   @ApiResponse({
     status: 200,
-    description: "Tokens refreshed successfully",
-    type: TokenResponseDto,
+    description: "Tokens refreshed successfully; new cookies set",
+    type: RefreshSessionResponseDto,
   })
   @ApiResponse({ status: 401, description: "Invalid or expired refresh token" })
-  async refreshTokens(@Body() dto: RefreshTokenDto): Promise<TokenResponseDto> {
-    return this.authService.refreshTokens(dto.refreshToken);
+  @ApiCookieAuth()
+  async refreshTokens(
+    @Req() req: Request,
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<RefreshSessionResponseDto> {
+    const refresh =
+      (req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined) ??
+      dto?.refreshToken;
+    if (!refresh) {
+      throw new UnauthorizedException("Refresh token required");
+    }
+    const result = await this.authService.refreshTokens(refresh);
+    this.setAuthCookies(res, result.accessToken, result.refreshToken);
+    return { ok: true };
   }
 
   @Post("logout")
@@ -263,7 +365,17 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Logout and revoke refresh token" })
   @ApiResponse({ status: 200, description: "Logged out successfully" })
-  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
-    return this.authService.logout(dto.refreshToken);
+  async logout(
+    @Req() req: Request,
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const refresh =
+      (req.cookies?.[REFRESH_TOKEN_COOKIE] as string | undefined) ??
+      dto?.refreshToken;
+    if (refresh) {
+      await this.authService.logout(refresh);
+    }
+    this.clearAuthCookies(res);
   }
 }

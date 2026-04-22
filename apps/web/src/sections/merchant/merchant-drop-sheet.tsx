@@ -82,6 +82,10 @@ function legacyAvailabilityToMerchantForm(
   return "unlimited";
 }
 
+function dateToIsoOrEmpty(d: Date | null | undefined): string {
+  return d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : "";
+}
+
 function dropToFormValues(drop: Drop): CreateDropForm {
   const redemptionTypeValue = drop.redemptionType || "anytime";
   const availabilityTypeValue = legacyAvailabilityToMerchantForm(drop);
@@ -95,13 +99,14 @@ function dropToFormValues(drop: Drop): CreateDropForm {
     logoUrl: drop.logoUrl || "",
     redemptionType: redemptionTypeValue as "anytime" | "timer" | "window",
     redemptionMinutes: drop.redemptionMinutes ?? undefined,
-    redemptionDeadline: (drop.redemptionDeadline as unknown as string) ?? "",
+    redemptionDeadline: dateToIsoOrEmpty(drop.redemptionDeadline),
     availabilityType: availabilityTypeValue,
     captureLimit: drop.captureLimit ?? undefined,
-    startTime: (drop.startTime as unknown as string) ?? "",
-    endTime: (drop.endTime as unknown as string) ?? "",
-    voucherAbsoluteExpiresAt:
-      (drop.voucherAbsoluteExpiresAt as unknown as string) ?? "",
+    startTime: dateToIsoOrEmpty(drop.startTime),
+    endTime: dateToIsoOrEmpty(drop.endTime),
+    voucherAbsoluteExpiresAt: dateToIsoOrEmpty(
+      drop.voucherAbsoluteExpiresAt,
+    ),
     voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? undefined,
     termsAndConditions: drop.termsAndConditions ?? "",
   };

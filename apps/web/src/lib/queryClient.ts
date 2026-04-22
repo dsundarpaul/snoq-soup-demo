@@ -1,10 +1,16 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryFunction,
+} from "@tanstack/react-query";
 import {
   apiFetchMaybeRetry,
   inferAuthRoleFromPath,
   throwIfResNotOk,
 } from "@/lib/api-client";
 import type { AuthRole } from "@/lib/auth-tokens";
+import { captureException } from "@/lib/observability";
 
 export async function apiRequest(
   method: string,
@@ -41,7 +47,35 @@ export function getQueryFn<T>(options: { on401: On401 }): QueryFunction<T> {
   };
 }
 
+const queryCache = new QueryCache({
+  onError: (error, query) => {
+    const statusMatch =
+      error instanceof Error ? /^(\d{3}):/.exec(error.message) : null;
+    captureException(error, {
+      extra: {
+        queryKey: query.queryKey,
+        httpStatus: statusMatch ? Number(statusMatch[1]) : undefined,
+      },
+    });
+  },
+});
+
+const mutationCache = new MutationCache({
+  onError: (error, _variables, _context, mutation) => {
+    const statusMatch =
+      error instanceof Error ? /^(\d{3}):/.exec(error.message) : null;
+    captureException(error, {
+      extra: {
+        mutationKey: mutation.options.mutationKey ?? null,
+        httpStatus: statusMatch ? Number(statusMatch[1]) : undefined,
+      },
+    });
+  },
+});
+
 export const queryClient = new QueryClient({
+  queryCache,
+  mutationCache,
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),

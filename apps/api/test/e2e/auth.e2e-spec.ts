@@ -4,6 +4,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { startE2eMongo } from "./mongo-test-server";
 import * as request from "supertest";
+import * as cookieParser from "cookie-parser";
 import { randomUUID } from "crypto";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
@@ -13,6 +14,11 @@ import { Types } from "mongoose";
 import { AppModule } from "../../src/app.module";
 import { DatabaseService } from "../../src/database/database.service";
 import { EmailVerificationTokenService } from "../../src/modules/auth/email-verification-token.service";
+import {
+  accessTokenFromSetCookie,
+  refreshTokenFromSetCookie,
+  cookieHeaderFromSetCookie,
+} from "./auth-cookie-helpers";
 
 // Mock throttler storage that always allows requests
 class MockThrottlerStorage implements ThrottlerStorage {
@@ -71,9 +77,7 @@ function mockMerchantVerificationTokenIssuance(
     });
 }
 
-interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
+interface AuthResponseBody {
   user: {
     id: string;
     email: string;
@@ -105,6 +109,7 @@ describe("Authentication E2E Tests", () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.setGlobalPrefix("api/v1");
 
@@ -153,9 +158,13 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
-      const registerBody = registerRes.body as AuthResponse;
-      expect(registerBody.accessToken).toBeDefined();
-      expect(registerBody.refreshToken).toBeDefined();
+      const registerBody = registerRes.body as AuthResponseBody;
+      expect(
+        accessTokenFromSetCookie(registerRes.headers["set-cookie"]),
+      ).toBeDefined();
+      expect(
+        refreshTokenFromSetCookie(registerRes.headers["set-cookie"]),
+      ).toBeDefined();
       expect(registerBody.user.email).toBe(email.toLowerCase());
       expect(registerBody.user.type).toBe("merchant");
       expect(registerBody.user.emailVerified).toBe(false);
@@ -194,44 +203,58 @@ describe("Authentication E2E Tests", () => {
         .send({ email, password })
         .expect(200);
 
-      const loginBody = loginRes.body as AuthResponse;
-      expect(loginBody.accessToken).toBeDefined();
-      expect(loginBody.refreshToken).toBeDefined();
+      const loginBody = loginRes.body as AuthResponseBody;
       expect(loginBody.user.emailVerified).toBe(true);
+      const loginCookieHeader = cookieHeaderFromSetCookie(
+        loginRes.headers["set-cookie"],
+      );
+      const loginRefreshPlain = refreshTokenFromSetCookie(
+        loginRes.headers["set-cookie"],
+      );
+      expect(loginRefreshPlain).toBeDefined();
 
       // Step 4: Refresh Token
       const refreshRes = await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: loginBody.refreshToken })
+        .set("Cookie", loginCookieHeader)
+        .send({})
         .expect(200);
 
-      const refreshBody = refreshRes.body as {
-        accessToken: string;
-        refreshToken: string;
-      };
-      expect(refreshBody.accessToken).toBeDefined();
-      expect(refreshBody.refreshToken).toBeDefined();
+      const refreshBody = refreshRes.body as { ok: boolean };
+      expect(refreshBody.ok).toBe(true);
 
       // Verify old refresh token is revoked (can't be used again)
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: loginBody.refreshToken })
+        .set("Cookie", loginCookieHeader)
+        .send({})
         .expect(401);
 
-      // Security: New refresh token should be different from old one
-      expect(refreshBody.refreshToken).not.toBe(loginBody.refreshToken);
+      const newRefresh = refreshTokenFromSetCookie(
+        refreshRes.headers["set-cookie"],
+      );
+      expect(newRefresh).toBeDefined();
+      expect(newRefresh).not.toBe(loginRefreshPlain);
 
       // Step 5: Logout
+      const afterRefreshCookies = cookieHeaderFromSetCookie(
+        refreshRes.headers["set-cookie"],
+      );
+      const afterRefreshAccess = accessTokenFromSetCookie(
+        refreshRes.headers["set-cookie"],
+      );
       await request(app.getHttpServer())
         .post("/api/v1/auth/logout")
-        .set("Authorization", `Bearer ${refreshBody.accessToken}`)
-        .send({ refreshToken: refreshBody.refreshToken })
+        .set("Authorization", `Bearer ${afterRefreshAccess}`)
+        .set("Cookie", afterRefreshCookies)
+        .send({})
         .expect(200);
 
       // Verify token is revoked
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: refreshBody.refreshToken })
+        .set("Cookie", afterRefreshCookies)
+        .send({})
         .expect(401);
     });
 
@@ -331,9 +354,13 @@ describe("Authentication E2E Tests", () => {
         .send({ deviceId })
         .expect(200);
 
-      const loginBody = loginRes.body as AuthResponse;
-      expect(loginBody.accessToken).toBeDefined();
-      expect(loginBody.refreshToken).toBeDefined();
+      const loginBody = loginRes.body as AuthResponseBody;
+      expect(
+        accessTokenFromSetCookie(loginRes.headers["set-cookie"]),
+      ).toBeDefined();
+      expect(
+        refreshTokenFromSetCookie(loginRes.headers["set-cookie"]),
+      ).toBeDefined();
       expect(loginBody.user.type).toBe("hunter");
       expect(loginBody.user.deviceId).toBe(deviceId);
       expect(loginBody.user.email).toBe("");
@@ -347,8 +374,9 @@ describe("Authentication E2E Tests", () => {
       expect(secondLoginRes.body.user.id).toBe(loginBody.user.id);
       expect(secondLoginRes.body.user.deviceId).toBe(deviceId);
 
-      // Device login should generate unique refresh tokens each time
-      expect(secondLoginRes.body.refreshToken).not.toBe(loginBody.refreshToken);
+      const r1 = refreshTokenFromSetCookie(loginRes.headers["set-cookie"]);
+      const r2 = refreshTokenFromSetCookie(secondLoginRes.headers["set-cookie"]);
+      expect(r2).not.toBe(r1);
     });
 
     it("should complete hunter registration and login flow", async () => {
@@ -368,7 +396,7 @@ describe("Authentication E2E Tests", () => {
         })
         .expect(201);
 
-      const registerBody = registerRes.body as AuthResponse;
+      const registerBody = registerRes.body as AuthResponseBody;
       expect(registerBody.user.email).toBe(email.toLowerCase());
       expect(registerBody.user.nickname).toBe(nickname);
       expect(registerBody.user.type).toBe("hunter");
@@ -389,7 +417,7 @@ describe("Authentication E2E Tests", () => {
         .expect(200);
 
       expect(loginRes.body.user.email).toBe(email.toLowerCase());
-      expect(loginRes.body.accessToken).toBeDefined();
+      expect(accessTokenFromSetCookie(loginRes.headers["set-cookie"])).toBeDefined();
     });
 
     it("should prevent duplicate device registration", async () => {
@@ -483,12 +511,12 @@ describe("Authentication E2E Tests", () => {
         .send({ email, password })
         .expect(200);
 
-      const loginBody = loginRes.body as AuthResponse;
+      const loginBody = loginRes.body as AuthResponseBody;
       expect(loginBody.user.type).toBe("admin");
       expect(loginBody.user.email).toBe(email.toLowerCase());
       expect(loginBody.user.name).toBe(name);
-      expect(loginBody.accessToken).toBeDefined();
-      expect(loginBody.refreshToken).toBeDefined();
+      expect(accessTokenFromSetCookie(loginRes.headers["set-cookie"])).toBeDefined();
+      expect(refreshTokenFromSetCookie(loginRes.headers["set-cookie"])).toBeDefined();
     });
 
     it("should prevent creating multiple admins", async () => {
@@ -702,10 +730,13 @@ describe("Authentication E2E Tests", () => {
         .send({ email, password })
         .expect(200);
 
-      const { accessToken } = loginRes.body as AuthResponse;
+      const accessToken = accessTokenFromSetCookie(
+        loginRes.headers["set-cookie"],
+      );
+      expect(accessToken).toBeDefined();
 
       // Decode and verify token expiry
-      const decoded = jwtService.decode(accessToken) as {
+      const decoded = jwtService.decode(accessToken!) as {
         exp: number;
         iat: number;
       };
@@ -738,12 +769,16 @@ describe("Authentication E2E Tests", () => {
         .send({ email, password })
         .expect(200);
 
-      const { refreshToken, user } = loginRes.body as AuthResponse;
+      const user = (loginRes.body as AuthResponseBody).user;
+      const refreshToken = refreshTokenFromSetCookie(
+        loginRes.headers["set-cookie"],
+      );
+      expect(refreshToken).toBeDefined();
 
       // Find refresh token in database
       const { createHash } = await import("crypto");
       const hashedToken = createHash("sha256")
-        .update(refreshToken)
+        .update(refreshToken!)
         .digest("hex");
       const tokenDoc = await database.refreshTokens.findOne({
         userId: user.id,
@@ -752,7 +787,7 @@ describe("Authentication E2E Tests", () => {
 
       expect(tokenDoc).toBeDefined();
       expect(tokenDoc!.token).toBe(hashedToken);
-      expect(tokenDoc!.token).not.toBe(refreshToken); // Should be hashed, not plain
+      expect(tokenDoc!.token).not.toBe(refreshToken);
     });
 
     it("should revoke all refresh tokens on password reset for merchant", async () => {
@@ -803,12 +838,20 @@ describe("Authentication E2E Tests", () => {
       // All existing refresh tokens should be revoked
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: login1.body.refreshToken })
+        .set(
+          "Cookie",
+          cookieHeaderFromSetCookie(login1.headers["set-cookie"]),
+        )
+        .send({})
         .expect(401);
 
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: login2.body.refreshToken })
+        .set(
+          "Cookie",
+          cookieHeaderFromSetCookie(login2.headers["set-cookie"]),
+        )
+        .send({})
         .expect(401);
     });
 
@@ -834,22 +877,26 @@ describe("Authentication E2E Tests", () => {
         .send({ email, password })
         .expect(200);
 
-      const { refreshToken: originalToken } = loginRes.body as AuthResponse;
+      const loginCookieHeader = cookieHeaderFromSetCookie(
+        loginRes.headers["set-cookie"],
+      );
 
       // Refresh to get new token pair
       const refreshRes1 = await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: originalToken })
+        .set("Cookie", loginCookieHeader)
+        .send({})
         .expect(200);
 
-      const { refreshToken: newToken } = refreshRes1.body as {
-        refreshToken: string;
-      };
+      const newToken = refreshTokenFromSetCookie(
+        refreshRes1.headers["set-cookie"],
+      );
 
       // Try to reuse the original token (simulating attacker using stolen token)
       const reuseRes = await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: originalToken })
+        .set("Cookie", loginCookieHeader)
+        .send({})
         .expect(401);
 
       expect(reuseRes.body.message).toContain("Token reuse detected");
@@ -857,8 +904,13 @@ describe("Authentication E2E Tests", () => {
       // The new token should also be revoked (entire family revoked)
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .send({ refreshToken: newToken })
+        .set(
+          "Cookie",
+          cookieHeaderFromSetCookie(refreshRes1.headers["set-cookie"]),
+        )
+        .send({})
         .expect(401);
+      expect(newToken).toBeDefined();
     });
 
     it("should return unique refresh tokens on each login", async () => {
@@ -885,9 +937,12 @@ describe("Authentication E2E Tests", () => {
           .send({ email, password })
           .expect(200);
 
-        const { refreshToken } = loginRes.body as AuthResponse;
+        const refreshToken = refreshTokenFromSetCookie(
+          loginRes.headers["set-cookie"],
+        );
+        expect(refreshToken).toBeDefined();
         expect(tokens).not.toContain(refreshToken);
-        tokens.push(refreshToken);
+        tokens.push(refreshToken!);
       }
 
       expect(tokens.length).toBe(5);

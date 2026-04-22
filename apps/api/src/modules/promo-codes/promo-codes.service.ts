@@ -26,6 +26,19 @@ interface PromoCodeFilter {
   status?: PromoCodeStatus;
 }
 
+type LeanPopulatedHunterRef = {
+  _id: Types.ObjectId;
+  nickname?: string | null;
+  email?: string | null;
+};
+
+interface LeanPopulatedPromoListItem {
+  _id: Types.ObjectId;
+  status: "available" | "assigned";
+  voucherId: Types.ObjectId | null;
+  hunterId: Types.ObjectId | LeanPopulatedHunterRef | null;
+}
+
 @Injectable()
 export class PromoCodesService {
   constructor(private readonly database: DatabaseService) {}
@@ -181,15 +194,16 @@ export class PromoCodesService {
       this.database.promoCodes.countDocuments(filter),
     ]);
 
+    const items = rawItems as LeanPopulatedPromoListItem[];
+
     const fallbackByPromoId = await this.resolveAssigneeNamesFromVouchers(
-      rawItems as Record<string, unknown>[],
+      items,
     );
 
     return {
-      items: (rawItems as Record<string, unknown>[]).map((doc) => {
+      items: items.map((doc) => {
         const dto = this.toResponseDto(doc as unknown as PromoCode);
-        const promoId =
-          this.normalizeObjectIdString(doc._id) ?? dto.id;
+        const promoId = doc._id.toString();
         const fromPopulate = this.nameFromPopulatedHunterField(doc.hunterId);
         dto.assignedToName =
           fromPopulate ?? fallbackByPromoId.get(promoId) ?? null;
@@ -202,30 +216,9 @@ export class PromoCodesService {
     };
   }
 
-  private normalizeObjectIdString(value: unknown): string | null {
-    if (value == null) return null;
-    if (typeof value === "string") {
-      const t = value.trim();
-      return /^[a-f\d]{24}$/i.test(t) ? t : null;
-    }
-    if (typeof value === "object" && value !== null && "toString" in value) {
-      const s = (value as { toString(): string }).toString();
-      return /^[a-f\d]{24}$/i.test(s) ? s : null;
-    }
-    return null;
-  }
-
-  private hunterIdForApi(hunterField: unknown): string | null {
-    if (hunterField == null) return null;
-    if (typeof hunterField === "object" && hunterField !== null && "_id" in hunterField) {
-      return this.normalizeObjectIdString(
-        (hunterField as { _id: unknown })._id,
-      );
-    }
-    return this.normalizeObjectIdString(hunterField);
-  }
-
-  private nameFromPopulatedHunterField(hunterField: unknown): string | null {
+  private nameFromPopulatedHunterField(
+    hunterField: LeanPopulatedPromoListItem["hunterId"],
+  ): string | null {
     if (
       hunterField == null ||
       typeof hunterField !== "object" ||
@@ -250,18 +243,20 @@ export class PromoCodesService {
   }
 
   private async resolveAssigneeNamesFromVouchers(
-    docs: Record<string, unknown>[],
+    docs: LeanPopulatedPromoListItem[],
   ): Promise<Map<string, string | null>> {
     const result = new Map<string, string | null>();
     const needVoucher: { promoId: string; voucherId: string }[] = [];
 
     for (const doc of docs) {
-      const promoId = this.normalizeObjectIdString(doc._id);
-      if (!promoId) continue;
+      const promoId = doc._id.toString();
       if (doc.status !== "assigned") continue;
       if (this.nameFromPopulatedHunterField(doc.hunterId)) continue;
-      const vid = this.normalizeObjectIdString(doc.voucherId);
-      if (vid) needVoucher.push({ promoId, voucherId: vid });
+      if (!doc.voucherId) continue;
+      needVoucher.push({
+        promoId,
+        voucherId: doc.voucherId.toString(),
+      });
     }
 
     if (needVoucher.length === 0) {
@@ -280,8 +275,8 @@ export class PromoCodesService {
     const voucherById = new Map<string, { claimedBy?: Voucher["claimedBy"] }>();
     for (const v of vouchers) {
       voucherById.set(v._id.toString(), v);
-      const hid = this.normalizeObjectIdString(v.claimedBy?.hunterId);
-      if (hid) hunterIds.add(hid);
+      const hid = v.claimedBy?.hunterId;
+      if (hid) hunterIds.add(hid.toString());
     }
 
     const hunters =
@@ -302,9 +297,9 @@ export class PromoCodesService {
     for (const { promoId, voucherId } of needVoucher) {
       const v = voucherById.get(voucherId);
       let name: string | null = null;
-      const hid = this.normalizeObjectIdString(v?.claimedBy?.hunterId);
+      const hid = v?.claimedBy?.hunterId;
       if (hid) {
-        name = labelByHunterId.get(hid) ?? null;
+        name = labelByHunterId.get(hid.toString()) ?? null;
       }
       if (!name && v?.claimedBy) {
         const em = v.claimedBy.email?.trim();
@@ -463,6 +458,15 @@ export class PromoCodesService {
     }
   }
 
+  // Type-safe refactor: safely convert ObjectId to string, becuase hunterRef could be a object or a ObjectId or a string.
+  private toObjectIdString(hunterRef: { _id: Types.ObjectId } | Types.ObjectId | string | null | undefined): string | null {
+    if (hunterRef == null) return null;
+    if (typeof hunterRef === "string") return hunterRef;
+    if ("_id" in hunterRef) return hunterRef._id.toString();
+    return (hunterRef as { toString(): string }).toString();
+  }
+
+
   private toResponseDto(promoCode: PromoCode): PromoCodeResponseDto {
     // Type-safe refactor: safely convert ObjectIds to strings
     const id =
@@ -483,7 +487,8 @@ export class PromoCodesService {
         : (promoCode.voucherId as { toString(): string }).toString()
       : null;
 
-    const hunterRaw = (promoCode as { hunterId?: unknown }).hunterId;
+    const hunterRef = (promoCode as PromoCode & { hunterId?: unknown }).hunterId;
+    let hunterIdStr = this.toObjectIdString(hunterRef);
 
     return {
       id,
@@ -492,7 +497,7 @@ export class PromoCodesService {
       code: promoCode.code,
       status: promoCode.status as PromoCodeStatus,
       voucherId: voucherIdStr,
-      hunterId: this.hunterIdForApi(hunterRaw),
+      hunterId: hunterIdStr,
       assignedAt: promoCode.assignedAt,
       assignedToName: null,
       createdAt: promoCode.createdAt,

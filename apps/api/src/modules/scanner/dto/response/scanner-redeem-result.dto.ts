@@ -13,8 +13,7 @@ export class ScannerRedeemResultDto {
   })
   voucherId!: string;
 
-  @ApiProperty({ example: "magic_token_abc123", description: "Magic token" })
-  magicToken!: string;
+  // magicToken intentionally excluded - scanners should not receive bearer tokens
 
   @ApiProperty({
     example: "2024-01-15T10:30:00.000Z",

@@ -101,6 +101,14 @@ export class Voucher {
   @Prop({ type: String, required: true })
   magicToken!: string;
 
+  @ApiProperty({
+    example: "a1b2c3d4e5f6...",
+    description: "SHA-256 hash of magic token for secure storage",
+  })
+  @IsString()
+  @Prop({ type: String })
+  magicTokenHash?: string;
+
   @ApiProperty({ type: ClaimedBy, description: "Claimant information" })
   @Prop({ type: ClaimedBy, default: {} })
   claimedBy!: ClaimedBy;
@@ -159,6 +167,7 @@ export const VoucherSchema = SchemaFactory.createForClass(Voucher);
 
 // Indexes
 VoucherSchema.index({ magicToken: 1 }, { unique: true });
+VoucherSchema.index({ magicTokenHash: 1 }, { unique: true, sparse: true });
 VoucherSchema.index({ dropId: 1 });
 VoucherSchema.index({ merchantId: 1, redeemed: 1 });
 // VoucherSchema.index({ "claimedBy.deviceId": 1 });
@@ -166,6 +175,14 @@ VoucherSchema.index({ "claimedBy.hunterId": 1 });
 VoucherSchema.index({ claimedAt: -1 });
 VoucherSchema.index({ deletedAt: 1 });
 VoucherSchema.index({ expiresAt: 1 }, { sparse: true });
+// Compound unique index to prevent duplicate claims by same hunter for same drop
+VoucherSchema.index(
+  { dropId: 1, "claimedBy.hunterId": 1, deletedAt: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { deletedAt: null },
+  },
+);
 // VoucherSchema.index(
 //   { dropId: 1, "claimedBy.deviceId": 1 },
 //   {

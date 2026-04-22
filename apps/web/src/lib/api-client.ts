@@ -1,14 +1,9 @@
 import { API_ORIGIN } from "@/lib/app-config";
 import {
-  hadAuthCredentials,
+  hadAuthSessionHint,
   invalidateAuthSession,
 } from "@/lib/auth-session";
-import {
-  type AuthRole,
-  getAccessToken,
-  getRefreshToken,
-  setTokenBundle,
-} from "@/lib/auth-tokens";
+import type { AuthRole } from "@/lib/auth-tokens";
 
 export type { AuthRole };
 
@@ -61,7 +56,7 @@ export async function throwIfResNotOk(
         (requestPathFor401
           ? inferAuthRoleFromPath(requestPathFor401)
           : undefined);
-      if (role && hadAuthCredentials(role)) {
+      if (role && hadAuthSessionHint()) {
         invalidateAuthSession(role);
       }
     }
@@ -87,20 +82,19 @@ type ApiFetchInit = {
   json?: boolean;
 };
 
+const defaultHeaders = (): Record<string, string> => ({
+  "X-Requested-With": "fetch",
+});
+
 export async function apiFetch(
   method: string,
   path: string,
   init?: ApiFetchInit
 ): Promise<Response> {
   const url = `${API_ORIGIN}${path}`;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...defaultHeaders() };
   if (init?.body !== undefined && init?.json !== false) {
     headers["Content-Type"] = "application/json";
-  }
-  const role = init?.auth ?? inferAuthRoleFromPath(path);
-  const access = role ? getAccessToken(role) : null;
-  if (access) {
-    headers.Authorization = `Bearer ${access}`;
   }
   if (init?.deviceId) {
     headers["X-Device-Id"] = init.deviceId;
@@ -108,7 +102,7 @@ export async function apiFetch(
   return fetch(url, {
     method,
     headers,
-    credentials: "omit",
+    credentials: "include",
     body:
       init?.body !== undefined && init?.json !== false
         ? JSON.stringify(init.body)
@@ -124,29 +118,68 @@ export async function apiFetchMaybeRetry(
   const role = init?.auth ?? inferAuthRoleFromPath(path);
   const merged: ApiFetchInit = { ...init, auth: role };
   let res = await apiFetch(method, path, merged);
-  if (res.status === 401 && role && (await tryRefreshAuth(role))) {
+  if (res.status === 401 && role && (await tryRefreshAuth())) {
     res = await apiFetch(method, path, merged);
   }
   return res;
 }
 
-export async function tryRefreshAuth(role: AuthRole): Promise<boolean> {
-  const refresh = getRefreshToken(role);
-  if (!refresh) return false;
+const S3_SIGNED_URL_PATH = "/api/v1/s3/signed-url";
+
+export async function uploadFileViaS3Presigned(
+  file: File,
+  options: { namespace: string; auth?: AuthRole }
+): Promise<{ publicUrl: string }> {
+  const role = options.auth ?? inferAuthRoleFromPath(S3_SIGNED_URL_PATH);
+  const signedRes = await apiFetchMaybeRetry("POST", S3_SIGNED_URL_PATH, {
+    auth: role,
+    body: {
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+      namespace: options.namespace,
+    },
+  });
+  await throwIfResNotOk(signedRes, S3_SIGNED_URL_PATH, role);
+  const { url, publicUrl } = (await signedRes.json()) as {
+    url: string;
+    publicUrl: string;
+  };
+  const putRes = await fetch(url, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+  });
+  if (!putRes.ok) {
+    const text = await putRes.text();
+    throw new Error(
+      text.trim().length > 0
+        ? `S3 upload failed: ${putRes.status}: ${text}`
+        : `S3 upload failed: ${putRes.status}`
+    );
+  }
+  return { publicUrl };
+}
+
+let inFlightRefresh: Promise<boolean> | null = null;
+
+export async function tryRefreshAuth(): Promise<boolean> {
+  if (inFlightRefresh) return inFlightRefresh;
+  inFlightRefresh = doRefreshAuth().finally(() => {
+    inFlightRefresh = null;
+  });
+  return inFlightRefresh;
+}
+
+async function doRefreshAuth(): Promise<boolean> {
   const res = await fetch(`${API_ORIGIN}/api/v1/auth/refresh`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "omit",
-    body: JSON.stringify({ refreshToken: refresh }),
+    headers: {
+      "Content-Type": "application/json",
+      ...defaultHeaders(),
+    },
+    credentials: "include",
+    body: JSON.stringify({}),
   });
-  if (!res.ok) return false;
-  const data = (await res.json()) as {
-    accessToken: string;
-    refreshToken: string;
-  };
-  setTokenBundle(role, {
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-  });
-  return true;
+  return res.ok;
 }

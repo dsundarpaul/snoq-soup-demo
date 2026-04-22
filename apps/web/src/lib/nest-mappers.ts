@@ -8,6 +8,13 @@ function toIso(v: Date | string | undefined | null): string | null {
   return v.toISOString();
 }
 
+function toDate(v: Date | string | null | undefined): Date | null {
+  if (v == null) return null;
+  if (v instanceof Date) return v;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function nestProfileDobToYmd(value: unknown): string | undefined {
   if (value == null || value === "") return undefined;
   const s = String(value).trim();
@@ -38,16 +45,11 @@ export function mapNestDropToLegacy(
 
   let availabilityType: string = "unlimited";
   let captureLimit: number | null = null;
-  let startTime: string | null = null;
-  let endTime: string | null = null;
 
   if (availability?.type === "limited") {
     availabilityType = "captureLimit";
     captureLimit = availability.limit ?? null;
   }
-
-  if (schedule?.start) startTime = toIso(schedule.start);
-  if (schedule?.end) endTime = toIso(schedule.end);
 
   const out: DropWithCount = {
     id: String(raw.id ?? ""),
@@ -63,17 +65,15 @@ export function mapNestDropToLegacy(
       (raw.termsAndConditions as string | null | undefined) ?? null,
     redemptionType: (redemption?.type as Drop["redemptionType"]) ?? "anytime",
     redemptionMinutes: redemption?.minutes ?? null,
-    redemptionDeadline: redemption?.deadline
-      ? (toIso(redemption.deadline) as unknown as Date)
-      : null,
+    redemptionDeadline:
+      redemption?.deadline != null ? toDate(redemption.deadline) : null,
     availabilityType: availabilityType as Drop["availabilityType"],
     captureLimit,
     active: raw.active !== false,
-    startTime: startTime as unknown as Date,
-    endTime: endTime as unknown as Date,
+    startTime: toDate(schedule?.start),
+    endTime: toDate(schedule?.end),
     voucherAbsoluteExpiresAt: raw.voucherAbsoluteExpiresAt
-      ? ((toIso(raw.voucherAbsoluteExpiresAt as Date | string) ??
-          null) as unknown as Date)
+      ? toDate(raw.voucherAbsoluteExpiresAt as Date | string | null | undefined)
       : null,
     voucherTtlHoursAfterClaim:
       typeof raw.voucherTtlHoursAfterClaim === "number"
@@ -81,7 +81,8 @@ export function mapNestDropToLegacy(
         : raw.voucherTtlHoursAfterClaim != null
           ? Number(raw.voucherTtlHoursAfterClaim)
           : null,
-    createdAt: (raw.createdAt as Date) ?? new Date(),
+    createdAt:
+      toDate(raw.createdAt as Date | string | null | undefined) ?? new Date(),
   };
   const resolvedCount =
     captureCount !== undefined
@@ -151,7 +152,8 @@ export function mapMerchantMeToLegacy(
         : null,
     businessPhone: (raw.businessPhone as string | null) ?? null,
     businessHours: (raw.businessHours as string | null) ?? null,
-    createdAt: (raw.createdAt as Date) ?? new Date(),
+    createdAt:
+      toDate(raw.createdAt as Date | string | null | undefined) ?? new Date(),
   } as Merchant;
 }
 
@@ -253,8 +255,11 @@ export function mapNestVoucherToLegacy(
     id: String(raw.id ?? ""),
     dropId: String(raw.dropId ?? ""),
     merchantId: String(raw.merchantId ?? ""),
-    claimedAt: (raw.claimedAt as Date) ?? new Date(),
-    redeemedAt: (raw.redeemedAt as Date | null) ?? null,
+    claimedAt:
+      toDate(raw.claimedAt as Date | string | null | undefined) ?? new Date(),
+    redeemedAt: toDate(
+      raw.redeemedAt as Date | string | null | undefined,
+    ),
     redeemed: Boolean(raw.redeemed),
     userEmail: (claimedBy?.email as string) ?? null,
     userPhone: (claimedBy?.phone as string) ?? null,
@@ -262,7 +267,7 @@ export function mapNestVoucherToLegacy(
     deviceId: (claimedBy?.deviceId as string) ?? null,
     hunterId: (claimedBy?.hunterId as string) ?? null,
     expiresAt: raw.expiresAt
-      ? ((toIso(raw.expiresAt as Date | string) ?? null) as unknown as Date)
+      ? toDate(raw.expiresAt as Date | string | null | undefined)
       : null,
   } as Voucher;
 }
@@ -447,8 +452,11 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
     id: String(raw.id ?? ""),
     dropId: String(dropInfo?.id ?? ""),
     merchantId: String(merchant?.id ?? ""),
-    claimedAt: (raw.claimedAt as Date) ?? new Date(),
-    redeemedAt: (raw.redeemedAt as Date | null) ?? null,
+    claimedAt:
+      toDate(raw.claimedAt as Date | string | null | undefined) ?? new Date(),
+    redeemedAt: toDate(
+      raw.redeemedAt as Date | string | null | undefined,
+    ),
     redeemed: Boolean(raw.redeemed),
     userEmail: (claimedBy?.email as string) ?? null,
     userPhone: (claimedBy?.phone as string) ?? null,
@@ -456,7 +464,7 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
     deviceId: (claimedBy?.deviceId as string) ?? null,
     hunterId: (claimedBy?.hunterId as string) ?? null,
     expiresAt: raw.expiresAt
-      ? ((toIso(raw.expiresAt as Date | string) ?? null) as unknown as Date)
+      ? toDate(raw.expiresAt as Date | string | null | undefined)
       : null,
   } as Voucher;
   const drop = mapNestDropToLegacy({
@@ -739,7 +747,8 @@ export function mapAdminMerchantItem(raw: Record<string, unknown>) {
     email: String(raw.email ?? ""),
     emailVerified: Boolean(raw.isVerified ?? raw.emailVerified ?? false),
     isSuspended: Boolean(raw.isSuspended ?? false),
-    createdAt: toIso(raw.createdAt as Date) ?? "",
+    createdAt:
+      toIso(raw.createdAt as Date | string | null | undefined) ?? "",
   };
 }
 
@@ -757,7 +766,8 @@ export function mapAdminUserItem(raw: Record<string, unknown>) {
     email: (raw.email as string) ?? null,
     totalClaims: Number(raw.totalClaims ?? 0),
     totalRedemptions: Number(raw.totalRedemptions ?? 0),
-    createdAt: toIso(raw.createdAt as Date) ?? "",
+    createdAt:
+      toIso(raw.createdAt as Date | string | null | undefined) ?? "",
   };
 }
 

@@ -14,6 +14,7 @@ import { CommandsModule } from "./modules/commands/commands.module";
 import { ScannerModule } from "./modules/scanner/scanner.module";
 import { PromoCodesModule } from "./modules/promo-codes/promo-codes.module";
 import { S3Module } from "./modules/s3/s3.module";
+import { RequireFetchHeaderGuard } from "./common/guards/require-fetch-header.guard";
 
 @Module({
   imports: [
@@ -64,6 +65,10 @@ import { S3Module } from "./modules/s3/s3.module";
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RequireFetchHeaderGuard,
     },
   ],
 })

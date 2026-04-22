@@ -2,9 +2,7 @@ function trimTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
-
-export const API_ORIGIN = rawApiUrl ? trimTrailingSlash(rawApiUrl) : "";
+export const API_ORIGIN = "";
 
 export function getPublicSiteUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();

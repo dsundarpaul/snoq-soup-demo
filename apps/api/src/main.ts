@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from "@nestjs/common";
 import { CommandFactory } from "nest-commander";
 import helmet from "helmet";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import * as cookieParser from "cookie-parser";
 import { config } from "./config/app.config";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
@@ -28,6 +29,9 @@ async function bootstrapHttp() {
       hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     }),
   );
+
+  // Cookie parser for JWT cookies
+  app.use(cookieParser());
 
   // CORS configuration
   const isProduction = config.NODE_ENV === "production";

@@ -1,28 +1,41 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import { Request } from "express";
 import { config } from "../../../config/app.config";
 import { AuthService } from "../auth.service";
-import { UserType } from "../../../database/schemas/refresh-token.schema";
+import { UserRole } from "../../../common/enums/user-role.enum";
 
 export interface JwtPayload {
   sub: string;
-  type: UserType;
+  type: UserRole;
   iat: number;
   exp: number;
 }
 
 export interface RequestUser {
   userId: string;
-  type: UserType;
+  type: UserRole;
   email?: string;
+}
+
+const COOKIE_NAME = "access_token";
+
+export function extractJwtFromCookieOrHeader(req: Request): string | null {
+  // First, try cookie
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  if (cookieToken) {
+    return cookieToken;
+  }
+  // Fall back to Authorization header
+  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly authService: AuthService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: config.jwt.secret,
     });
@@ -41,7 +54,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Check email verification for merchants
     if (
-      payload.type === UserType.MERCHANT &&
+      payload.type === UserRole.MERCHANT &&
       "emailVerified" in user &&
       !user.emailVerified
     ) {
@@ -49,7 +62,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     if (
-      payload.type === UserType.MERCHANT &&
+      payload.type === UserRole.MERCHANT &&
       "suspendedAt" in user &&
       user.suspendedAt != null
     ) {

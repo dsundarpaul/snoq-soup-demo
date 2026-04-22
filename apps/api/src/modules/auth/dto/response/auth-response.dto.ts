@@ -30,18 +30,6 @@ export class UserDto {
 }
 
 export class AuthResponseDto {
-  @ApiProperty({
-    example: "eyJhbGciOiJIUzI1NiIs...",
-    description: "JWT access token",
-  })
-  accessToken!: string;
-
-  @ApiProperty({
-    example: "eyJhbGciOiJIUzI1NiIs...",
-    description: "JWT refresh token",
-  })
-  refreshToken!: string;
-
   @ApiProperty({ type: UserDto, description: "User information" })
   user!: UserDto;
 }

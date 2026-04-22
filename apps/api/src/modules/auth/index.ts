@@ -8,7 +8,7 @@ export { RefreshTokenDto } from "./dto/request/refresh-token.dto";
 
 // Response DTOs
 export { AuthResponseDto, UserDto } from "./dto/response/auth-response.dto";
-export { TokenResponseDto } from "./dto/response/token-response.dto";
+export { RefreshSessionResponseDto } from "./dto/response/token-response.dto";
 
 // Services and Strategies
 export { AuthService } from "./auth.service";

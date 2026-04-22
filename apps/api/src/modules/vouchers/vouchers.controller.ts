@@ -33,7 +33,7 @@ import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { SendEmailDto } from "./dto/request/send-email.dto";
 import { SendWhatsAppDto } from "./dto/request/send-whatsapp.dto";
-import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
+import { MerchantVoucherResponseDto } from "./dto/response/voucher-response.dto";
 import { ClaimVoucherResponseDto } from "./dto/response/claim-voucher-response.dto";
 import { VoucherDetailResponseDto } from "./dto/response/voucher-detail-response.dto";
 import { RedeemResultDto } from "./dto/response/redeem-result.dto";
@@ -61,7 +61,7 @@ export class VouchersController {
   async claim(
     @Body() dto: ClaimVoucherDto,
     @DeviceId() deviceId: string,
-    @Req() req: Request & { hunterId?: string }
+    @Req() req: Request & { hunterId?: string },
   ): Promise<ClaimVoucherResponseDto> {
     return this.vouchersService.claim({
       ...dto,
@@ -87,12 +87,12 @@ export class VouchersController {
   @HttpCode(HttpStatus.OK)
   async redeem(
     @Body() dto: RedeemVoucherDto,
-    @CurrentUser() user: CurrentUserType
+    @CurrentUser() user: CurrentUserType,
   ): Promise<RedeemResultDto> {
     return this.vouchersService.redeem(
       dto,
       user.type as "merchant" | "scanner" | "hunter",
-      user.userId
+      user.userId,
     );
   }
 
@@ -103,7 +103,7 @@ export class VouchersController {
   @ApiResponse({ status: 200, type: VoucherDetailResponseDto })
   @ApiResponse({ status: 404, description: "Voucher not found" })
   async findByMagicToken(
-    @Param("token") token: string
+    @Param("token") token: string,
   ): Promise<VoucherDetailResponseDto> {
     return this.vouchersService.findByMagicToken(token);
   }
@@ -121,7 +121,7 @@ export class VouchersController {
       dto.voucherId,
       dto.email,
       dto.magicLink,
-      dto.magicToken
+      dto.magicToken,
     );
     return { success: true };
   }
@@ -137,12 +137,12 @@ export class VouchersController {
   @ApiResponse({ status: 404, description: "Voucher not found" })
   @HttpCode(HttpStatus.OK)
   async sendByWhatsApp(
-    @Body() dto: SendWhatsAppDto
+    @Body() dto: SendWhatsAppDto,
   ): Promise<{ success: boolean }> {
     await this.vouchersService.sendByWhatsApp(
       dto.voucherId,
       dto.phone,
-      dto.magicLink
+      dto.magicLink,
     );
     return { success: true };
   }
@@ -160,11 +160,11 @@ export class VouchersController {
   @ApiResponse({ status: 404, description: "Voucher or promo code not found" })
   async getPromoCode(
     @Param("id") voucherId: string,
-    @Query("magicToken") magicToken: string
+    @Query("magicToken") magicToken: string,
   ): Promise<{ promoCode: string | null }> {
     const promoCode = await this.vouchersService.getPromoCode(
       voucherId,
-      magicToken
+      magicToken,
     );
     return { promoCode };
   }
@@ -182,15 +182,15 @@ export class VouchersController {
     required: false,
     enum: ["all", "active", "redeemed"],
   })
-  @ApiResponse({ status: 200, type: [VoucherResponseDto] })
+  @ApiResponse({ status: 200, type: [MerchantVoucherResponseDto] })
   async findByMerchant(
     @CurrentUser() user: CurrentUserType,
     @Query("page") page = 1,
     @Query("limit") limit = 20,
     @Query("search") search?: string,
-    @Query("status") status?: string
+    @Query("status") status?: string,
   ): Promise<{
-    vouchers: VoucherResponseDto[];
+    vouchers: MerchantVoucherResponseDto[];
     total: number;
     page: number;
     limit: number;
@@ -201,7 +201,7 @@ export class VouchersController {
       Number(page),
       Number(limit),
       search?.trim(),
-      status
+      status,
     );
   }
 
@@ -218,14 +218,14 @@ export class VouchersController {
   async findByHunter(
     @CurrentUser() user: CurrentUserType,
     @Query("unredeemedLimit") unredeemedLimit?: string,
-    @Query("redeemedLimit") redeemedLimit?: string
+    @Query("redeemedLimit") redeemedLimit?: string,
   ): Promise<HunterVouchersBucketsDto> {
     const unredeemed = unredeemedLimit ? Number(unredeemedLimit) : undefined;
     const redeemed = redeemedLimit ? Number(redeemedLimit) : undefined;
     return this.vouchersService.findByHunter(
       user.userId,
       Number.isFinite(unredeemed) ? unredeemed : undefined,
-      Number.isFinite(redeemed) ? redeemed : undefined
+      Number.isFinite(redeemed) ? redeemed : undefined,
     );
   }
 
@@ -248,7 +248,7 @@ export class VouchersController {
     @CurrentUser() user: CurrentUserType,
     @Query("status") status: "all" | "unredeemed" | "redeemed" = "all",
     @Query("page") page = 1,
-    @Query("limit") limit = 20
+    @Query("limit") limit = 20,
   ): Promise<HunterVouchersPageDto> {
     const normalized: "all" | "unredeemed" | "redeemed" =
       status === "unredeemed" || status === "redeemed" ? status : "all";
@@ -256,7 +256,7 @@ export class VouchersController {
       user.userId,
       normalized,
       Number(page),
-      Number(limit)
+      Number(limit),
     );
   }
 }

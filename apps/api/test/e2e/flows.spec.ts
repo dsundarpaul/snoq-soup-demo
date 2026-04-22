@@ -1,11 +1,17 @@
 import { faker } from "@faker-js/faker";
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
+import { MongooseModule, getConnectionToken } from "@nestjs/mongoose";
+import { Connection } from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { startE2eMongo } from "./mongo-test-server";
 import * as request from "supertest";
+import * as cookieParser from "cookie-parser";
 import { AppModule } from "../../src/app.module";
+import {
+  accessTokenFromSetCookie,
+  cookieHeaderFromSetCookie,
+} from "./auth-cookie-helpers";
 
 describe("SouqSnap E2E Flows", () => {
   let app: INestApplication;
@@ -18,6 +24,8 @@ describe("SouqSnap E2E Flows", () => {
   let voucherId: string;
   let magicToken: string;
   let scannerToken: string;
+  let merchantCookieHeader = "";
+  let hunterCookieHeader = "";
   const deviceId = faker.string.uuid();
 
   beforeAll(async () => {
@@ -29,6 +37,7 @@ describe("SouqSnap E2E Flows", () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.setGlobalPrefix("api/v1");
     await app.init();
@@ -71,23 +80,34 @@ describe("SouqSnap E2E Flows", () => {
   describe("2. Merchant Flow", () => {
     const merchantEmail = faker.internet.email();
     const merchantUsername = faker.internet.userName();
+    const merchantPassword = faker.internet.password({
+      length: 12,
+      memorable: false,
+    });
 
     it("POST /api/v1/auth/merchant/register - should register merchant", async () => {
       const response = await request(app.getHttpServer())
         .post("/api/v1/auth/merchant/register")
         .send({
           email: merchantEmail,
-          password: faker.internet.password({ length: 12, memorable: false }),
+          password: merchantPassword,
           businessName: faker.company.name(),
           username: merchantUsername,
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty("accessToken");
+      expect(
+        accessTokenFromSetCookie(response.headers["set-cookie"]),
+      ).toBeDefined();
       expect(response.body).toHaveProperty("user");
       expect(response.body.user).toHaveProperty("id");
-      expect(response.body.user).toHaveProperty("role", "merchant");
+      expect(response.body.user).toHaveProperty("type", "merchant");
       merchantId = response.body.user.id;
+      const conn = app.get<Connection>(getConnectionToken());
+      await conn.collection("merchants").updateOne(
+        { email: merchantEmail.toLowerCase() },
+        { $set: { emailVerified: true } },
+      );
     });
 
     it("POST /api/v1/auth/merchant/login - should login merchant", async () => {
@@ -95,12 +115,19 @@ describe("SouqSnap E2E Flows", () => {
         .post("/api/v1/auth/merchant/login")
         .send({
           email: merchantEmail,
-          password: faker.internet.password({ length: 12, memorable: false }),
+          password: merchantPassword,
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty("accessToken");
-      merchantToken = response.body.accessToken;
+      expect(
+        accessTokenFromSetCookie(response.headers["set-cookie"]),
+      ).toBeDefined();
+      merchantToken = accessTokenFromSetCookie(
+        response.headers["set-cookie"],
+      )!;
+      merchantCookieHeader = cookieHeaderFromSetCookie(
+        response.headers["set-cookie"],
+      );
     });
 
     it("GET /api/v1/merchants/me - should get merchant profile", async () => {
@@ -246,18 +273,21 @@ describe("SouqSnap E2E Flows", () => {
     });
 
     it("POST /api/v1/auth/logout - should logout merchant", async () => {
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post("/api/v1/auth/logout")
         .set("Authorization", `Bearer ${merchantToken}`)
-        .send({ refreshToken: faker.string.uuid() })
+        .set("Cookie", merchantCookieHeader)
+        .send({})
         .expect(200);
-
-      expect(response.body).toHaveProperty("message");
     });
   });
 
   describe("3. Hunter Flow", () => {
     const hunterEmail = faker.internet.email();
+    const hunterPassword = faker.internet.password({
+      length: 12,
+      memorable: false,
+    });
 
     it("POST /api/v1/auth/hunter/device-login - should login/create hunter by device", async () => {
       const response = await request(app.getHttpServer())
@@ -265,9 +295,16 @@ describe("SouqSnap E2E Flows", () => {
         .send({ deviceId })
         .expect(200);
 
-      expect(response.body).toHaveProperty("accessToken");
+      expect(
+        accessTokenFromSetCookie(response.headers["set-cookie"]),
+      ).toBeDefined();
       expect(response.body).toHaveProperty("user");
-      hunterToken = response.body.accessToken;
+      hunterToken = accessTokenFromSetCookie(
+        response.headers["set-cookie"],
+      )!;
+      hunterCookieHeader = cookieHeaderFromSetCookie(
+        response.headers["set-cookie"],
+      );
     });
 
     it("POST /api/v1/auth/hunter/register - should register hunter with email", async () => {
@@ -277,12 +314,14 @@ describe("SouqSnap E2E Flows", () => {
         .send({
           deviceId: newDeviceId,
           email: hunterEmail,
-          password: faker.internet.password({ length: 12, memorable: false }),
+          password: hunterPassword,
           nickname: faker.internet.userName(),
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty("accessToken");
+      expect(
+        accessTokenFromSetCookie(response.headers["set-cookie"]),
+      ).toBeDefined();
       expect(response.body).toHaveProperty("user");
     });
 
@@ -291,12 +330,19 @@ describe("SouqSnap E2E Flows", () => {
         .post("/api/v1/auth/hunter/login")
         .send({
           email: hunterEmail,
-          password: faker.internet.password({ length: 12, memorable: false }),
+          password: hunterPassword,
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty("accessToken");
-      hunterToken = response.body.accessToken;
+      expect(
+        accessTokenFromSetCookie(response.headers["set-cookie"]),
+      ).toBeDefined();
+      hunterToken = accessTokenFromSetCookie(
+        response.headers["set-cookie"],
+      )!;
+      hunterCookieHeader = cookieHeaderFromSetCookie(
+        response.headers["set-cookie"],
+      );
     });
 
     it("GET /api/v1/hunters/me - should get hunter profile", async () => {
@@ -455,8 +501,12 @@ describe("SouqSnap E2E Flows", () => {
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty("accessToken");
-      adminToken = response.body.accessToken;
+      expect(
+        accessTokenFromSetCookie(response.headers["set-cookie"]),
+      ).toBeDefined();
+      adminToken = accessTokenFromSetCookie(
+        response.headers["set-cookie"],
+      )!;
     });
 
     it("GET /api/v1/admin/stats - should get platform stats", async () => {

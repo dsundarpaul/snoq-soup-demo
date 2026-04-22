@@ -1,9 +1,10 @@
 import {
   clearTokenBundle,
+  emitAuthChanged,
   type AuthRole,
-  getAccessToken,
-  getRefreshToken,
 } from "@/lib/auth-tokens";
+
+const SESSION_HINT_KEY = "souqsnap_session_hint";
 
 const HUNTER_SUPPRESS_DEVICE_LOGIN_KEY = "souqsnap_hunter_suppress_device_login";
 
@@ -13,23 +14,31 @@ const LOGIN_PATHS: Record<AuthRole, string> = {
   admin: "/admin",
 };
 
-export function hadAuthCredentials(role: AuthRole): boolean {
+export function setAuthSessionHint(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(SESSION_HINT_KEY, "1");
+}
+
+export function clearAuthSessionHint(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(SESSION_HINT_KEY);
+}
+
+export function hadAuthSessionHint(): boolean {
   if (typeof window === "undefined") return false;
-  return Boolean(getAccessToken(role) || getRefreshToken(role));
+  return sessionStorage.getItem(SESSION_HINT_KEY) === "1";
 }
 
 export function invalidateAuthSession(role: AuthRole): void {
   if (typeof window === "undefined") return;
+  clearAuthSessionHint();
   clearTokenBundle(role);
   window.location.assign(LOGIN_PATHS[role]);
 }
 
 export function clearSessionsExcept(targetRole: AuthRole): void {
-  (["merchant", "hunter", "admin"] as const).forEach((r) => {
-    if (r !== targetRole) {
-      clearTokenBundle(r);
-    }
-  });
+  void targetRole;
+  emitAuthChanged();
 }
 
 export function setHunterSuppressDeviceLoginAfterLogout(): void {

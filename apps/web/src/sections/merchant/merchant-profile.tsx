@@ -36,7 +36,10 @@ export default function MerchantProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <MerchantDashboardHeader merchant={merchant} onLogout={handleLogout} />
+      <MerchantDashboardHeader
+        merchant={merchant ?? undefined}
+        onLogout={handleLogout}
+      />
 
       <main className="max-w-5xl mx-auto px-4 py-8 pb-24 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -57,7 +60,7 @@ export default function MerchantProfilePage() {
           {/* <TabsTrigger value="scanner">Staff Voucher</TabsTrigger> */}
           {/* </TabsList> */}
           <TabsContent value="profile" className="mt-0">
-            <MerchantProfileInformationTab merchant={merchant} />
+            <MerchantProfileInformationTab merchant={merchant ?? undefined} />
           </TabsContent>
           <TabsContent value="scanner" className="mt-0">
             <MerchantScannerDetailsTab {...scannerAssignments} />

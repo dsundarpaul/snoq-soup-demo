@@ -1,11 +1,14 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
-import { MongooseModule, getModelToken } from "@nestjs/mongoose";
+import { MongooseModule, getModelToken, getConnectionToken } from "@nestjs/mongoose";
+import { Connection } from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { startE2eMongo } from "./mongo-test-server";
 import { Model, Types } from "mongoose";
 import * as request from "supertest";
+import * as cookieParser from "cookie-parser";
 import { AppModule } from "../../src/app.module";
+import { accessTokenFromSetCookie } from "./auth-cookie-helpers";
 import { Drop, DropDocument } from "../../src/database/schemas/drop.schema";
 import {
   Voucher,
@@ -110,6 +113,7 @@ describe("Drops E2E Tests", () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     app.useGlobalPipes(new ValidationPipe({ transform: true }));
     app.setGlobalPrefix("api/v1");
     await app.init();
@@ -133,9 +137,26 @@ describe("Drops E2E Tests", () => {
         password: "TestPass123!",
         businessName: randomBusinessName(),
         username: `testmerchant${timestamp}`,
-      });
+      })
+      .expect(201);
 
-    merchantToken = merchantResponse.body.accessToken;
+    const conn = app.get<Connection>(getConnectionToken());
+    await conn.collection("merchants").updateOne(
+      { email: `testmerchant${timestamp}@test.com` },
+      { $set: { emailVerified: true } },
+    );
+
+    const loginRes = await request(app.getHttpServer())
+      .post("/api/v1/auth/merchant/login")
+      .send({
+        email: `testmerchant${timestamp}@test.com`,
+        password: "TestPass123!",
+      })
+      .expect(200);
+
+    merchantToken = accessTokenFromSetCookie(
+      loginRes.headers["set-cookie"],
+    )!;
     merchantId = merchantResponse.body.user.id;
 
     // Get admin token
@@ -146,7 +167,7 @@ describe("Drops E2E Tests", () => {
         password: process.env.ADMIN_PASSWORD || "AdminPass123!",
       });
 
-    adminToken = adminResponse.body.accessToken;
+    adminToken = accessTokenFromSetCookie(adminResponse.headers["set-cookie"])!;
   });
 
   afterAll(async () => {
@@ -706,7 +727,9 @@ describe("Drops E2E Tests", () => {
         })
         .expect(201);
 
-      const otherMerchantToken = otherMerchantResponse.body.accessToken;
+      const otherMerchantToken = accessTokenFromSetCookie(
+        otherMerchantResponse.headers["set-cookie"],
+      )!;
 
       // Create drop with first merchant
       const coords = randomCoords();

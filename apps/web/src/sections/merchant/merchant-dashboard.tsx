@@ -369,7 +369,10 @@ export default function MerchantDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <MerchantDashboardHeader merchant={merchant} onLogout={handleLogout} />
+      <MerchantDashboardHeader
+        merchant={merchant ?? undefined}
+        onLogout={handleLogout}
+      />
 
       <main className="max-w-7xl mx-auto px-4 py-8 pb-24">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

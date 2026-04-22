@@ -8,12 +8,15 @@ import {
   Param,
   Query,
   Res,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
   DefaultValuePipe,
   ParseIntPipe,
+  UnauthorizedException,
 } from "@nestjs/common";
+import type { Request } from "express";
 import type { Response } from "express";
 import {
   ApiTags,
@@ -30,6 +33,7 @@ import {
 } from "./admin.service";
 import { UpdateMerchantAdminDto } from "./dto/request/update-merchant-admin.dto";
 import { AdminStatsDto } from "./dto/response/admin-stats.dto";
+import { AdminMeDto } from "./dto/response/admin-me.dto";
 import { AdminAnalyticsDto } from "./dto/response/admin-analytics.dto";
 import {
   MerchantListDto,
@@ -39,10 +43,13 @@ import { UserListDto } from "./dto/response/user-list.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
+import type { RequestUser } from "../auth/strategies/jwt.strategy";
 import { csvAttachmentFilename } from "../../common/utils/csv";
+import { UpdateDropDto } from "../drops/dto/request/update-drop.dto";
 import { PromoCodesService } from "../promo-codes/promo-codes.service";
 import { BulkCreatePromoCodesDto } from "../promo-codes/dto/request/bulk-create-promo-codes.dto";
 import { PromoCodeListDto } from "../promo-codes/dto/response/promo-code-list.dto";
+import { AdminCreateDropDto } from "./dto/request/admin-create-drop.dto";
 import { PromoCodeResponseDto } from "../promo-codes/dto/response/promo-code-response.dto";
 import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 
@@ -53,6 +60,26 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly promoCodesService: PromoCodesService,
   ) {}
+
+  @Get("me")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("admin")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Current admin profile" })
+  @ApiResponse({ status: 200, type: AdminMeDto })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - Admin access required",
+  })
+  async getMe(
+    @Req() req: Request & { user: RequestUser },
+  ): Promise<AdminMeDto> {
+    if (!req.user?.userId) {
+      throw new UnauthorizedException();
+    }
+    return this.adminService.getAdminProfile(req.user.userId);
+  }
 
   @Get("stats")
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -365,7 +392,7 @@ export class AdminController {
   })
   @ApiResponse({ status: 404, description: "Merchant not found" })
   @HttpCode(HttpStatus.CREATED)
-  async createDropAsAdmin(@Body() dto: any) {
+  async createDropAsAdmin(@Body() dto: AdminCreateDropDto) {
     return this.adminService.createDropAsAdmin(dto);
   }
 
@@ -384,7 +411,7 @@ export class AdminController {
     description: "Forbidden - Admin access required",
   })
   @ApiResponse({ status: 404, description: "Drop not found" })
-  async updateDropAsAdmin(@Param("id") id: string, @Body() dto: any) {
+  async updateDropAsAdmin(@Param("id") id: string, @Body() dto: UpdateDropDto) {
     return this.adminService.updateDropAsAdmin(id, dto);
   }
 

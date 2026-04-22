@@ -3,9 +3,13 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Inject,
+  UnauthorizedException,
 } from "@nestjs/common";
+import { Cache } from "cache-manager";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { AuthService } from "../auth/auth.service";
-import { UserType } from "../../database/schemas/refresh-token.schema";
+import { UserRole } from "../../common/enums/user-role.enum";
 import { FilterQuery, PipelineStage, Types } from "mongoose";
 import { DatabaseService } from "../../database/database.service";
 import { DropsService } from "../drops/drops.service";
@@ -25,6 +29,7 @@ import {
 import { UserListDto, UserListItemDto } from "./dto/response/user-list.dto";
 import { DropResponseDto } from "../drops/dto/response/drop-response.dto";
 import { encodeCsv } from "../../common/utils/csv";
+import { AdminCreateDropDto } from "./dto/request/admin-create-drop.dto";
 
 export interface PaginationQuery {
   page?: number;
@@ -54,7 +59,35 @@ export class AdminService {
     private readonly database: DatabaseService,
     private readonly dropsService: DropsService,
     private readonly authService: AuthService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+
+  async getAdminProfile(userId: string): Promise<{
+    admin: { id: string; email: string; name: string };
+  }> {
+    const admin = await this.database.admins
+      .findOne({ _id: userId, deletedAt: null })
+      .select("-password")
+      .lean();
+    if (!admin) {
+      throw new UnauthorizedException("Admin not found");
+    }
+    return {
+      admin: {
+        id: admin._id.toString(),
+        email: admin.email,
+        name: admin.name,
+      },
+    };
+  }
+
+  /**
+   * Escape special regex characters to prevent regex injection attacks.
+   * User input used in $regex queries must be escaped.
+   */
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
   private merchantAccountFlags(merchant: {
     lockUntil?: Date | null;
@@ -77,10 +110,11 @@ export class AdminService {
       filter.emailVerified = query.isVerified;
     }
     if (query.search) {
+      const escaped = this.escapeRegex(query.search);
       filter.$or = [
-        { businessName: { $regex: query.search, $options: "i" } },
-        { email: { $regex: query.search, $options: "i" } },
-        { username: { $regex: query.search, $options: "i" } },
+        { businessName: { $regex: escaped, $options: "i" } },
+        { email: { $regex: escaped, $options: "i" } },
+        { username: { $regex: escaped, $options: "i" } },
       ] as unknown[];
     }
     return filter;
@@ -91,10 +125,11 @@ export class AdminService {
   ): Record<string, unknown> {
     const filter: Record<string, unknown> = { deletedAt: null };
     if (query.search) {
+      const escaped = this.escapeRegex(query.search);
       filter.$or = [
-        { deviceId: { $regex: query.search, $options: "i" } },
-        { nickname: { $regex: query.search, $options: "i" } },
-        { email: { $regex: query.search, $options: "i" } },
+        { deviceId: { $regex: escaped, $options: "i" } },
+        { nickname: { $regex: escaped, $options: "i" } },
+        { email: { $regex: escaped, $options: "i" } },
       ] as unknown[];
     }
     if (query.minClaims !== undefined) {
@@ -146,6 +181,10 @@ export class AdminService {
   }
 
   async getPlatformStats(): Promise<AdminStatsDto> {
+    const cacheKey = "admin:stats";
+    const cached = await this.cacheManager.get<AdminStatsDto>(cacheKey);
+    if (cached) return cached;
+
     const [
       totalMerchants,
       verifiedMerchants,
@@ -177,7 +216,7 @@ export class AdminService {
 
     const redemptionRate = totalClaims > 0 ? totalRedemptions / totalClaims : 0;
 
-    return {
+    const result: AdminStatsDto = {
       totalMerchants,
       verifiedMerchants,
       totalDrops,
@@ -189,12 +228,19 @@ export class AdminService {
       redemptionRate: Math.round(redemptionRate * 100) / 100,
       generatedAt: new Date(),
     };
+
+    await this.cacheManager.set(cacheKey, result, 60_000);
+    return result;
   }
 
   async getPlatformAnalytics(
     days = 30,
     granularity: "hourly" | "daily" | "weekly" | "monthly" = "daily",
   ): Promise<AdminAnalyticsDto> {
+    const cacheKey = `admin:analytics:${days}:${granularity}`;
+    const cached = await this.cacheManager.get<AdminAnalyticsDto>(cacheKey);
+    if (cached) return cached;
+
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -402,7 +448,7 @@ export class AdminService {
         ? Math.round((totalRedemptionsPeriod / totalClaimsPeriod) * 1000) / 10
         : 0;
 
-    return {
+    const result: AdminAnalyticsDto = {
       merchantsOverTime,
       dropsOverTime,
       claimsOverTime,
@@ -417,6 +463,9 @@ export class AdminService {
       granularity,
       generatedAt: new Date(),
     };
+
+    await this.cacheManager.set(cacheKey, result, 60_000);
+    return result;
   }
 
   async findAllMerchants(query: MerchantQuery): Promise<MerchantListDto> {
@@ -553,7 +602,7 @@ export class AdminService {
 
     if (dto.suspended === true) {
       if (!existing.suspendedAt) {
-        await this.authService.revokeAllUserTokens(id, UserType.MERCHANT);
+        await this.authService.revokeAllUserTokens(id, UserRole.MERCHANT);
       }
       $set.suspendedAt = new Date();
     } else if (dto.suspended === false) {
@@ -814,8 +863,8 @@ export class AdminService {
     );
   }
 
-  async createDropAsAdmin(body: Record<string, unknown>): Promise<unknown> {
-    const merchantId = body.merchantId;
+  async createDropAsAdmin(body: AdminCreateDropDto): Promise<unknown> {
+    const { merchantId, ...dropData } = body;
     if (typeof merchantId !== "string" || !Types.ObjectId.isValid(merchantId)) {
       throw new BadRequestException("Valid merchantId is required");
     }
@@ -827,19 +876,14 @@ export class AdminService {
       throw new NotFoundException("Merchant not found");
     }
 
-    const rest = { ...body };
-    delete rest.merchantId;
-    return this.dropsService.create(
-      merchantId,
-      rest as unknown as CreateDropDto,
-    );
+    return this.dropsService.create(merchantId, dropData as CreateDropDto);
   }
 
   async updateDropAsAdmin(
     id: string,
-    dto: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.dropsService.updateAsAdmin(id, dto as UpdateDropDto);
+    dto: UpdateDropDto,
+  ): Promise<DropResponseDto> {
+    return this.dropsService.updateAsAdmin(id, dto);
   }
 
   async deleteDropAsAdmin(

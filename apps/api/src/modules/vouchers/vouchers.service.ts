@@ -4,16 +4,20 @@ import {
   BadRequestException,
   ForbiddenException,
   ConflictException,
+  Logger,
 } from "@nestjs/common";
 import { Types, FlattenMaps } from "mongoose";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash, timingSafeEqual } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { DropDocument } from "../../database/schemas/drop.schema";
 import { VoucherDocument } from "../../database/schemas/voucher.schema";
 import { PromoCodeStatus } from "../../database/schemas/promo-code.schema";
 import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
-import { VoucherResponseDto } from "./dto/response/voucher-response.dto";
+import {
+  VoucherResponseDto,
+  MerchantVoucherResponseDto,
+} from "./dto/response/voucher-response.dto";
 import { ClaimVoucherResponseDto } from "./dto/response/claim-voucher-response.dto";
 import {
   VoucherDetailResponseDto,
@@ -43,14 +47,44 @@ interface VoucherFilter {
 
 @Injectable()
 export class VouchersService {
+  private readonly logger = new Logger(VouchersService.name);
+
+  /**
+   * Hash a magic token using SHA-256 for secure storage.
+   * Magic tokens are bearer credentials and should never be stored in plaintext.
+   */
+  private hashMagicToken(token: string): string {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
+  /**
+   * Constant-time string comparison to prevent timing attacks.
+   * Used for comparing sensitive values like magic tokens and hashes.
+   */
+  private safeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    try {
+      const bufA = Buffer.from(a, "hex");
+      const bufB = Buffer.from(b, "hex");
+      return timingSafeEqual(bufA, bufB);
+    } catch {
+      // Fallback to length-safe comparison if hex parsing fails
+      let result = 0;
+      for (let i = 0; i < a.length; i++) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      }
+      return result === 0;
+    }
+  }
+
   constructor(
     private readonly database: DatabaseService,
     private readonly mailService: MailService,
-    private readonly dropsService: DropsService
+    private readonly dropsService: DropsService,
   ) {}
 
   async claim(
-    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string }
+    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string },
   ): Promise<ClaimVoucherResponseDto> {
     const { dropId, deviceId } = dto;
     const fromBody = dto.hunterId?.trim();
@@ -61,7 +95,7 @@ export class VouchersService {
     const hunterId = fromBody ?? resolvedFromDevice;
     if (!hunterId) {
       throw new BadRequestException(
-        "Hunter could not be resolved for this device"
+        "Hunter could not be resolved for this device",
       );
     }
 
@@ -120,7 +154,7 @@ export class VouchersService {
 
     const cap = this.getLimitedAvailabilityCap(drop);
     let claimedCountBefore = 0;
-    if (cap != null) {
+    if (cap !== null) {
       claimedCountBefore = await this.database.vouchers.countDocuments({
         dropId: new Types.ObjectId(dropId),
         deletedAt: null,
@@ -129,7 +163,7 @@ export class VouchersService {
       if (claimedCountBefore >= cap) {
         await this.deactivateLimitedDropIfAtOrOverCount(
           drop,
-          claimedCountBefore
+          claimedCountBefore,
         );
         throw new BadRequestException("Drop capture limit reached");
       }
@@ -137,29 +171,45 @@ export class VouchersService {
 
     // Generate magic token
     const magicToken = randomBytes(16).toString("hex");
+    const magicTokenHash = this.hashMagicToken(magicToken);
     // const claimedAt = new Date();
     // const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
 
-    // Create voucher
-    const voucher = await this.database.vouchers.create({
-      dropId: new Types.ObjectId(dropId),
-      merchantId: drop.merchantId,
-      magicToken,
-      claimedBy: {
-        deviceId,
-        hunterId: hunterObjectId,
-      },
-      // claimedAt,
-      // expiresAt,
-      redeemed: false,
-      redeemedAt: null,
-      redeemedBy: {},
-    });
+    // Create voucher with hashed token for security
+    // The unique compound index {dropId, claimedBy, hunterId, deletedAt} ensures atomicity
+    let voucher;
+    try {
+      voucher = await this.database.vouchers.create({
+        dropId: new Types.ObjectId(dropId),
+        merchantId: drop.merchantId,
+        magicToken, // Keep for backwards compatibility
+        magicTokenHash, // Secure hashed storage
+        claimedBy: {
+          deviceId,
+          hunterId: hunterObjectId,
+        },
+        // claimedAt,
+        // expiresAt,
+        redeemed: false,
+        redeemedAt: null,
+        redeemedBy: {},
+      });
+    } catch (err: unknown) {
+      // Handle duplicate key error from unique compound index (race condition)
+      const mongoError = err as {
+        code?: number;
+        keyValue?: Record<string, unknown>;
+      };
+      if (mongoError.code === 11000) {
+        throw new ConflictException("Voucher already claimed by this hunter");
+      }
+      throw err;
+    }
 
     if (cap != null) {
       await this.deactivateLimitedDropIfAtOrOverCount(
         drop,
-        claimedCountBefore + 1
+        claimedCountBefore + 1,
       );
     }
 
@@ -167,7 +217,7 @@ export class VouchersService {
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
       drop._id as Types.ObjectId,
-      hunterObjectId
+      hunterObjectId,
     );
 
     await this.database.hunters.findByIdAndUpdate(hunterObjectId, {
@@ -177,7 +227,7 @@ export class VouchersService {
     const merchantDoc = await this.database.merchants
       .findById(drop.merchantId)
       .select(
-        "businessName username logoUrl storeLocation businessPhone businessHours"
+        "businessName username logoUrl storeLocation businessPhone businessHours",
       )
       .lean();
 
@@ -185,7 +235,7 @@ export class VouchersService {
     return {
       ...base,
       merchant: this.mapMerchantLeanToInfoDto(
-        merchantDoc as Record<string, unknown> | null
+        merchantDoc as Record<string, unknown> | null,
       ),
     };
   }
@@ -193,7 +243,7 @@ export class VouchersService {
   async redeem(
     dto: RedeemVoucherDto,
     redeemerType: "merchant" | "scanner" | "hunter",
-    redeemerId: string
+    redeemerId: string,
   ): Promise<RedeemResultDto> {
     const { voucherId, magicToken } = dto;
 
@@ -207,8 +257,13 @@ export class VouchersService {
       throw new NotFoundException("Voucher not found");
     }
 
-    // Then check magic token
-    if (voucher.magicToken !== magicToken) {
+    // Check magic token by comparing hashed values using constant-time comparison
+    const inputTokenHash = this.hashMagicToken(magicToken);
+    // Prefer hash comparison if available, fallback to plaintext for legacy vouchers
+    const tokenValid = voucher.magicTokenHash
+      ? this.safeCompare(voucher.magicTokenHash, inputTokenHash)
+      : this.safeCompare(voucher.magicToken ?? "", magicToken);
+    if (!tokenValid) {
       throw new ForbiddenException("Invalid magic token");
     }
 
@@ -239,7 +294,7 @@ export class VouchersService {
 
       if (drop.redemption.minutes && minutesElapsed > drop.redemption.minutes) {
         throw new ForbiddenException(
-          `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`
+          `Voucher must be redeemed within ${drop.redemption.minutes} minutes of claim`,
         );
       }
     } else if (
@@ -261,14 +316,14 @@ export class VouchersService {
       const link = hunter.redeemerMerchantId?.toString() ?? "";
       if (!link || link !== voucherMerchantId) {
         throw new ForbiddenException(
-          "Hunter is not authorized to redeem for this merchant"
+          "Hunter is not authorized to redeem for this merchant",
         );
       }
     }
 
     if (redeemerType === "merchant" && redeemerId !== voucherMerchantId) {
       throw new ForbiddenException(
-        "You can only redeem vouchers for your own drops"
+        "You can only redeem vouchers for your own drops",
       );
     }
 
@@ -279,45 +334,59 @@ export class VouchersService {
       const scannerMerchantId = redeemerId;
       if (scannerMerchantId !== voucherMerchantId) {
         throw new ForbiddenException(
-          "Scanner can only redeem vouchers for their assigned merchant"
+          "Scanner can only redeem vouchers for their assigned merchant",
         );
       }
     }
 
-    // Mark as redeemed
-    voucher.redeemed = true;
-    voucher.redeemedAt = now;
-    voucher.redeemedBy = {
-      type: redeemerType,
-      id: redeemerId,
-    };
+    // Mark as redeemed atomically - prevents race conditions
+    // Only update if still unredeemed, ensuring no double-redemption
+    const redeemedVoucher = await this.database.vouchers.findOneAndUpdate(
+      {
+        _id: voucher._id,
+        redeemed: false, // Atomic condition
+      },
+      {
+        $set: {
+          redeemed: true,
+          redeemedAt: now,
+          redeemedBy: {
+            type: redeemerType,
+            id: redeemerId,
+          },
+        },
+      },
+      { new: true },
+    );
 
-    await voucher.save();
+    if (!redeemedVoucher) {
+      throw new BadRequestException("Voucher has already been redeemed");
+    }
 
     // Increment hunter stats if hunterId exists
-    if (voucher.claimedBy?.hunterId) {
+    if (redeemedVoucher.claimedBy?.hunterId) {
       await this.database.hunters.findByIdAndUpdate(
-        voucher.claimedBy.hunterId,
+        redeemedVoucher.claimedBy.hunterId,
         {
           $inc: { "stats.totalRedemptions": 1 },
-        }
+        },
       );
     }
 
     // Get promo code if assigned
     const promoCode = await this.database.promoCodes.findOne({
-      voucherId: voucher._id,
+      voucherId: redeemedVoucher._id,
     });
 
     // Type-safe refactor: safely get IDs
-    const voucherIdStr = voucher._id?.toString() ?? "";
+    const voucherIdStr = redeemedVoucher._id?.toString() ?? "";
 
     return {
       voucherId: voucherIdStr,
-      voucher: this.toResponseDto(voucher, drop),
+      voucher: this.toResponseDto(redeemedVoucher, drop),
       success: true,
       message: "Voucher redeemed successfully",
-      redeemedAt: voucher.redeemedAt,
+      redeemedAt: redeemedVoucher.redeemedAt!,
       redeemedByType: redeemerType,
       redeemedById: redeemerId,
       promoCode: promoCode?.code,
@@ -327,8 +396,10 @@ export class VouchersService {
   }
 
   async findByMagicToken(token: string): Promise<VoucherDetailResponseDto> {
+    // Hash token for secure lookup
+    const tokenHash = this.hashMagicToken(token);
     const voucher = await this.database.vouchers.findOne({
-      magicToken: token,
+      $or: [{ magicTokenHash: tokenHash }, { magicToken: token }],
       deletedAt: null,
     });
 
@@ -347,7 +418,7 @@ export class VouchersService {
   }
 
   private async hydrateHunterVoucherItems(
-    vouchersList: Array<Record<string, unknown>>
+    vouchersList: Array<Record<string, unknown>>,
   ): Promise<HunterVoucherItemDto[]> {
     const voucherDocs = vouchersList as unknown as VoucherDocument[];
     const dropIdStrs = [
@@ -358,9 +429,9 @@ export class VouchersService {
               ? typeof v.dropId === "string"
                 ? v.dropId
                 : v.dropId.toString()
-              : ""
+              : "",
           )
-          .filter(Boolean)
+          .filter(Boolean),
       ),
     ];
 
@@ -375,7 +446,7 @@ export class VouchersService {
         : [];
 
     const dropMap = new Map(
-      drops.map((d) => [d._id.toString(), d as DropDocument])
+      drops.map((d) => [d._id.toString(), d as DropDocument]),
     );
 
     const merchantIdStrs = [
@@ -386,9 +457,9 @@ export class VouchersService {
               ? typeof d.merchantId === "string"
                 ? d.merchantId
                 : d.merchantId.toString()
-              : ""
+              : "",
           )
-          .filter(Boolean)
+          .filter(Boolean),
       ),
     ];
 
@@ -402,13 +473,13 @@ export class VouchersService {
               deletedAt: null,
             })
             .select(
-              "businessName username logoUrl storeLocation businessPhone businessHours"
+              "businessName username logoUrl storeLocation businessPhone businessHours",
             )
             .lean()
         : [];
 
     const merchantMap = new Map(
-      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>])
+      merchants.map((m) => [m._id.toString(), m as Record<string, unknown>]),
     );
 
     const items: HunterVoucherItemDto[] = [];
@@ -427,7 +498,7 @@ export class VouchersService {
         voucher: this.toResponseDto(v, null),
         drop: this.dropsService.toResponseDto(doc),
         merchant: this.mapMerchantLeanToInfoDto(
-          merchantMap.get(merchantIdForDrop) ?? null
+          merchantMap.get(merchantIdForDrop) ?? null,
         ),
       });
     }
@@ -437,7 +508,7 @@ export class VouchersService {
   async findByHunter(
     hunterId: string,
     unredeemedLimit?: number,
-    redeemedLimit?: number
+    redeemedLimit?: number,
   ): Promise<HunterVouchersBucketsDto> {
     const hunter = await this.database.hunters
       .findOne({ _id: hunterId, deletedAt: null })
@@ -508,7 +579,7 @@ export class VouchersService {
     hunterId: string,
     status: "unredeemed" | "redeemed" | "all",
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<HunterVouchersPageDto> {
     const safePage = Math.max(1, Math.floor(page));
     const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));
@@ -561,9 +632,9 @@ export class VouchersService {
     page = 1,
     limit = 20,
     search?: string,
-    status?: string
+    status?: string,
   ): Promise<{
-    vouchers: VoucherResponseDto[];
+    vouchers: MerchantVoucherResponseDto[];
     total: number;
     page: number;
     limit: number;
@@ -618,7 +689,7 @@ export class VouchersService {
             .lean()
         : [];
     const dropMap = new Map(
-      drops.map((d) => [d._id.toString(), d as DropDocument])
+      drops.map((d) => [d._id.toString(), d as DropDocument]),
     );
 
     const hunterIdStrings = new Set<string>();
@@ -651,16 +722,16 @@ export class VouchersService {
           nickname: h.nickname ?? null,
           email: h.email ?? null,
         },
-      ])
+      ]),
     );
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     return {
       vouchers: vouchers.map((v) => {
-        const dto = this.toResponseDto(
+        const dto = this.toMerchantResponseDto(
           v as VoucherDocument,
-          dropMap.get(v.dropId?.toString() ?? "") ?? null
+          dropMap.get(v.dropId?.toString() ?? "") ?? null,
         );
         const hid = dto.claimedBy?.hunterId;
         if (hid) {
@@ -688,7 +759,7 @@ export class VouchersService {
     voucherId: string,
     email: string,
     magicLink: string,
-    magicToken: string
+    magicToken: string,
   ): Promise<void> {
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
@@ -720,7 +791,8 @@ export class VouchersService {
   async sendByWhatsApp(
     voucherId: string,
     phone: string,
-    magicLink: string
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _magicLink: string,
   ): Promise<void> {
     const voucher = await this.database.vouchers.findById(voucherId);
 
@@ -738,16 +810,18 @@ export class VouchersService {
 
     // TODO: Implement actual WhatsApp sending via WhatsApp API
     // This is a placeholder for WhatsApp integration
-    console.log(`Sending voucher WhatsApp to ${phone}: ${magicLink}`);
+    this.logger.warn("WhatsApp integration not implemented");
   }
 
   async getPromoCode(
     voucherId: string,
-    magicToken: string
+    magicToken: string,
   ): Promise<string | null> {
+    // Hash token for secure lookup
+    const tokenHash = this.hashMagicToken(magicToken);
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
-      magicToken,
+      $or: [{ magicTokenHash: tokenHash }, { magicToken }],
       deletedAt: null,
     });
 
@@ -792,7 +866,7 @@ export class VouchersService {
   private async assignPromoCode(
     voucherId: Types.ObjectId,
     dropId: Types.ObjectId,
-    hunterId: Types.ObjectId
+    hunterId: Types.ObjectId,
   ): Promise<void> {
     // Find available promo code for this drop
     const promoCode = await this.database.promoCodes.findOneAndUpdate(
@@ -809,18 +883,18 @@ export class VouchersService {
           assignedAt: new Date(),
         },
       },
-      { sort: { createdAt: 1 } }
+      { sort: { createdAt: 1 } },
     );
 
     // If no promo code available, that's okay - voucher still valid
     if (!promoCode) {
-      console.log(`No promo code available for drop ${dropId}`);
+      this.logger.debug(`No promo code available for drop ${dropId}`);
     }
   }
 
   private computeVoucherExpiresAt(
     drop: DropDocument | FlattenMaps<DropDocument>,
-    claimedAt: Date
+    claimedAt: Date,
   ): Date | null {
     const candidates: number[] = [];
     const abs = drop.voucherAbsoluteExpiresAt;
@@ -849,7 +923,7 @@ export class VouchersService {
 
   private toResponseDto(
     voucher: VoucherDocument | FlattenMaps<VoucherDocument>,
-    drop?: DropDocument | FlattenMaps<DropDocument> | null
+    drop?: DropDocument | FlattenMaps<DropDocument> | null,
   ): VoucherResponseDto {
     // Type-safe refactor: safely convert ObjectId to string
     const id =
@@ -910,8 +984,23 @@ export class VouchersService {
     };
   }
 
+  /**
+   * Merchant-facing voucher response - excludes sensitive magicToken.
+   * Merchants should not see bearer tokens that belong to hunters.
+   */
+  private toMerchantResponseDto(
+    voucher: VoucherDocument | FlattenMaps<VoucherDocument>,
+    drop?: DropDocument | FlattenMaps<DropDocument> | null,
+  ): MerchantVoucherResponseDto {
+    const dto = this.toResponseDto(voucher, drop);
+    // Remove magicToken - merchants should not see bearer tokens
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { magicToken: _, ...merchantDto } = dto;
+    return merchantDto;
+  }
+
   private async toDetailResponseDto(
-    voucher: VoucherDocument
+    voucher: VoucherDocument,
   ): Promise<VoucherDetailResponseDto> {
     const baseDto = this.toResponseDto(voucher);
 
@@ -921,7 +1010,7 @@ export class VouchersService {
       this.database.merchants
         .findById(voucher.merchantId)
         .select(
-          "businessName username logoUrl storeLocation businessPhone businessHours"
+          "businessName username logoUrl storeLocation businessPhone businessHours",
         )
         .lean(),
     ]);
@@ -957,7 +1046,7 @@ export class VouchersService {
         };
 
     const merchantInfo = this.mapMerchantLeanToInfoDto(
-      merchant as Record<string, unknown> | null
+      merchant as Record<string, unknown> | null,
     );
 
     const detailDto: VoucherDetailResponseDto = {
@@ -977,7 +1066,7 @@ export class VouchersService {
   }
 
   private mapMerchantLeanToInfoDto(
-    merchant: Record<string, unknown> | null
+    merchant: Record<string, unknown> | null,
   ): MerchantInfoDto {
     if (!merchant || !merchant._id) {
       return {
@@ -1028,20 +1117,20 @@ export class VouchersService {
   }
 
   private getLimitedAvailabilityCap(drop: DropDocument): number | null {
-    const a = drop.availability;
-    if (!a || a.type !== "limited") {
+    const availability = drop.availability;
+    if (!availability || availability.type !== "limited") {
       return null;
     }
-    const n = Number(a.limit);
-    if (!Number.isFinite(n) || n < 1) {
+    const limit = Number(availability.limit);
+    if (!Number.isFinite(limit) || limit < 1) {
       return null;
     }
-    return n;
+    return limit;
   }
 
   private async deactivateLimitedDropIfAtOrOverCount(
     drop: DropDocument,
-    voucherCount: number
+    voucherCount: number,
   ): Promise<void> {
     const cap = this.getLimitedAvailabilityCap(drop);
     if (cap == null || voucherCount < cap) {
@@ -1049,7 +1138,7 @@ export class VouchersService {
     }
     const updated = await this.database.drops.findOneAndUpdate(
       { _id: drop._id, active: true, deletedAt: null },
-      { $set: { active: false } }
+      { $set: { active: false } },
     );
     if (updated) {
       await this.dropsService.notifyActiveDropsListingChanged();

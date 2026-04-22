@@ -16,11 +16,13 @@ import { EmailVerificationCleanupService } from "./email-verification-cleanup.se
     DatabaseModule,
     MailModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
-    JwtModule.register({
-      secret: config.jwt.secret,
-      signOptions: {
-        expiresIn: "15m",
-      },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: config.jwt.secret,
+        signOptions: {
+          expiresIn: config.jwt.expiresIn,
+        },
+      }),
     }),
   ],
   providers: [

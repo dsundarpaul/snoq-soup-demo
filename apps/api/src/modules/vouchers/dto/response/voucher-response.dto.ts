@@ -160,3 +160,80 @@ export class VoucherResponseDto {
   })
   updatedAt!: Date;
 }
+
+/**
+ * Merchant-facing voucher response - excludes sensitive magicToken.
+ * Merchants should not see bearer tokens that belong to hunters.
+ */
+export class MerchantVoucherResponseDto {
+  @ApiProperty({
+    example: "507f1f77bcf86cd799439033",
+    description: "Voucher ID",
+  })
+  id!: string;
+
+  @ApiProperty({ example: "507f1f77bcf86cd799439044", description: "Drop ID" })
+  dropId!: string;
+
+  @ApiProperty({
+    type: DropInfoDto,
+    description: "Associated drop information",
+    nullable: true,
+  })
+  drop?: DropInfoDto;
+
+  @ApiProperty({
+    example: "507f1f77bcf86cd799439011",
+    description: "Merchant ID",
+  })
+  merchantId!: string;
+
+  // magicToken intentionally excluded - merchants should not see bearer tokens
+
+  @ApiProperty({ type: ClaimedByDto, description: "Claimant information" })
+  claimedBy!: ClaimedByDto;
+
+  @ApiProperty({
+    example: "2024-01-15T10:30:00Z",
+    description: "When voucher was claimed",
+  })
+  claimedAt!: Date;
+
+  @ApiProperty({
+    example: "2024-01-20T23:59:59Z",
+    description: "Voucher expiry (null if no cap beyond drop rules)",
+    nullable: true,
+  })
+  expiresAt!: Date | null;
+
+  @ApiProperty({
+    example: false,
+    description: "Whether voucher has been redeemed",
+  })
+  redeemed!: boolean;
+
+  @ApiProperty({
+    example: "2024-01-16T14:20:00Z",
+    description: "When voucher was redeemed",
+    nullable: true,
+  })
+  redeemedAt!: Date | null;
+
+  @ApiProperty({ type: RedeemedByDto, description: "Redeemer information" })
+  redeemedBy!: RedeemedByDto;
+
+  @ApiProperty({ description: "QR code data for redemption" })
+  qrData!: string;
+
+  @ApiProperty({
+    example: "2024-01-15T10:30:00Z",
+    description: "Creation timestamp",
+  })
+  createdAt!: Date;
+
+  @ApiProperty({
+    example: "2024-01-15T10:30:00Z",
+    description: "Last update timestamp",
+  })
+  updatedAt!: Date;
+}

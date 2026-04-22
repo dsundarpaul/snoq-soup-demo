@@ -8,10 +8,12 @@ import {
 } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
+  clearAuthSessionHint,
   clearHunterSuppressDeviceLogin,
   clearSessionsExcept,
-  hadAuthCredentials,
+  hadAuthSessionHint,
   invalidateAuthSession,
+  setAuthSessionHint,
   setHunterSuppressDeviceLoginAfterLogout,
 } from "@/lib/auth-session";
 import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
@@ -20,13 +22,8 @@ import {
   apiFetchMaybeRetry,
   throwIfResNotOk,
 } from "@/lib/api-client";
+import { clearTokenBundle } from "@/lib/auth-tokens";
 import {
-  setTokenBundle,
-  clearTokenBundle,
-  getRefreshToken,
-} from "@/lib/auth-tokens";
-import {
-  mapHunterProfileToLegacy,
   mapHunterHistoryToVoucherRows,
   mapHunterVoucherBundleToLegacy,
   mapHunterVouchersBucketsToLegacy,
@@ -37,24 +34,18 @@ import type {
   HunterLoginInput,
   HunterSignupInput,
 } from "./treasure-hunter.api-types";
+import { fetchHunterMeCredential } from "@/hooks/auth-role-queries";
+import {
+  treasureHunterQueryKeys,
+  type HunterVoucherStatus,
+} from "./treasure-hunter.query-keys";
 
-export const treasureHunterQueryKeys = {
-  profile: ["hunter-profile-v1"] as const,
-  history: ["hunter-history-v1"] as const,
-  vouchers: ["hunter-vouchers-v1"] as const,
-  vouchersSummary: (unredeemedLimit?: number, redeemedLimit?: number) =>
-    ["hunter-vouchers-v1", "summary", unredeemedLimit, redeemedLimit] as const,
-  vouchersList: (status: HunterVoucherStatus, limit: number) =>
-    ["hunter-vouchers-v1", "list", status, limit] as const,
-  leaderboard: (limit: number) => ["/api/v1/leaderboard", limit] as const,
-};
+export { treasureHunterQueryKeys, type HunterVoucherStatus };
 
 export type HunterVoucherRow = {
   voucher: Voucher;
   drop: Drop;
 } & HunterVoucherMerchantDisplay;
-
-export type HunterVoucherStatus = "all" | "unredeemed" | "redeemed";
 
 export function useHunterVouchersQuery(options?: {
   unredeemedLimit?: number;
@@ -81,7 +72,7 @@ export function useHunterVouchersQuery(options?: {
         auth: "hunter",
       });
       if (res.status === 401) {
-        if (hadAuthCredentials("hunter")) {
+        if (hadAuthSessionHint()) {
           invalidateAuthSession("hunter");
         }
         return {
@@ -117,7 +108,7 @@ export function useHunterVouchersInfiniteQuery(
       const path = `/api/v1/hunters/me/vouchers/list?${params.toString()}`;
       const res = await apiFetchMaybeRetry("GET", path, { auth: "hunter" });
       if (res.status === 401) {
-        if (hadAuthCredentials("hunter")) {
+        if (hadAuthSessionHint()) {
           invalidateAuthSession("hunter");
         }
         return {
@@ -160,25 +151,9 @@ export function useHunterVouchersInfiniteQuery(
 }
 
 export function useTreasureHunterProfileQuery() {
-  const hasHunterAuth = useHasRoleCredentials("hunter");
   return useQuery({
     queryKey: treasureHunterQueryKeys.profile,
-    queryFn: async () => {
-      const path = "/api/v1/hunters/me";
-      const res = await apiFetchMaybeRetry("GET", path, {
-        auth: "hunter",
-      });
-      if (res.status === 401) {
-        if (hadAuthCredentials("hunter")) {
-          invalidateAuthSession("hunter");
-        }
-        return null;
-      }
-      await throwIfResNotOk(res, path, "hunter");
-      const json = (await res.json()) as Record<string, unknown>;
-      return mapHunterProfileToLegacy(json);
-    },
-    enabled: hasHunterAuth,
+    queryFn: fetchHunterMeCredential,
   });
 }
 
@@ -198,14 +173,9 @@ export function useTreasureHunterLoginMutation(
         { auth: undefined }
       );
       const body = (await res.json()) as {
-        accessToken: string;
-        refreshToken: string;
         user: Record<string, unknown>;
       };
-      setTokenBundle("hunter", {
-        accessToken: body.accessToken,
-        refreshToken: body.refreshToken,
-      });
+      setAuthSessionHint();
       return body;
     },
     onSuccess: (...args) => {
@@ -246,14 +216,8 @@ export function useTreasureHunterSignupMutation(
         },
         { auth: undefined }
       );
-      const body = (await res.json()) as {
-        accessToken: string;
-        refreshToken: string;
-      };
-      setTokenBundle("hunter", {
-        accessToken: body.accessToken,
-        refreshToken: body.refreshToken,
-      });
+      await res.json();
+      setAuthSessionHint();
       const patchPath = "/api/v1/hunters/me/profile";
       const patch = await apiFetchMaybeRetry("PATCH", patchPath, {
         auth: "hunter",
@@ -269,7 +233,7 @@ export function useTreasureHunterSignupMutation(
       } else {
         await patch.json().catch(() => null);
       }
-      return body;
+      return { ok: true };
     },
     onSuccess: (...args) => {
       clearHunterSuppressDeviceLogin();
@@ -295,19 +259,17 @@ export function useTreasureHunterLogoutMutation(
     ...options,
     mutationFn: async ({ deviceId }: { deviceId: string }) => {
       setHunterSuppressDeviceLoginAfterLogout();
-      const refresh = getRefreshToken("hunter");
-      if (refresh) {
-        try {
-          await apiRequest(
-            "POST",
-            "/api/v1/auth/logout",
-            { refreshToken: refresh },
-            { auth: "hunter", deviceId }
-          );
-        } catch {
-          clearTokenBundle("hunter");
-        }
+      try {
+        await apiRequest(
+          "POST",
+          "/api/v1/auth/logout",
+          {},
+          { auth: "hunter", deviceId }
+        );
+      } catch {
+        clearTokenBundle("hunter");
       }
+      clearAuthSessionHint();
       clearTokenBundle("hunter");
       return { ok: true };
     },
@@ -418,20 +380,9 @@ export function useLeaderboardQuery(limit = 50) {
 }
 
 export async function fetchTreasureHunterProfile() {
-  if (!hadAuthCredentials("hunter")) {
+  try {
+    return await fetchHunterMeCredential();
+  } catch {
     return null;
   }
-  const path = "/api/v1/hunters/me";
-  const res = await apiFetchMaybeRetry("GET", path, {
-    auth: "hunter",
-  });
-  if (res.status === 401) {
-    if (hadAuthCredentials("hunter")) {
-      invalidateAuthSession("hunter");
-    }
-    return null;
-  }
-  if (!res.ok) return null;
-  const json = (await res.json()) as Record<string, unknown>;
-  return mapHunterProfileToLegacy(json);
 }

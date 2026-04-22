@@ -35,10 +35,8 @@ import {
   useTreasureHunterProfileQuery,
   useTreasureHunterLogoutMutation,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
-import {
-  clearSessionsExcept,
-  hadAuthCredentials,
-} from "@/lib/auth-session";
+import { clearSessionsExcept } from "@/lib/auth-session";
+import { useRoleCredentialState } from "@/hooks/use-role-credentials";
 
 const appLogoSrc = "/images/clean_trophy_logo_no_text.png";
 
@@ -58,6 +56,8 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
   const deviceId = useDeviceId();
   const { toast } = useToast();
 
+  const { hasCredentials: hasMerchantSession } =
+    useRoleCredentialState("merchant");
   const { data: profile } = useTreasureHunterProfileQuery();
 
   const logoutMutation = useTreasureHunterLogoutMutation({
@@ -202,7 +202,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  if (hadAuthCredentials("merchant")) {
+                  if (hasMerchantSession) {
                     router.replace("/merchant/dashboard");
                   } else {
                     clearSessionsExcept("merchant");

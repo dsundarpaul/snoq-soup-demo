@@ -2,13 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsDate, IsOptional, IsEnum } from "class-validator";
 import { HydratedDocument, Types } from "mongoose";
-
-export enum UserType {
-  MERCHANT = "merchant",
-  HUNTER = "hunter",
-  ADMIN = "admin",
-  SCANNER = "scanner",
-}
+import { UserRole } from "../../common/enums/user-role.enum";
 
 @Schema({ timestamps: true })
 export class RefreshToken {
@@ -17,10 +11,10 @@ export class RefreshToken {
   @Prop({ type: Types.ObjectId, required: true })
   userId!: Types.ObjectId;
 
-  @ApiProperty({ enum: UserType, description: "Type of user" })
-  @IsEnum(UserType)
-  @Prop({ type: String, required: true, enum: Object.values(UserType) })
-  userType!: UserType;
+  @ApiProperty({ enum: UserRole, description: "Type of user" })
+  @IsEnum(UserRole)
+  @Prop({ type: String, required: true, enum: Object.values(UserRole) })
+  userType!: UserRole;
 
   @ApiProperty({ description: "Hashed refresh token" })
   @IsString()

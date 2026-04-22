@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { Types } from "mongoose";
+import { createHash } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { MerchantDocument } from "../../database/schemas/merchant.schema";
 import { VouchersService } from "../vouchers/vouchers.service";
@@ -32,8 +33,11 @@ export class ScannerService {
       };
     }
 
+    // Hash the token before querying (tokens are stored as hashes)
+    const hashedToken = createHash("sha256").update(token).digest("hex");
+
     const merchant = await this.database.merchants.findOne({
-      "scannerToken.token": token,
+      "scannerToken.token": hashedToken,
       deletedAt: null,
     });
 
@@ -87,8 +91,11 @@ export class ScannerService {
       return null;
     }
 
+    // Hash the token before querying (tokens are stored as hashes)
+    const hashedToken = createHash("sha256").update(token).digest("hex");
+
     return this.database.merchants.findOne({
-      "scannerToken.token": token,
+      "scannerToken.token": hashedToken,
       deletedAt: null,
     });
   }
@@ -113,9 +120,14 @@ export class ScannerService {
       throw new ForbiddenException("Invalid scanner token");
     }
 
+    // Hash the magic token to search (tokens stored with hash for security)
+    const hashedMagicToken = createHash("sha256")
+      .update(magicToken)
+      .digest("hex");
+
     const voucher = await this.database.vouchers.findOne({
       _id: new Types.ObjectId(voucherId),
-      magicToken,
+      $or: [{ magicTokenHash: hashedMagicToken }, { magicToken }],
       deletedAt: null,
     });
 
@@ -148,7 +160,7 @@ export class ScannerService {
     return {
       success: result.success,
       voucherId: result.voucherId,
-      magicToken,
+      // magicToken intentionally excluded - scanners should not see bearer tokens
       redeemedAt: result.redeemedAt,
       message: result.message,
       voucher: result.dropName

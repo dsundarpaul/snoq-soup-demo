@@ -192,6 +192,7 @@ export class HuntersService {
     const vouchers = await this.database.vouchers
       .find(query)
       .sort({ claimedAt: -1 })
+      .limit(500)
       .lean();
 
     if (vouchers.length === 0) {

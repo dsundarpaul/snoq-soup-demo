@@ -133,6 +133,17 @@ export class Hunter {
   @Prop({ type: Stats, default: { totalClaims: 0, totalRedemptions: 0 } })
   stats!: Stats;
 
+  @ApiProperty({ default: 0, description: "Login attempts count" })
+  @IsNumber()
+  @Prop({ type: Number, default: 0 })
+  loginAttempts!: number;
+
+  @ApiProperty({ nullable: true, description: "Lockout expiration timestamp" })
+  @IsDate()
+  @IsOptional()
+  @Prop({ type: Date, default: null })
+  lockUntil?: Date | null;
+
   @ApiProperty({
     nullable: true,
     description: "Merchant this hunter may redeem vouchers for (staff)",

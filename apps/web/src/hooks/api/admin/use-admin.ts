@@ -6,17 +6,16 @@ import {
   keepPreviousData,
   type UseMutationOptions,
 } from "@tanstack/react-query";
-import { clearSessionsExcept } from "@/lib/auth-session";
+import {
+  clearAuthSessionHint,
+  clearSessionsExcept,
+  setAuthSessionHint,
+  setHunterSuppressDeviceLoginAfterLogout,
+} from "@/lib/auth-session";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { AdminLoginInput } from "./admin.api-types";
-import {
-  setTokenBundle,
-  setStoredUser,
-  clearTokenBundle,
-  getRefreshToken,
-  getStoredUser,
-  getAccessToken,
-} from "@/lib/auth-tokens";
+import { clearTokenBundle } from "@/lib/auth-tokens";
+import { fetchAdminMeCredential } from "@/hooks/auth-role-queries";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   mapAdminAnalyticsToLegacy,
@@ -75,7 +74,7 @@ export type AdminUsersListParams = {
 };
 
 export const adminQueryKeys = {
-  session: ["/api/v1/admin/session"] as const,
+  session: ["/api/v1/admin/me"] as const,
   stats: ["/api/v1/admin/stats"] as const,
   analytics: ["/api/v1/admin/analytics"] as const,
   merchants: ["/api/v1/admin/merchants"] as const,
@@ -149,22 +148,13 @@ export function useAdminLoginMutation(
         }
       );
       const body = (await response.json()) as {
-        accessToken: string;
-        refreshToken: string;
         user: { id: string; email: string; name?: string };
       };
-      setTokenBundle("admin", {
-        accessToken: body.accessToken,
-        refreshToken: body.refreshToken,
-      });
-      setStoredUser("admin", {
-        id: body.user.id,
-        email: body.user.email,
-        name: body.user.name ?? body.user.email,
-      });
+      setAuthSessionHint();
       return body;
     },
     onSuccess: (...args) => {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.session });
       clearSessionsExcept("admin");
       options?.onSuccess?.(...args);
     },
@@ -177,21 +167,13 @@ export function useAdminLogoutMutation(
   return useMutation({
     ...options,
     mutationFn: async () => {
-      const refresh = getRefreshToken("admin");
-      if (refresh) {
-        try {
-          await apiRequest(
-            "POST",
-            "/api/v1/auth/logout",
-            { refreshToken: refresh },
-            {
-              auth: "admin",
-            }
-          );
-        } catch {
-          clearTokenBundle("admin");
-        }
+      setHunterSuppressDeviceLoginAfterLogout();
+      try {
+        await apiRequest("POST", "/api/v1/auth/logout", {}, { auth: "admin" });
+      } catch {
+        clearTokenBundle("admin");
       }
+      clearAuthSessionHint();
       clearTokenBundle("admin");
     },
     onSuccess: (...args) => {
@@ -208,15 +190,7 @@ export function useAdminSessionQuery(enabled = true) {
     queryKey: adminQueryKeys.session,
     retry: false,
     enabled,
-    queryFn: async () => {
-      const token = getAccessToken("admin");
-      if (!token) return null;
-      const user = getStoredUser<{ id: string; email: string; name: string }>(
-        "admin"
-      );
-      if (!user) return null;
-      return { admin: { id: user.id, email: user.email, name: user.name } };
-    },
+    queryFn: fetchAdminMeCredential,
   });
 }
 

@@ -1,15 +1,11 @@
 import { useCallback, useState } from "react";
-import { upload } from "@vercel/blob/client";
-import { API_ORIGIN } from "@/lib/app-config";
-import { type AuthRole, getAccessToken } from "@/lib/auth-tokens";
+import { uploadFileViaS3Presigned } from "@/lib/api-client";
+import type { AuthRole } from "@/lib/auth-tokens";
 
-const CLIENT_UPLOAD_PATH = "/api/v1/s3/blob/client-upload";
 const ALLOWED_NAMESPACE = /^[a-zA-Z0-9_-]+$/;
 
 export interface UploadResult {
   publicUrl: string;
-  pathname: string;
-  contentType?: string;
 }
 
 export interface UseUploadOptions {
@@ -17,13 +13,6 @@ export interface UseUploadOptions {
   auth?: AuthRole;
   onSuccess?: (result: UploadResult) => void;
   onError?: (error: Error) => void;
-}
-
-function buildUploadPathname(namespace: string, file: File): string {
-  const dot = file.name.lastIndexOf(".");
-  const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
-  const safe = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${ext}`;
-  return `${namespace}/${safe}`;
 }
 
 export function useUpload(options: UseUploadOptions) {
@@ -38,31 +27,18 @@ export function useUpload(options: UseUploadOptions) {
       setProgress(0);
 
       try {
-        const { namespace } = options;
+        const { namespace, auth } = options;
         if (!ALLOWED_NAMESPACE.test(namespace)) {
           throw new Error("Invalid upload namespace");
         }
-        const role = options.auth ?? "merchant";
-        const token = getAccessToken(role);
-        if (!token) {
-          throw new Error("You must be signed in to upload files");
-        }
 
-        const pathname = buildUploadPathname(namespace, file);
-        const blob = await upload(pathname, file, {
-          access: "public",
-          contentType: file.type || undefined,
-          handleUploadUrl: `${API_ORIGIN}${CLIENT_UPLOAD_PATH}`,
-          clientPayload: JSON.stringify({ namespace }),
-          headers: { Authorization: `Bearer ${token}` },
-          onUploadProgress: ({ percentage }) => setProgress(percentage),
+        setProgress(15);
+        const { publicUrl } = await uploadFileViaS3Presigned(file, {
+          namespace,
+          auth,
         });
-
-        const result: UploadResult = {
-          publicUrl: blob.url,
-          pathname: blob.pathname,
-          contentType: blob.contentType,
-        };
+        setProgress(100);
+        const result: UploadResult = { publicUrl };
         options.onSuccess?.(result);
         return result;
       } catch (err) {
