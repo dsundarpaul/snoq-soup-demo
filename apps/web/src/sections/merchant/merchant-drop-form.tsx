@@ -30,6 +30,7 @@ import {
   Target,
   Calendar,
   Info,
+  Lock,
   ChevronDown,
   X,
 } from "lucide-react";
@@ -520,10 +521,22 @@ export function MerchantDropForm({
           )}
         />
         {hasClaims && (
-          <p className="text-xs text-muted-foreground">
-            Locked because {captureCount} voucher
-            {captureCount === 1 ? " has" : "s have"} already been claimed.
-          </p>
+          <div
+            className="flex gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
+            role="status"
+          >
+            <Lock
+              className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-500"
+              aria-hidden
+            />
+            <p className="min-w-0 text-sm leading-snug text-foreground">
+              <span className="font-medium text-amber-950 dark:text-amber-100">
+                Redemption rules are locked.{" "}
+              </span>
+              {captureCount} voucher{captureCount === 1 ? " has" : "s have"}{" "}
+              already been claimed, so this field cannot be edited.
+            </p>
+          </div>
         )}
         <p className="text-xs text-muted-foreground">
           {redemptionType === "anytime" &&

@@ -164,7 +164,9 @@ export function VoucherDisplay({
       });
       const res = await apiFetch(
         "GET",
-        `/api/v1/vouchers/${encodeURIComponent(voucher.id)}/promo-code?${qs.toString()}`
+        `/api/v1/vouchers/${encodeURIComponent(
+          voucher.id
+        )}/promo-code?${qs.toString()}`
       );
       await throwIfResNotOk(res);
       return res.json() as Promise<{ promoCode: string | null }>;
@@ -194,14 +196,17 @@ export function VoucherDisplay({
   const appUrl = getPublicSiteUrl();
   const magicLink = publicUrls.voucher(voucher.magicToken);
   const shareMessage = `I just caught a reward at ${businessName}! Join the hunt here: ${appUrl}`;
-  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+    shareMessage
+  )}`;
 
   const hasTimer = drop.redemptionType === "timer" && drop.redemptionMinutes;
   const hasWindow =
     drop.redemptionType === "window" && Boolean(drop.redemptionDeadline);
   const hasVoucherExpiresAt = Boolean(voucher.expiresAt);
   const hasTimeLimit = hasVoucherExpiresAt || hasTimer || hasWindow;
-  const isExpired = hasTimeLimit && timeRemaining !== null && timeRemaining <= 0;
+  const isExpired =
+    hasTimeLimit && timeRemaining !== null && timeRemaining <= 0;
 
   useEffect(() => {
     const voucherExpiryMs = voucher.expiresAt
@@ -332,7 +337,9 @@ export function VoucherDisplay({
     const digits =
       dialCode.replace(/\D/g, "") + nationalNumber.replace(/\D/g, "");
     const message = `Your Souq-Snap voucher is ready! Use this link to view your reward: ${magicLink}`;
-    const whatsappUrl = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${digits}?text=${encodeURIComponent(
+      message
+    )}`;
     window.open(whatsappUrl, "_blank");
   };
 
@@ -398,6 +405,18 @@ export function VoucherDisplay({
       </div>
 
       <div className={bodyClass}>
+        {drop.description.trim() ? (
+          <div data-testid="section-drop-description">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-2">
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              {t("voucher.dropDescription")}
+            </h4>
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
+              {drop.description}
+            </p>
+          </div>
+        ) : null}
+
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
             <QrCode className="w-3.5 h-3.5" />
@@ -419,6 +438,67 @@ export function VoucherDisplay({
             </p> */}
           </div>
         </div>
+        {hasTimeLimit && !voucher.redeemed ? (
+          <div
+            className={cn(
+              "rounded-xl border p-4 shadow-sm flex gap-3",
+              isExpired
+                ? "bg-destructive/10 border-destructive/25"
+                : hasTimer
+                ? "bg-primary/8 border-primary/25"
+                : "bg-amber-500/8 border-amber-500/25"
+            )}
+          >
+            {isExpired ? (
+              <AlertTriangle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+            ) : hasTimer ? (
+              <Timer className="w-6 h-6 text-primary shrink-0 mt-0.5 animate-pulse" />
+            ) : (
+              <Timer className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p
+                className={cn(
+                  "text-sm font-semibold",
+                  isExpired ? "text-destructive" : "text-foreground"
+                )}
+              >
+                {isExpired
+                  ? t("voucher.voucherExpired")
+                  : hasTimer
+                  ? t("voucher.timeRemaining")
+                  : t("voucher.timeUntilDeadline")}
+              </p>
+              <p
+                className={cn(
+                  "text-2xl font-mono font-bold mt-1",
+                  isExpired
+                    ? "text-destructive"
+                    : hasTimer
+                    ? "text-primary"
+                    : "text-amber-600 dark:text-amber-400"
+                )}
+              >
+                {timeRemaining !== null
+                  ? formatTimeRemaining(timeRemaining, t("status.expired"))
+                  : t("common.loading")}
+              </p>
+              {hasWindow && !isExpired && drop.redemptionDeadline ? (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {t("voucher.deadline")}:{" "}
+                  {new Date(drop.redemptionDeadline).toLocaleString()}
+                </p>
+              ) : null}
+              {!isExpired ? (
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  {hasTimer
+                    ? t("voucher.redeemBeforeTimer")
+                    : t("voucher.redeemBeforeDeadline")}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {showMerchantBlock ? (
           <div
@@ -566,68 +646,6 @@ export function VoucherDisplay({
             <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
               {t("voucher.useInPartnerApp")}
             </p>
-          </div>
-        ) : null}
-
-        {hasTimeLimit && !voucher.redeemed ? (
-          <div
-            className={cn(
-              "rounded-xl border p-4 shadow-sm flex gap-3",
-              isExpired
-                ? "bg-destructive/10 border-destructive/25"
-                : hasTimer
-                ? "bg-primary/8 border-primary/25"
-                : "bg-amber-500/8 border-amber-500/25"
-            )}
-          >
-            {isExpired ? (
-              <AlertTriangle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
-            ) : hasTimer ? (
-              <Timer className="w-6 h-6 text-primary shrink-0 mt-0.5 animate-pulse" />
-            ) : (
-              <Timer className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p
-                className={cn(
-                  "text-sm font-semibold",
-                  isExpired ? "text-destructive" : "text-foreground"
-                )}
-              >
-                {isExpired
-                  ? t("voucher.voucherExpired")
-                  : hasTimer
-                  ? t("voucher.timeRemaining")
-                  : t("voucher.timeUntilDeadline")}
-              </p>
-              <p
-                className={cn(
-                  "text-2xl font-mono font-bold mt-1",
-                  isExpired
-                    ? "text-destructive"
-                    : hasTimer
-                    ? "text-primary"
-                    : "text-amber-600 dark:text-amber-400"
-                )}
-              >
-                {timeRemaining !== null
-                  ? formatTimeRemaining(timeRemaining, t("status.expired"))
-                  : t("common.loading")}
-              </p>
-              {hasWindow && !isExpired && drop.redemptionDeadline ? (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {t("voucher.deadline")}:{" "}
-                  {new Date(drop.redemptionDeadline).toLocaleString()}
-                </p>
-              ) : null}
-              {!isExpired ? (
-                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                  {hasTimer
-                    ? t("voucher.redeemBeforeTimer")
-                    : t("voucher.redeemBeforeDeadline")}
-                </p>
-              ) : null}
-            </div>
           </div>
         ) : null}
 

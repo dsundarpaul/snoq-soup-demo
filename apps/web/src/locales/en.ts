@@ -200,6 +200,7 @@ const en = {
   "voucher.deadline": "Deadline",
   "voucher.reward": "Reward",
   "voucher.dropName": "Treasure Name",
+  "voucher.dropDescription": "About this treasure",
   "voucher.voucherId": "Voucher",
   "voucher.loading": "Loading your voucher...",
   "voucher.notFound": "Voucher Not Found",

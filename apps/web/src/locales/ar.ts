@@ -198,6 +198,7 @@ const ar = {
   "voucher.deadline": "الموعد النهائي",
   "voucher.reward": "المكافأة",
   "voucher.dropName": "اسم الكنز",
+  "voucher.dropDescription": "عن الكنز",
   "voucher.voucherId": "رقم القسيمة",
   "voucher.loading": "جاري تحميل القسيمة...",
   "voucher.notFound": "القسيمة غير موجودة",
