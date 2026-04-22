@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type {
+  Resolver,
   SubmitErrorHandler,
   SubmitHandler,
   UseFormReturn,
@@ -59,7 +60,9 @@ export const MERCHANT_DROP_FORM_ID = "merchant-drop-form";
 
 export function useMerchantDropForm(): UseFormReturn<CreateDropForm> {
   return useForm<CreateDropForm>({
-    resolver: zodResolver(createDropSchema),
+    resolver: zodResolver(
+      createDropSchema as never
+    ) as Resolver<CreateDropForm, unknown, CreateDropForm>,
     defaultValues: getCreateDropEmptyValues(),
   });
 }
