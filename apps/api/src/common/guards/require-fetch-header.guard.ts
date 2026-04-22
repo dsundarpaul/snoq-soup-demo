@@ -29,15 +29,18 @@ import { Request } from "express";
 @Injectable()
 export class RequireFetchHeaderGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
+    console.log("canActivate", process.env.NODE_ENV);
     if (process.env.NODE_ENV === "development") {
       return true;
     }
 
     const req = context.switchToHttp().getRequest<Request>();
     const method = req.method.toUpperCase();
+    console.log(method);
     if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
       return true;
     }
+    console.log("did not return true on", method);
 
     const secFetchSite = req.headers["sec-fetch-site"];
     if (
