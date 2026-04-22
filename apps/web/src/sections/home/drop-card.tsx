@@ -58,7 +58,7 @@ export function DropCard({
       data-testid={`card-drop-${drop.id}`}
       className={`relative overflow-hidden p-4 hover-elevate transition-all ${
         claimed ? "opacity-60" : ""
-      } ${isInRange ? "border-primary border-2" : ""}`}
+      }`}
     >
       <button
         type="button"
@@ -142,8 +142,8 @@ export function DropCard({
                   timeWindowInfo.isExpired
                     ? "text-destructive"
                     : timeWindowInfo.notYetActive
-                      ? "text-amber-500"
-                      : "text-muted-foreground"
+                    ? "text-amber-500"
+                    : "text-muted-foreground"
                 }`}
               >
                 <Clock className="w-3 h-3" />
