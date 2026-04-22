@@ -239,6 +239,52 @@ describe("SouqSnap E2E Flows", () => {
       expect(response.body).toHaveProperty("total");
     });
 
+    it("GET .../codes - search narrows results; pagination; limit cap", async () => {
+      const prefix = `SRCH${Date.now()}`;
+      await request(app.getHttpServer())
+        .post(`/api/v1/merchants/me/drops/${dropId}/codes/bulk`)
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .send({
+          codes: [
+            { code: `${prefix}AAA` },
+            { code: `${prefix}AAB` },
+            { code: `${prefix}ZZZOTHER` },
+          ],
+        })
+        .expect(201);
+
+      const searchRes = await request(app.getHttpServer())
+        .get(
+          `/api/v1/merchants/me/drops/${dropId}/codes?search=${encodeURIComponent(`${prefix}AA`)}`,
+        )
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(200);
+
+      expect(searchRes.body.total).toBe(2);
+      expect(searchRes.body.items).toHaveLength(2);
+
+      const pageRes = await request(app.getHttpServer())
+        .get(
+          `/api/v1/merchants/me/drops/${dropId}/codes?search=${encodeURIComponent(`${prefix}AA`)}&page=1&limit=1`,
+        )
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(200);
+
+      expect(pageRes.body.items).toHaveLength(1);
+      expect(pageRes.body.total).toBe(2);
+      expect(pageRes.body.totalPages).toBe(2);
+      expect(pageRes.body.limit).toBe(1);
+
+      const capRes = await request(app.getHttpServer())
+        .get(
+          `/api/v1/merchants/me/drops/${dropId}/codes?limit=500&page=1`,
+        )
+        .set("Authorization", `Bearer ${merchantToken}`)
+        .expect(200);
+
+      expect(capRes.body.limit).toBe(100);
+    });
+
     it("DELETE /api/v1/merchants/me/drops/:dropId/codes/:codeId - should delete one available code", async () => {
       const listRes = await request(app.getHttpServer())
         .get(`/api/v1/merchants/me/drops/${dropId}/codes`)

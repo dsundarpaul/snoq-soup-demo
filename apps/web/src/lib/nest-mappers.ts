@@ -1,4 +1,5 @@
 import type { Drop, Merchant, Voucher } from "@shared/schema";
+import type { PromoCodeTableRow } from "@/sections/merchant/merchant-dashboard.types";
 
 type DropWithCount = Drop & { captureCount?: number };
 
@@ -209,6 +210,61 @@ function unwrapNestPagedPayload(
   return json;
 }
 
+export function mapPromoCodeStatsDto(json: Record<string, unknown>): {
+  total: number;
+  available: number;
+  assigned: number;
+} {
+  return {
+    total: typeof json.total === "number" ? json.total : Number(json.total ?? 0),
+    available:
+      typeof json.available === "number"
+        ? json.available
+        : Number(json.available ?? 0),
+    assigned:
+      typeof json.assigned === "number"
+        ? json.assigned
+        : Number(json.assigned ?? 0),
+  };
+}
+
+export function mapPromoCodeListItemDto(
+  raw: Record<string, unknown>,
+): PromoCodeTableRow {
+  const assignedToName =
+    raw.assignedToName != null && String(raw.assignedToName).trim() !== ""
+      ? String(raw.assignedToName)
+      : null;
+  return {
+    id: String(raw.id ?? ""),
+    code: String(raw.code ?? ""),
+    status: String(raw.status ?? ""),
+    assignedToName,
+    assignedAt: toDate(raw.assignedAt as Date | string | null | undefined),
+    createdAt:
+      toDate(raw.createdAt as Date | string | null | undefined) ?? new Date(),
+  };
+}
+
+export function mapPromoCodeListPageDto(json: Record<string, unknown>): {
+  items: PromoCodeTableRow[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+} {
+  const root = unwrapNestPagedPayload(json);
+  const itemsRaw = (root.items as Record<string, unknown>[]) ?? [];
+  return {
+    items: itemsRaw.map((r) => mapPromoCodeListItemDto(r)),
+    total: typeof root.total === "number" ? root.total : itemsRaw.length,
+    page: typeof root.page === "number" ? root.page : 1,
+    limit: typeof root.limit === "number" ? root.limit : itemsRaw.length,
+    totalPages:
+      typeof root.totalPages === "number" ? root.totalPages : 1,
+  };
+}
+
 export function mapPromoListToLegacy(json: Record<string, unknown>): {
   codes: {
     id: string;
@@ -237,10 +293,12 @@ export function mapPromoListToLegacy(json: Record<string, unknown>): {
         : null,
   }));
   const assigned = codes.filter((c) => c.status === "assigned").length;
+  const totalList =
+    typeof root.total === "number" ? root.total : codes.length;
   return {
     codes,
     stats: {
-      total: (root.total as number | undefined) ?? codes.length,
+      total: totalList,
       available: codes.length - assigned,
       assigned,
     },

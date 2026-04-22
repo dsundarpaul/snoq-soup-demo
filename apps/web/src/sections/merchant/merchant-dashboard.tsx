@@ -13,7 +13,6 @@ import {
   merchantQueryKeys,
   useMerchantMeQuery,
   useMerchantAnalyticsQuery,
-  useMerchantDropCodesQuery,
   useMerchantDropActiveMutation,
   type MerchantDropsListStatus,
 } from "@/hooks/api/merchant/use-merchant";
@@ -29,11 +28,7 @@ import {
 } from "@/lib/nest-mappers";
 import { useToast } from "@/hooks/use-toast";
 import type { Drop } from "@shared/schema";
-import type {
-  AnalyticsData,
-  DashboardStats,
-  PromoCodesResponse,
-} from "@/sections/merchant/merchant-dashboard.types";
+import type { AnalyticsData, DashboardStats } from "@/sections/merchant/merchant-dashboard.types";
 import { DatePickerField } from "@/components/date-picker-field";
 import { MerchantDashboardHeader } from "@/sections/merchant/merchant-dashboard-header";
 import { MerchantScannerFab } from "@/sections/merchant/merchant-scanner-fab";
@@ -41,7 +36,7 @@ import { MerchantDropsPanel } from "@/sections/merchant/merchant-drops-panel";
 import { MerchantAnalyticsPanel } from "@/sections/merchant/merchant-analytics-panel";
 import { filterAnalyticsByRange } from "@/sections/merchant/filter-analytics-by-range";
 import { MerchantDropSheet } from "@/sections/merchant/merchant-drop-sheet";
-import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
+import { MerchantPromoCodesSheet } from "@/sections/merchant/merchant-promo-codes-sheet";
 import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
 import { downloadAuthenticatedCsv } from "@/utils/download-authenticated-csv";
 
@@ -135,8 +130,6 @@ export default function MerchantDashboardPage() {
     [analyticsRaw, analyticsDateFrom, analyticsDateTo]
   );
 
-  const codesQuery = useMerchantDropCodesQuery(codesDropId);
-
   const deleteDropMutation = useMutation({
     mutationFn: async (dropId: string) => {
       const response = await apiRequest(
@@ -196,7 +189,7 @@ export default function MerchantDashboardPage() {
       setCodesText("");
       if (codesDropId) {
         queryClient.invalidateQueries({
-          queryKey: merchantQueryKeys.dropCodes(codesDropId),
+          queryKey: merchantQueryKeys.dropCodesBase(codesDropId),
         });
       }
       toast({
@@ -227,7 +220,7 @@ export default function MerchantDashboardPage() {
     onSuccess: () => {
       if (codesDropId) {
         queryClient.invalidateQueries({
-          queryKey: merchantQueryKeys.dropCodes(codesDropId),
+          queryKey: merchantQueryKeys.dropCodesBase(codesDropId),
         });
       }
       toast({
@@ -255,7 +248,7 @@ export default function MerchantDashboardPage() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: merchantQueryKeys.dropCodes(variables.dropId),
+        queryKey: merchantQueryKeys.dropCodesBase(variables.dropId),
       });
       toast({
         title: "Code removed",
@@ -490,7 +483,7 @@ export default function MerchantDashboardPage() {
         deletePending={deleteDropMutation.isPending}
       />
 
-      <MerchantPromoCodesDialog
+      <MerchantPromoCodesSheet
         open={!!codesDropId}
         onOpenChange={(open) => {
           if (!open) {
@@ -498,9 +491,9 @@ export default function MerchantDashboardPage() {
             setCodesText("");
           }
         }}
+        dropId={codesDropId}
         codesText={codesText}
         onCodesTextChange={setCodesText}
-        codesQuery={codesQuery}
         uploadPending={uploadCodesMutation.isPending}
         deletePending={deleteCodesMutation.isPending}
         deletingCodeId={

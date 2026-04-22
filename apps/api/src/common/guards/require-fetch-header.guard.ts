@@ -9,7 +9,7 @@ import { Request } from "express";
 @Injectable()
 export class RequireFetchHeaderGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    if (process.env.NODE_ENV === "test") {
+    if (process.env.NODE_ENV === "development") {
       return true;
     }
     const req = context.switchToHttp().getRequest<Request>();

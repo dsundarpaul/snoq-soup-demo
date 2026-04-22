@@ -53,7 +53,20 @@ export interface PromoCodeRow {
   assignedToName: string | null;
 }
 
+export interface PromoCodeTableRow extends PromoCodeRow {
+  assignedAt: Date | null;
+  createdAt: Date;
+}
+
 export interface PromoCodesResponse {
   codes: PromoCodeRow[];
   stats: { total: number; available: number; assigned: number };
 }
+
+export type PromoCodesStats = {
+  total: number;
+  available: number;
+  assigned: number;
+};
+
+export type MerchantPromoCodesListStatus = "all" | "available" | "assigned";

@@ -19,11 +19,18 @@ import {
   PromoCodeStatsDto,
 } from "./dto/response/promo-code-list.dto";
 
+const MAX_PROMO_CODES_PAGE_LIMIT = 100;
+
+function escapeRegexForSubstring(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // Type-safe refactor: Define filter interface
 interface PromoCodeFilter {
   dropId: Types.ObjectId;
   deletedAt: null;
   status?: PromoCodeStatus;
+  code?: { $regex: string; $options: string };
 }
 
 type LeanPopulatedHunterRef = {
@@ -139,9 +146,16 @@ export class PromoCodesService {
     status?: PromoCodeStatus,
     page = 1,
     limit = 20,
+    search?: string,
   ): Promise<PromoCodeListDto> {
     await this.verifyDropOwnership(dropId, merchantId);
-    return this.listPromoCodesForDropPage(dropId, status, page, limit);
+    return this.listPromoCodesForDropPage(
+      dropId,
+      status,
+      page,
+      limit,
+      search,
+    );
   }
 
   async findByDropAsAdmin(
@@ -149,9 +163,16 @@ export class PromoCodesService {
     status?: PromoCodeStatus,
     page = 1,
     limit = 20,
+    search?: string,
   ): Promise<PromoCodeListDto> {
     await this.verifyDropExists(dropId);
-    return this.listPromoCodesForDropPage(dropId, status, page, limit);
+    return this.listPromoCodesForDropPage(
+      dropId,
+      status,
+      page,
+      limit,
+      search,
+    );
   }
 
   async bulkCreateAsAdmin(
@@ -171,7 +192,12 @@ export class PromoCodesService {
     status: PromoCodeStatus | undefined,
     page: number,
     limit: number,
+    search?: string,
   ): Promise<PromoCodeListDto> {
+    const limitCapped = Math.min(
+      Math.max(1, limit),
+      MAX_PROMO_CODES_PAGE_LIMIT,
+    );
     const filter: PromoCodeFilter = {
       dropId: new Types.ObjectId(dropId),
       deletedAt: null,
@@ -181,7 +207,15 @@ export class PromoCodesService {
       filter.status = status;
     }
 
-    const skip = (page - 1) * limit;
+    const q = search?.trim();
+    if (q) {
+      filter.code = {
+        $regex: escapeRegexForSubstring(q),
+        $options: "i",
+      };
+    }
+
+    const skip = (page - 1) * limitCapped;
 
     const [rawItems, total] = await Promise.all([
       this.database.promoCodes
@@ -189,7 +223,7 @@ export class PromoCodesService {
         .populate({ path: "hunterId", select: "nickname email" })
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
+        .limit(limitCapped)
         .lean(),
       this.database.promoCodes.countDocuments(filter),
     ]);
@@ -211,8 +245,8 @@ export class PromoCodesService {
       }),
       total,
       page,
-      limit,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+      limit: limitCapped,
+      totalPages: Math.max(1, Math.ceil(total / limitCapped)),
     };
   }
 

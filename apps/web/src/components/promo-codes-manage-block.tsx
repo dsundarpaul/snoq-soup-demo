@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,10 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2, Upload, FileText, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
-import type { PromoCodesResponse } from "@/sections/merchant/merchant-dashboard.types";
+import type {
+  PromoCodesResponse,
+  PromoCodesStats,
+} from "@/sections/merchant/merchant-dashboard.types";
 
 export type PromoCodesManageVariant = "merchant" | "admin";
 
@@ -15,6 +19,9 @@ export interface PromoCodesManageBlockProps {
   variant: PromoCodesManageVariant;
   isLoading: boolean;
   data: PromoCodesResponse | undefined;
+  stats?: PromoCodesStats;
+  statsLoading?: boolean;
+  tableSection?: ReactNode;
   codesText: string;
   onCodesTextChange: (text: string) => void;
   uploadPending: boolean;
@@ -30,6 +37,9 @@ export function PromoCodesManageBlock({
   variant,
   isLoading,
   data,
+  stats: statsProp,
+  statsLoading = false,
+  tableSection,
   codesText,
   onCodesTextChange,
   uploadPending,
@@ -41,6 +51,7 @@ export function PromoCodesManageBlock({
   deletingCodeId = null,
 }: PromoCodesManageBlockProps) {
   const { t } = useLanguage();
+  const stats = statsProp ?? data?.stats;
 
   const ids =
     variant === "admin"
@@ -62,7 +73,7 @@ export function PromoCodesManageBlock({
 
   return (
     <>
-      {isLoading ? (
+      {isLoading && !tableSection ? (
         <div className="flex justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
         </div>
@@ -74,7 +85,11 @@ export function PromoCodesManageBlock({
                 className="text-2xl font-bold"
                 data-testid="text-codes-total"
               >
-                {data?.stats?.total || 0}
+                {statsLoading ? (
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                ) : (
+                  stats?.total ?? 0
+                )}
               </div>
               <div className="text-xs text-muted-foreground">
                 {t("promoCodes.total")}
@@ -85,7 +100,11 @@ export function PromoCodesManageBlock({
                 className="text-2xl font-bold text-green-600"
                 data-testid="text-codes-available"
               >
-                {data?.stats?.available || 0}
+                {statsLoading ? (
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                ) : (
+                  stats?.available ?? 0
+                )}
               </div>
               <div className="text-xs text-muted-foreground">
                 {t("promoCodes.available")}
@@ -96,7 +115,11 @@ export function PromoCodesManageBlock({
                 className="text-2xl font-bold text-blue-600"
                 data-testid="text-codes-assigned"
               >
-                {data?.stats?.assigned || 0}
+                {statsLoading ? (
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                ) : (
+                  stats?.assigned ?? 0
+                )}
               </div>
               <div className="text-xs text-muted-foreground">
                 {t("promoCodes.assigned")}
@@ -150,7 +173,27 @@ export function PromoCodesManageBlock({
             </p>
           </div>
 
-          {(data?.codes?.length || 0) > 0 ? (
+          {tableSection ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("promoCodes.codeList")}</Label>
+                {onDeleteAllCodes ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={onDeleteAllCodes}
+                    disabled={deletePending}
+                    data-testid="button-delete-all-codes"
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    {t("promoCodes.deleteAll")}
+                  </Button>
+                ) : null}
+              </div>
+              {tableSection}
+            </div>
+          ) : (data?.codes?.length || 0) > 0 ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>{t("promoCodes.codeList")}</Label>

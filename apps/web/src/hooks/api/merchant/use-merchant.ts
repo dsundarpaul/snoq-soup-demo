@@ -20,8 +20,10 @@ import {
   mapMerchantAnalyticsToLegacy,
   mapMerchantPublicToStoreData,
   mapNestDropToLegacy,
-  mapPromoListToLegacy,
+  mapPromoCodeListPageDto,
+  mapPromoCodeStatsDto,
 } from "@/lib/nest-mappers";
+import type { MerchantPromoCodesListStatus } from "@/sections/merchant/merchant-dashboard.types";
 import type { Merchant } from "@shared/schema";
 import type {
   MerchantLoginInput,
@@ -66,8 +68,27 @@ export const merchantQueryKeys = {
   stats: ["/api/v1/merchants/me/stats"] as const,
   analytics: (from: string, to: string) =>
     ["/api/v1/merchants/me/analytics", from, to] as const,
-  dropCodes: (dropId: string) =>
+  dropCodesBase: (dropId: string) =>
     ["/api/v1/merchants/me/drops", dropId, "codes"] as const,
+  dropCodesStats: (dropId: string) =>
+    ["/api/v1/merchants/me/drops", dropId, "codes", "stats"] as const,
+  dropCodesList: (
+    dropId: string,
+    page: number,
+    limit: number,
+    status: MerchantPromoCodesListStatus,
+    search: string,
+  ) =>
+    [
+      "/api/v1/merchants/me/drops",
+      dropId,
+      "codes",
+      "list",
+      page,
+      limit,
+      status,
+      search,
+    ] as const,
   scannerToken: ["/api/v1/merchants/me/scanner-token"] as const,
 };
 
@@ -223,21 +244,70 @@ export function useMerchantAnalyticsQuery(
   });
 }
 
-export function useMerchantDropCodesQuery(dropId: string | null) {
+const DEFAULT_PROMO_CODES_PAGE_LIMIT = 25;
+
+export function useMerchantDropCodesStatsQuery(dropId: string | null) {
   return useQuery({
     queryKey: dropId
-      ? merchantQueryKeys.dropCodes(dropId)
-      : ["merchant-drop-codes-disabled"],
+      ? merchantQueryKeys.dropCodesStats(dropId)
+      : ["merchant-drop-codes-stats-disabled"],
     queryFn: async () => {
-      const path = `/api/v1/merchants/me/drops/${dropId}/codes`;
+      const path = `/api/v1/merchants/me/drops/${dropId}/codes/stats`;
       const res = await apiFetchMaybeRetry("GET", path, {
         auth: "merchant",
       });
       await throwIfResNotOk(res, path, "merchant");
       const json = (await res.json()) as Record<string, unknown>;
-      return mapPromoListToLegacy(json);
+      return mapPromoCodeStatsDto(json);
     },
     enabled: !!dropId,
+  });
+}
+
+export function useMerchantDropCodesListQuery(params: {
+  dropId: string | null;
+  page: number;
+  limit?: number;
+  status: MerchantPromoCodesListStatus;
+  search: string;
+  enabled?: boolean;
+}) {
+  const {
+    dropId,
+    page,
+    limit = DEFAULT_PROMO_CODES_PAGE_LIMIT,
+    status,
+    search,
+    enabled = true,
+  } = params;
+  const searchTrimmed = search.trim();
+  return useQuery({
+    queryKey:
+      dropId && enabled
+        ? merchantQueryKeys.dropCodesList(
+            dropId,
+            page,
+            limit,
+            status,
+            searchTrimmed,
+          )
+        : ["merchant-drop-codes-list-disabled"],
+    queryFn: async () => {
+      const sp = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (status !== "all") sp.set("status", status);
+      if (searchTrimmed) sp.set("search", searchTrimmed);
+      const path = `/api/v1/merchants/me/drops/${dropId}/codes?${sp.toString()}`;
+      const res = await apiFetchMaybeRetry("GET", path, {
+        auth: "merchant",
+      });
+      await throwIfResNotOk(res, path, "merchant");
+      const json = (await res.json()) as Record<string, unknown>;
+      return mapPromoCodeListPageDto(json);
+    },
+    enabled: !!dropId && enabled,
   });
 }
 

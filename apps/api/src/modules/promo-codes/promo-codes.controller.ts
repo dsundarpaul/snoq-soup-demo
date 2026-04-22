@@ -95,7 +95,13 @@ export class PromoCodesController {
     name: "limit",
     type: Number,
     required: false,
-    description: "Items per page",
+    description: "Items per page (capped on server)",
+  })
+  @ApiQuery({
+    name: "search",
+    type: String,
+    required: false,
+    description: "Case-insensitive substring match on code",
   })
   async findByDrop(
     @CurrentUser() user: CurrentUserType,
@@ -103,6 +109,7 @@ export class PromoCodesController {
     @Query("status") status?: PromoCodeStatus,
     @Query("page", new DefaultValuePipe(1), ParseIntPipe) page = 1,
     @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit = 20,
+    @Query("search") search?: string,
   ): Promise<PromoCodeListDto> {
     return this.promoCodesService.findByDrop(
       dropId,
@@ -110,6 +117,7 @@ export class PromoCodesController {
       status,
       page,
       limit,
+      search,
     );
   }
 
