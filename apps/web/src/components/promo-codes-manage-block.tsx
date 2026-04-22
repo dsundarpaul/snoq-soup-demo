@@ -145,6 +145,9 @@ export function PromoCodesManageBlock({
                 />
               </label>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Max upload limit: 1000 codes
+            </p>
           </div>
 
           {(data?.codes?.length || 0) > 0 ? (

@@ -507,7 +507,7 @@ const en = {
   "merchant.form.tooltip.availability":
     "Unlimited or cap how many people can claim this drop.",
   "merchant.form.tooltip.schedule":
-    "When the drop is visible; leave empty for always-on (within app rules).",
+    "Set when this drop becomes available and expires. Leave empty for no time restrictions.",
   "merchant.form.tooltip.terms":
     "Optional legal or usage text shown when viewing or redeeming the voucher (max 300 characters).",
   "merchant.form.location.sectionTitle": "Set drop location",

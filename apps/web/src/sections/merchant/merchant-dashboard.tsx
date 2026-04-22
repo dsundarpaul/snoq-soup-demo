@@ -18,7 +18,11 @@ import {
   type MerchantDropsListStatus,
 } from "@/hooks/api/merchant/use-merchant";
 import { dropQueryKeys } from "@/hooks/api/drop/use-drop";
-import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
+import {
+  apiFetchMaybeRetry,
+  getUserFacingApiErrorMessage,
+  throwIfResNotOk,
+} from "@/lib/api-client";
 import {
   mapMerchantStatsToLegacy,
   toNestBulkPromoPayload,
@@ -40,6 +44,16 @@ import { MerchantDropSheet } from "@/sections/merchant/merchant-drop-sheet";
 import { MerchantPromoCodesDialog } from "@/sections/merchant/merchant-promo-codes-dialog";
 import { MerchantVouchersPanel } from "@/sections/merchant/merchant-vouchers-panel";
 import { downloadAuthenticatedCsv } from "@/utils/download-authenticated-csv";
+
+const MAX_PROMO_CODES_PER_UPLOAD = 1000;
+const MAX_PROMO_CODES_FILE_SIZE_BYTES = 256 * 1024;
+const MAX_PROMO_CODES_TEXT_LENGTH = 100_000;
+
+const parsePromoCodesText = (input: string): string[] =>
+  input
+    .split(/[\n,]/)
+    .map((code) => code.trim())
+    .filter((code) => code.length > 0);
 
 export default function MerchantDashboardPage() {
   const router = useRouter();
@@ -190,10 +204,11 @@ export default function MerchantDashboardPage() {
         description: "Promo codes have been added.",
       });
     },
-    onError: () => {
+    onError: (error: unknown) => {
       toast({
         title: "Upload Failed",
-        description: "Failed to upload codes.",
+        description:
+          getUserFacingApiErrorMessage(error) ?? "Failed to upload codes.",
         variant: "destructive",
       });
     },
@@ -267,20 +282,67 @@ export default function MerchantDashboardPage() {
 
   const handleUploadCodes = () => {
     if (!codesDropId || !codesText.trim()) return;
-    const codes = codesText
-      .split(/[\n,]/)
-      .map((c) => c.trim())
-      .filter((c) => c.length > 0);
+    if (codesText.length > MAX_PROMO_CODES_TEXT_LENGTH) {
+      toast({
+        title: "Upload Failed",
+        description: "Input is too large. Please import a smaller CSV file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const codes = parsePromoCodesText(codesText);
     if (codes.length === 0) return;
+    if (codes.length > MAX_PROMO_CODES_PER_UPLOAD) {
+      toast({
+        title: "Upload Failed",
+        description: `You can upload up to ${MAX_PROMO_CODES_PER_UPLOAD} promo codes at a time.`,
+        variant: "destructive",
+      });
+      return;
+    }
     uploadCodesMutation.mutate({ dropId: codesDropId, codes });
   };
 
   const handleFileImportCodes = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_PROMO_CODES_FILE_SIZE_BYTES) {
+      toast({
+        title: "Import Failed",
+        description: "CSV file is too large. Please upload a smaller file.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
+      if (text.length > MAX_PROMO_CODES_TEXT_LENGTH) {
+        toast({
+          title: "Import Failed",
+          description: "CSV content is too large. Please upload a smaller file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const codes = parsePromoCodesText(text);
+      if (codes.length === 0) {
+        toast({
+          title: "Import Failed",
+          description: "No promo codes found in the selected file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (codes.length > MAX_PROMO_CODES_PER_UPLOAD) {
+        toast({
+          title: "Import Failed",
+          description: `This file contains ${codes.length} codes. Maximum allowed is ${MAX_PROMO_CODES_PER_UPLOAD}.`,
+          variant: "destructive",
+        });
+        return;
+      }
       setCodesText(text);
     };
     reader.readAsText(file);

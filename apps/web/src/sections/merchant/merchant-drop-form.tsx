@@ -612,7 +612,10 @@ export function MerchantDropForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unlimited">Unlimited</SelectItem>
-                  <SelectItem value="captureLimit" disabled={lockToUnlimitedOnly}>
+                  <SelectItem
+                    value="captureLimit"
+                    disabled={lockToUnlimitedOnly}
+                  >
                     Capture Limit
                   </SelectItem>
                 </SelectContent>
@@ -699,10 +702,6 @@ export function MerchantDropForm({
         <p className="text-xs text-muted-foreground">
           Set when this drop becomes available and expires. Leave empty for no
           time restrictions.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {t("merchant.form.datetime.saudiIntent")}{" "}
-          {t("merchant.form.datetime.localInputNote")}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">

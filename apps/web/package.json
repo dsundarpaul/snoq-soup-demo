@@ -75,6 +75,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@serwist/turbopack": "^9.5.7",
     "@tailwindcss/typography": "^0.5.15",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^20",
@@ -82,9 +83,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
+    "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "postcss": "^8.4.47",
+    "serwist": "^9.5.7",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
