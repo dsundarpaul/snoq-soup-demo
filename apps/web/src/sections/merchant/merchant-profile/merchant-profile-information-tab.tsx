@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { Merchant } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
+import { APP_NAME } from "@/lib/app-brand";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   merchantQueryKeys,
@@ -135,7 +136,9 @@ export function MerchantProfileInformationTab({
       <Card>
         <CardHeader>
           <CardTitle>Account</CardTitle>
-          <CardDescription>Your business identity on Souq-Snap</CardDescription>
+          <CardDescription>
+            Your business identity on {APP_NAME}
+          </CardDescription>
         </CardHeader>
         <CardContent className="text-sm space-y-2">
           <div>

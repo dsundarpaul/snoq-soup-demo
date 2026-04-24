@@ -62,8 +62,8 @@ async function bootstrapHttp() {
   // Swagger setup - only in non-production environments
   if (config.NODE_ENV !== "production") {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle("SouqSnap API")
-      .setDescription("SouqSnap - Gamified Drops & Voucher Platform API")
+      .setTitle("Scavly API")
+      .setDescription("Scavly — gamified drops and voucher platform API")
       .setVersion("1.0.0")
       .addBearerAuth(
         { type: "http", scheme: "bearer", bearerFormat: "JWT" },

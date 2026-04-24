@@ -103,7 +103,7 @@ const ar = {
   "merchant.portal": "بوابة التاجر",
   "merchant.login": "دخول التاجر",
   "merchant.loginDesc": "سجّل دخولك لإدارة الكنوز ومسح قسائم العملاء",
-  "merchant.newToSouqSnap": "جديد في سوق سناب؟",
+  "merchant.newToSouqSnap": "جديد في Scavly؟",
   "merchant.createAccount": "إنشاء حساب تاجر",
   "merchant.businessName": "اسم النشاط التجاري",
   "merchant.yourBusinessName": "اسم نشاطك التجاري",
@@ -392,14 +392,14 @@ const ar = {
   "welcome.driveCustomers1": "اجذب عملاء حقيقيين إلى ",
   "welcome.driveCustomers2": "متجرك",
   "welcome.driveDesc":
-    "الإعلانات التقليدية تعرض مشاهدات. سوق سناب يجلب زوار فعليين. أنشئ مكافآت لا تُقاوم تجذب العملاء إلى موقعك.",
+    "الإعلانات التقليدية تعرض مشاهدات. Scavly يجلب زوار فعليين. أنشئ مكافآت لا تُقاوم تجذب العملاء إلى موقعك.",
   "welcome.fiveMinSetup": "إعداد في 5 دقائق",
   "welcome.fiveMinDesc": "أنشئ أول كنز في دقائق. لا تحتاج خبرة تقنية.",
   "welcome.realTimeAnalytics": "تحليلات فورية",
   "welcome.analyticsDesc": "تابع الاقتناصات والاسترداد من لوحة التحكم.",
   "welcome.easyVerification": "تحقق سهل",
   "welcome.verificationDesc": "امسح رمز QR للتحقق وتتبع الاستخدام.",
-  "welcome.whySouqSnap": "لماذا سوق سناب؟",
+  "welcome.whySouqSnap": "لماذا Scavly؟",
   "welcome.gamified": "تجربة ممتعة",
   "welcome.gamifiedDesc":
     "صيد الكنوز على طريقة بوكيمون جو يبقي العملاء منجذبين",
@@ -419,7 +419,7 @@ const ar = {
   "welcome.merchantDashboard": "لوحة تحكم التاجر",
   "welcome.totalClaims": "إجمالي الاقتناصات",
   "welcome.conversion": "التحويل",
-  "welcome.footer": "© 2026 سوق سناب. صُنع في السعودية.",
+  "welcome.footer": "© 2026 Scavly. صُنع في السعودية.",
 
   // Email Verification
   "verify.title": "التحقق من البريد",
@@ -625,7 +625,7 @@ const ar = {
   "store.notFound": "المتجر غير موجود",
   "store.notFoundDesc": "هذا المتجر غير موجود أو لم يعد متاحاً.",
   "store.exploreAll": "استكشف جميع المكافآت",
-  "store.poweredBy": "مدعوم من سوق سناب",
+  "store.poweredBy": "مدعوم من Scavly",
   "store.availableRewards": "مكافآت متاحة",
   "store.copyStoreLink": "نسخ رابط المتجر",
 

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { LanguageToggle } from "@/components/language-toggle";
+import { APP_NAME } from "@/lib/app-brand";
 
 const mockupHome = "/images/mockup-home.png";
 const mockupArHunt = "/images/mockup-ar-hunt.png";
@@ -112,7 +113,7 @@ export default function WelcomePage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-teal/30 to-primary/30 rounded-3xl blur-xl" />
                 <img
                   src={mockupHome}
-                  alt="Souq-Snap Home Screen"
+                  alt={`${APP_NAME} home screen`}
                   className="relative rounded-2xl shadow-2xl border-4 border-background"
                 />
               </div>
@@ -490,7 +491,7 @@ export default function WelcomePage() {
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-teal flex items-center justify-center">
                 <Trophy className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-lg">Souq-Snap</span>
+              <span className="font-bold text-lg">{APP_NAME}</span>
             </div>
 
             <div className="flex items-center gap-6 text-sm text-muted-foreground">

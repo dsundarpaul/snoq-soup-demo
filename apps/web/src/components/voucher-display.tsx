@@ -44,6 +44,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { publicUrls, getPublicSiteUrl } from "@/lib/app-config";
+import { APP_NAME } from "@/lib/app-brand";
 import {
   apiFetch,
   apiFetchMaybeRetry,
@@ -336,7 +337,7 @@ export function VoucherDisplay({
     }
     const digits =
       dialCode.replace(/\D/g, "") + nationalNumber.replace(/\D/g, "");
-    const message = `Your Souq-Snap voucher is ready! Use this link to view your reward: ${magicLink}`;
+    const message = `Your ${APP_NAME} voucher is ready! Use this link to view your reward: ${magicLink}`;
     const whatsappUrl = `https://wa.me/${digits}?text=${encodeURIComponent(
       message
     )}`;

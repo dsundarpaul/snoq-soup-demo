@@ -11,6 +11,7 @@ import { Loader2, AlertCircle, Trophy, Home, ArrowLeft } from "lucide-react";
 import type { Voucher, Drop } from "@shared/schema";
 import { useVoucherByMagicTokenQuery } from "@/hooks/api/voucher/use-voucher";
 import { mapVoucherMagicDetailToView } from "@/lib/nest-mappers";
+import { APP_NAME } from "@/lib/app-brand";
 
 interface VoucherData {
   voucher: Voucher;
@@ -102,7 +103,7 @@ export default function VoucherViewPage() {
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/30">
             <Trophy className="w-8 h-8 text-teal" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Souq-Snap</h1>
+          <h1 className="text-2xl font-bold text-foreground">{APP_NAME}</h1>
           <p className="text-muted-foreground mt-1">
             {t("voucher.yourRewardAwaits")}
           </p>

@@ -25,6 +25,10 @@ import {
   Sparkles,
   Shield,
 } from "lucide-react";
+import { APP_NAME } from "@/lib/app-brand";
+import { getPublicSiteHostnameOrFallback } from "@/lib/app-config";
+
+const CTA_HOST = getPublicSiteHostnameOrFallback();
 
 function PhoneMockup({
   children,
@@ -54,7 +58,7 @@ function PhoneMockup({
 
 function HomeScreenMockup() {
   return (
-    <PhoneMockup title="Souq-Snap">
+    <PhoneMockup title={APP_NAME}>
       <div className="pt-10 px-3 h-full bg-gradient-to-b from-background to-primary/5">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -268,14 +272,14 @@ export default function PitchDeckExportPage() {
               <Trophy className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-teal bg-clip-text text-transparent mb-4">
-              Souq-Snap
+              {APP_NAME}
             </h1>
             <p className="text-xl text-muted-foreground mb-4">
               Location-Based AR Rewards for Saudi Arabia
             </p>
             <div className="bg-primary/10 px-6 py-3 rounded-full">
               <span className="text-lg font-semibold text-primary">
-                Hunt. Snap. Save.
+                Hunt. Claim. Redeem.
               </span>
             </div>
           </div>
@@ -330,9 +334,9 @@ export default function PitchDeckExportPage() {
                 Gamified AR Treasure Hunts
               </p>
               <p className="text-muted-foreground mb-6">
-                Souq-Snap turns finding deals into an exciting real-world game.
-                Users hunt for virtual rewards at real locations, then redeem
-                them in-store.
+                {APP_NAME} turns finding deals into an exciting real-world
+                game. Users hunt for virtual rewards at real locations, then
+                redeem them in-store.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1">
@@ -675,7 +679,7 @@ export default function PitchDeckExportPage() {
             <div className="flex items-center gap-3 bg-primary/10 px-6 py-3 rounded-full">
               <Smartphone className="w-6 h-6 text-primary" />
               <span className="text-lg font-semibold text-primary">
-                souq-snap.com
+                {CTA_HOST}
               </span>
             </div>
           </div>

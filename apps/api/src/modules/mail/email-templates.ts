@@ -1,6 +1,6 @@
-const BRAND_NAME = "SouqSnap";
-const COLOR_PRIMARY = "#7C3AED";
-const COLOR_PRIMARY_DARK = "#5B21B6";
+const BRAND_NAME = "Scavly";
+const COLOR_PRIMARY = "#5E4BB1";
+const COLOR_PRIMARY_DARK = "#433B8F";
 const COLOR_PAGE_BG = "#F1F5F9";
 const COLOR_CARD_BG = "#FFFFFF";
 const COLOR_TEXT = "#0F172A";
@@ -57,7 +57,7 @@ function layoutBrandedEmail(options: {
 <tr>
 <td style="background:linear-gradient(135deg,${COLOR_PRIMARY} 0%,${COLOR_PRIMARY_DARK} 100%);background-color:${COLOR_PRIMARY};padding:28px 32px;">
 <p style="margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:22px;font-weight:700;letter-spacing:-0.02em;color:#FFFFFF;">${escapeHtml(BRAND_NAME)}</p>
-<p style="margin:8px 0 0 0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.9);">Discover drops. Claim rewards.</p>
+<p style="margin:8px 0 0 0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.9);">HUNT. CLAIM. REDEEM.</p>
 </td>
 </tr>
 <tr>
@@ -111,7 +111,7 @@ ${frontendBase}`;
   const html = layoutBrandedEmail({
     preheader,
     title: "Confirm your email",
-    lead: "Thanks for joining SouqSnap. Confirm your address to unlock the merchant dashboard and start sharing drops with hunters.",
+    lead: "Thanks for joining Scavly. Confirm your address to unlock the merchant dashboard and start sharing drops with hunters.",
     bodyLines: [
       "Tap the button below to verify your email. For your security, this link will not stay valid forever.",
     ],

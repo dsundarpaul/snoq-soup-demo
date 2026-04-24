@@ -38,6 +38,7 @@ import {
 } from "@/hooks/api/merchant/use-merchant";
 import { useRedirectIfMerchantLoggedIn } from "@/hooks/use-redirect-if-merchant-logged-in";
 import { clearSessionsExcept } from "@/lib/auth-session";
+import { APP_NAME } from "@/lib/app-brand";
 
 export default function MerchantLoginPage() {
   useRedirectIfMerchantLoggedIn();
@@ -117,7 +118,7 @@ export default function MerchantLoginPage() {
             <Trophy className="w-10 h-10 text-teal" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">
-            Souq-Snap
+            {APP_NAME}
           </h1>
           <p className="text-muted-foreground mt-2">{t("merchant.portal")}</p>
         </div>

@@ -37,8 +37,7 @@ import {
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import { clearSessionsExcept } from "@/lib/auth-session";
 import { useRoleCredentialState } from "@/hooks/use-role-credentials";
-
-const appLogoSrc = "/images/clean_trophy_logo_no_text.png";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 type GeoState = {
   loading: boolean;
@@ -85,14 +84,16 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <img
-              src={appLogoSrc}
-              alt="Souq-Snap"
-              className="w-9 h-9 rounded-lg shrink-0"
+              src={appLogo.src}
+              alt={APP_NAME}
+              width={appLogo.width}
+              height={appLogo.height}
+              className="w-9 h-9 rounded-lg shrink-0 object-contain"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-lg text-foreground">
-                  Souq-Snap
+                  {APP_NAME}
                 </h1>
                 {geo.loading ? (
                   <Badge

@@ -26,6 +26,10 @@ import {
   Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { APP_NAME } from "@/lib/app-brand";
+import { getPublicSiteHostnameOrFallback } from "@/lib/app-config";
+
+const CTA_HOST = getPublicSiteHostnameOrFallback();
 
 function PhoneMockup({
   children,
@@ -55,7 +59,7 @@ function PhoneMockup({
 
 function HomeScreenMockup() {
   return (
-    <PhoneMockup title="Souq-Snap">
+    <PhoneMockup title={APP_NAME}>
       <div className="pt-12 px-4 h-full bg-gradient-to-b from-background to-primary/5">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -298,9 +302,9 @@ const slides = [
   {
     id: 1,
     type: "cover",
-    title: "Souq-Snap",
+    title: APP_NAME,
     subtitle: "Location-Based AR Rewards for Saudi Arabia",
-    tagline: "Hunt. Snap. Save.",
+    tagline: "Hunt. Claim. Redeem.",
   },
   {
     id: 2,
@@ -331,8 +335,7 @@ const slides = [
     type: "solution",
     title: "The Solution",
     headline: "Gamified AR Treasure Hunts",
-    description:
-      "Souq-Snap turns finding deals into an exciting real-world game. Users hunt for virtual rewards at real locations, then redeem them in-store.",
+    description: `${APP_NAME} turns finding deals into an exciting real-world game. Users hunt for virtual rewards at real locations, then redeem them in-store.`,
   },
   {
     id: 4,
@@ -469,7 +472,7 @@ const slides = [
     type: "closing",
     title: "Transform Retail",
     tagline: "Where Every Location Becomes an Opportunity",
-    cta: "souq-snap.com",
+    cta: CTA_HOST,
   },
 ];
 

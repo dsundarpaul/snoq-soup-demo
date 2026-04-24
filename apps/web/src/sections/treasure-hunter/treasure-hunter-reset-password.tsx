@@ -31,6 +31,7 @@ import {
   type TreasureHunterResetPasswordInput,
 } from "@/hooks/api/treasure-hunter/treasure-hunter.api-types";
 import { useTreasureHunterResetPasswordMutation } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
+import { APP_NAME } from "@/lib/app-brand";
 
 export default function TreasureHunterResetPasswordPage() {
   const params = useParams<{ token: string }>();
@@ -116,7 +117,7 @@ export default function TreasureHunterResetPasswordPage() {
             <Trophy className="w-10 h-10 text-teal" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">
-            Souq-Snap
+            {APP_NAME}
           </h1>
           <p className="text-muted-foreground mt-2">
             {t("profile.treasureHunter")}

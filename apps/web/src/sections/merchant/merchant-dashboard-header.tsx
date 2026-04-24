@@ -16,8 +16,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { useTheme } from "@/hooks/use-theme";
 import { Home, LogOut, Moon, Settings2, Sun, User } from "lucide-react";
 import type { Merchant } from "@shared/schema";
-
-const appLogoSrc = "/images/clean_trophy_logo_no_text.png";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 export interface MerchantDashboardHeaderProps {
   merchant: Merchant | undefined;
@@ -43,9 +42,11 @@ export function MerchantDashboardHeader({
           className="flex items-center gap-2 sm:gap-3 min-w-0 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <img
-            src={merchant?.logoUrl || appLogoSrc}
-            alt={merchant?.businessName || "Souq-Snap"}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 object-cover"
+            src={merchant?.logoUrl || appLogo.src}
+            alt={merchant?.businessName || APP_NAME}
+            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 ${
+              merchant?.logoUrl ? "object-cover" : "object-contain"
+            }`}
           />
           <div className="min-w-0">
             <h1 className="font-bold text-foreground text-sm sm:text-base truncate">

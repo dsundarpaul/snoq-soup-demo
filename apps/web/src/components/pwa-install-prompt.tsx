@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Download, Smartphone } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
+import { APP_NAME } from "@/lib/app-brand";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -76,7 +77,7 @@ export function PWAInstallPrompt() {
 
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white text-lg">
-              Souq-Snap
+              {APP_NAME}
             </h3>
             <p className="text-white/80 text-sm">
               {t("pwa.huntClaimReward")}

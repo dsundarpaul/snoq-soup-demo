@@ -105,7 +105,7 @@ const en = {
   "merchant.login": "Merchant Login",
   "merchant.loginDesc":
     "Sign in to manage your treasures and scan customer vouchers",
-  "merchant.newToSouqSnap": "New to Souq-Snap?",
+  "merchant.newToSouqSnap": "New to Scavly?",
   "merchant.createAccount": "Create a merchant account",
   "merchant.businessName": "Business Name",
   "merchant.yourBusinessName": "Your business name",
@@ -397,7 +397,7 @@ const en = {
   "welcome.driveCustomers1": "Drive Real Customers To Your ",
   "welcome.driveCustomers2": "Doorstep",
   "welcome.driveDesc":
-    "Traditional ads show impressions. Souq-Snap delivers actual visitors. Create irresistible rewards that pull customers right to your location.",
+    "Traditional ads show impressions. Scavly delivers actual visitors. Create irresistible rewards that pull customers right to your location.",
   "welcome.fiveMinSetup": "5-Minute Setup",
   "welcome.fiveMinDesc":
     "Create your first treasure in minutes. No technical skills needed.",
@@ -407,7 +407,7 @@ const en = {
   "welcome.easyVerification": "Easy Verification",
   "welcome.verificationDesc":
     "Scan customer QR codes to verify and track redemptions.",
-  "welcome.whySouqSnap": "Why Souq-Snap?",
+  "welcome.whySouqSnap": "Why Scavly?",
   "welcome.gamified": "Gamified",
   "welcome.gamifiedDesc":
     "Pokémon GO-style treasure hunting keeps customers engaged",
@@ -427,7 +427,7 @@ const en = {
   "welcome.merchantDashboard": "Merchant Dashboard",
   "welcome.totalClaims": "Total Claims",
   "welcome.conversion": "Conversion",
-  "welcome.footer": "© 2026 Souq-Snap. Made in Saudi Arabia.",
+  "welcome.footer": "© 2026 Scavly. Made in Saudi Arabia.",
 
   // Email Verification
   "verify.title": "Email Verification",
@@ -644,7 +644,7 @@ const en = {
   "store.notFoundDesc":
     "This merchant store doesn't exist or is no longer available.",
   "store.exploreAll": "Explore All Rewards",
-  "store.poweredBy": "Powered by Souq-Snap",
+  "store.poweredBy": "Powered by Scavly",
   "store.availableRewards": "available rewards",
   "store.copyStoreLink": "Copy Store Link",
 

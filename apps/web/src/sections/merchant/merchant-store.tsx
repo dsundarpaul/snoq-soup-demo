@@ -21,9 +21,9 @@ import {
   Copy,
   ExternalLink,
 } from "lucide-react";
-const appLogoSrc = "/images/clean_trophy_logo_no_text.png";
 import type { Drop } from "@shared/schema";
 import { publicUrls } from "@/lib/app-config";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 import { useMerchantPublicStoreQuery } from "@/hooks/api/merchant/use-merchant";
 
 type DropWithCount = Drop & { captureCount?: number };
@@ -82,7 +82,7 @@ export default function MerchantStorePage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: data?.merchant.businessName || "Souq-Snap Store",
+          title: data?.merchant.businessName || `${APP_NAME} Store`,
           text: `${t("store.activeRewards")} - ${data?.merchant.businessName}`,
           url,
         });
@@ -109,12 +109,14 @@ export default function MerchantStorePage() {
               <Link href="/">
                 <div className="flex items-center gap-2 cursor-pointer">
                   <img
-                    src={appLogoSrc}
-                    alt="Souq-Snap"
-                    className="w-9 h-9 rounded-lg"
+                    src={appLogo.src}
+                    alt={APP_NAME}
+                    width={appLogo.width}
+                    height={appLogo.height}
+                    className="w-9 h-9 rounded-lg object-contain"
                   />
                   <span className="font-bold text-lg">
-                    Souq-Snap
+                    {APP_NAME}
                   </span>
                 </div>
               </Link>
@@ -155,12 +157,14 @@ export default function MerchantStorePage() {
             <Link href="/">
               <div className="flex items-center gap-2 cursor-pointer">
                 <img
-                  src={appLogoSrc}
-                  alt="Souq-Snap"
-                  className="w-9 h-9 rounded-lg"
+                  src={appLogo.src}
+                  alt={APP_NAME}
+                  width={appLogo.width}
+                  height={appLogo.height}
+                  className="w-9 h-9 rounded-lg object-contain"
                 />
                 <span className="font-bold text-lg">
-                  Souq-Snap
+                  {APP_NAME}
                 </span>
               </div>
             </Link>
