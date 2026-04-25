@@ -1,24 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { QrCode, Copy, Check, Share2, Loader2 } from "lucide-react";
 import { publicUrls } from "@/lib/app-config";
 import { useToast } from "@/hooks/use-toast";
-import {
-  useMerchantScannerTokenQuery,
-} from "@/hooks/api/merchant/use-merchant";
 import { useMerchantScannerTokenMutation } from "@/hooks/api/scanner/use-scanner";
+import {
+  readStaffScannerToken,
+  writeStaffScannerToken,
+} from "@/utils/staff-scanner-token-storage";
 
-export function StaffScannerLink() {
+export interface StaffScannerLinkProps {
+  merchantId: string | undefined;
+}
+
+export function StaffScannerLink({ merchantId }: StaffScannerLinkProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [storedToken, setStoredToken] = useState<string | null>(null);
 
-  const { data: tokenData, isLoading } = useMerchantScannerTokenQuery();
+  useEffect(() => {
+    if (!merchantId) {
+      setHydrated(true);
+      return;
+    }
+    setStoredToken(readStaffScannerToken(merchantId));
+    setHydrated(true);
+  }, [merchantId]);
+
+  const applyToken = useCallback(
+    (token: string) => {
+      if (!merchantId) return;
+      writeStaffScannerToken(merchantId, token);
+      setStoredToken(token);
+    },
+    [merchantId]
+  );
 
   const generateMutation = useMerchantScannerTokenMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      applyToken(data.token);
       toast({
         title: "Scanner link generated",
         description: "You can now share this link with your staff.",
@@ -26,9 +50,7 @@ export function StaffScannerLink() {
     },
   });
 
-  const scannerToken =
-    typeof tokenData?.token === "string" ? tokenData.token : null;
-
+  const scannerToken = storedToken;
   const scannerUrl = scannerToken
     ? publicUrls.staffScan(scannerToken)
     : null;
@@ -41,7 +63,9 @@ export function StaffScannerLink() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (isLoading) return <Loader2 className="w-4 h-4 animate-spin" />;
+  if (!merchantId || !hydrated) {
+    return <Loader2 className="w-4 h-4 animate-spin" />;
+  }
 
   if (!scannerToken) {
     return (

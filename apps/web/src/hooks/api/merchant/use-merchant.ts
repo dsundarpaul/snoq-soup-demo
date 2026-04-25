@@ -80,7 +80,6 @@ export const merchantQueryKeys = {
       status,
       search,
     ] as const,
-  scannerToken: ["/api/v1/merchants/me/scanner-token"] as const,
 };
 
 export function useMerchantLoginMutation(
@@ -481,21 +480,6 @@ export function useMerchantDropActiveMutation(
       queryClient.invalidateQueries({ queryKey: merchantQueryKeys.stats });
       queryClient.invalidateQueries({ queryKey: dropQueryKeys.all });
       options?.onSuccess?.(...args);
-    },
-  });
-}
-
-export function useMerchantScannerTokenQuery() {
-  return useQuery({
-    queryKey: merchantQueryKeys.scannerToken,
-    queryFn: async () => {
-      const path = "/api/v1/merchants/me/scanner-token";
-      const res = await apiFetchMaybeRetry("GET", path, {
-        auth: "merchant",
-      });
-      if (res.status === 404) return null;
-      await throwIfResNotOk(res, path, "merchant");
-      return res.json() as Promise<Record<string, unknown> | null>;
     },
   });
 }

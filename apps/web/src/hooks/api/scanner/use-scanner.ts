@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import type {
   CreateStaffScannerAssignmentInput,
+  MerchantScannerTokenResponse,
   StaffScannerAssignment,
   UseStaffScannerAssignmentsResult,
 } from "./scanner.api-types";
@@ -139,7 +140,10 @@ export function useStaffScannerRedeemMutation(
 }
 
 export function useMerchantScannerTokenMutation(
-  options?: Omit<UseMutationOptions<unknown, Error, void>, "mutationFn">
+  options?: Omit<
+    UseMutationOptions<MerchantScannerTokenResponse, Error, void>,
+    "mutationFn"
+  >
 ) {
   return useMutation({
     ...options,
@@ -150,13 +154,7 @@ export function useMerchantScannerTokenMutation(
         {},
         { auth: "merchant" }
       );
-      return res.json() as Promise<Record<string, unknown>>;
-    },
-    onSuccess: (...args) => {
-      queryClient.invalidateQueries({
-        queryKey: ["/api/v1/merchants/me/scanner-token"],
-      });
-      options?.onSuccess?.(...args);
+      return res.json() as Promise<MerchantScannerTokenResponse>;
     },
   });
 }

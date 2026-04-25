@@ -251,7 +251,7 @@ export function MerchantProfileInformationTab({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <StaffScannerLink />
+          <StaffScannerLink merchantId={merchant?.id} />
         </CardContent>
       </Card>
 

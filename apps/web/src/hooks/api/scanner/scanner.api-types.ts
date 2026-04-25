@@ -32,3 +32,9 @@ export interface MerchantStaffDirectoryEntry {
   displayName: string;
   email: string | null;
 }
+
+export interface MerchantScannerTokenResponse {
+  token: string;
+  expiresAt: string;
+  createdAt: string;
+}
