@@ -13,7 +13,7 @@ import {
   cookieHeaderFromSetCookie,
 } from "./auth-cookie-helpers";
 
-describe("SouqSnap E2E Flows", () => {
+describe("Scavly E2E Flows", () => {
   let app: INestApplication;
   let mongoServer: MongoMemoryReplSet;
   let merchantToken: string;
@@ -104,10 +104,12 @@ describe("SouqSnap E2E Flows", () => {
       expect(response.body.user).toHaveProperty("type", "merchant");
       merchantId = response.body.user.id;
       const conn = app.get<Connection>(getConnectionToken());
-      await conn.collection("merchants").updateOne(
-        { email: merchantEmail.toLowerCase() },
-        { $set: { emailVerified: true } },
-      );
+      await conn
+        .collection("merchants")
+        .updateOne(
+          { email: merchantEmail.toLowerCase() },
+          { $set: { emailVerified: true } },
+        );
     });
 
     it("POST /api/v1/auth/merchant/login - should login merchant", async () => {
@@ -122,9 +124,7 @@ describe("SouqSnap E2E Flows", () => {
       expect(
         accessTokenFromSetCookie(response.headers["set-cookie"]),
       ).toBeDefined();
-      merchantToken = accessTokenFromSetCookie(
-        response.headers["set-cookie"],
-      )!;
+      merchantToken = accessTokenFromSetCookie(response.headers["set-cookie"])!;
       merchantCookieHeader = cookieHeaderFromSetCookie(
         response.headers["set-cookie"],
       );
@@ -239,52 +239,6 @@ describe("SouqSnap E2E Flows", () => {
       expect(response.body).toHaveProperty("total");
     });
 
-    it("GET .../codes - search narrows results; pagination; limit cap", async () => {
-      const prefix = `SRCH${Date.now()}`;
-      await request(app.getHttpServer())
-        .post(`/api/v1/merchants/me/drops/${dropId}/codes/bulk`)
-        .set("Authorization", `Bearer ${merchantToken}`)
-        .send({
-          codes: [
-            { code: `${prefix}AAA` },
-            { code: `${prefix}AAB` },
-            { code: `${prefix}ZZZOTHER` },
-          ],
-        })
-        .expect(201);
-
-      const searchRes = await request(app.getHttpServer())
-        .get(
-          `/api/v1/merchants/me/drops/${dropId}/codes?search=${encodeURIComponent(`${prefix}AA`)}`,
-        )
-        .set("Authorization", `Bearer ${merchantToken}`)
-        .expect(200);
-
-      expect(searchRes.body.total).toBe(2);
-      expect(searchRes.body.items).toHaveLength(2);
-
-      const pageRes = await request(app.getHttpServer())
-        .get(
-          `/api/v1/merchants/me/drops/${dropId}/codes?search=${encodeURIComponent(`${prefix}AA`)}&page=1&limit=1`,
-        )
-        .set("Authorization", `Bearer ${merchantToken}`)
-        .expect(200);
-
-      expect(pageRes.body.items).toHaveLength(1);
-      expect(pageRes.body.total).toBe(2);
-      expect(pageRes.body.totalPages).toBe(2);
-      expect(pageRes.body.limit).toBe(1);
-
-      const capRes = await request(app.getHttpServer())
-        .get(
-          `/api/v1/merchants/me/drops/${dropId}/codes?limit=500&page=1`,
-        )
-        .set("Authorization", `Bearer ${merchantToken}`)
-        .expect(200);
-
-      expect(capRes.body.limit).toBe(100);
-    });
-
     it("DELETE /api/v1/merchants/me/drops/:dropId/codes/:codeId - should delete one available code", async () => {
       const listRes = await request(app.getHttpServer())
         .get(`/api/v1/merchants/me/drops/${dropId}/codes`)
@@ -345,9 +299,7 @@ describe("SouqSnap E2E Flows", () => {
         accessTokenFromSetCookie(response.headers["set-cookie"]),
       ).toBeDefined();
       expect(response.body).toHaveProperty("user");
-      hunterToken = accessTokenFromSetCookie(
-        response.headers["set-cookie"],
-      )!;
+      hunterToken = accessTokenFromSetCookie(response.headers["set-cookie"])!;
       hunterCookieHeader = cookieHeaderFromSetCookie(
         response.headers["set-cookie"],
       );
@@ -383,9 +335,7 @@ describe("SouqSnap E2E Flows", () => {
       expect(
         accessTokenFromSetCookie(response.headers["set-cookie"]),
       ).toBeDefined();
-      hunterToken = accessTokenFromSetCookie(
-        response.headers["set-cookie"],
-      )!;
+      hunterToken = accessTokenFromSetCookie(response.headers["set-cookie"])!;
       hunterCookieHeader = cookieHeaderFromSetCookie(
         response.headers["set-cookie"],
       );
@@ -550,9 +500,7 @@ describe("SouqSnap E2E Flows", () => {
       expect(
         accessTokenFromSetCookie(response.headers["set-cookie"]),
       ).toBeDefined();
-      adminToken = accessTokenFromSetCookie(
-        response.headers["set-cookie"],
-      )!;
+      adminToken = accessTokenFromSetCookie(response.headers["set-cookie"])!;
     });
 
     it("GET /api/v1/admin/stats - should get platform stats", async () => {

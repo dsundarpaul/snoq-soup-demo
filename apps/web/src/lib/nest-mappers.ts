@@ -29,8 +29,10 @@ export function mapNestDropToLegacy(
   captureCount?: number
 ): DropWithCount {
   const loc = raw.location as { lat?: number; lng?: number } | undefined;
-  const lat = typeof loc?.lat === "number" ? loc.lat : Number(raw.latitude ?? 0);
-  const lng = typeof loc?.lng === "number" ? loc.lng : Number(raw.longitude ?? 0);
+  const lat =
+    typeof loc?.lat === "number" ? loc.lat : Number(raw.latitude ?? 0);
+  const lng =
+    typeof loc?.lng === "number" ? loc.lng : Number(raw.longitude ?? 0);
   const redemption = raw.redemption as
     | { type?: string; minutes?: number; deadline?: Date | string }
     | undefined;
@@ -41,8 +43,7 @@ export function mapNestDropToLegacy(
     | { start?: Date | string; end?: Date | string }
     | undefined;
   const rv = raw.rewardValue;
-  const rewardValue =
-    typeof rv === "number" ? String(rv) : String(rv ?? "");
+  const rewardValue = typeof rv === "number" ? String(rv) : String(rv ?? "");
 
   let availabilityType: string = "unlimited";
   let captureLimit: number | null = null;
@@ -80,8 +81,8 @@ export function mapNestDropToLegacy(
       typeof raw.voucherTtlHoursAfterClaim === "number"
         ? raw.voucherTtlHoursAfterClaim
         : raw.voucherTtlHoursAfterClaim != null
-          ? Number(raw.voucherTtlHoursAfterClaim)
-          : null,
+        ? Number(raw.voucherTtlHoursAfterClaim)
+        : null,
     createdAt:
       toDate(raw.createdAt as Date | string | null | undefined) ?? new Date(),
   };
@@ -89,8 +90,8 @@ export function mapNestDropToLegacy(
     captureCount !== undefined
       ? captureCount
       : typeof raw.captureCount === "number"
-        ? raw.captureCount
-        : undefined;
+      ? raw.captureCount
+      : undefined;
   if (resolvedCount !== undefined) out.captureCount = resolvedCount;
   return out;
 }
@@ -110,9 +111,7 @@ export function mapActiveDropsPayload(json: {
   });
 }
 
-export function mapMerchantMeToLegacy(
-  raw: Record<string, unknown>
-): Merchant {
+export function mapMerchantMeToLegacy(raw: Record<string, unknown>): Merchant {
   const sl = raw.storeLocation as
     | {
         lat?: number;
@@ -158,9 +157,7 @@ export function mapMerchantMeToLegacy(
   } as Merchant;
 }
 
-export function mapAuthUserToMerchant(
-  user: Record<string, unknown>
-): Merchant {
+export function mapAuthUserToMerchant(user: Record<string, unknown>): Merchant {
   return {
     id: String(user.id ?? ""),
     username: String(user.username ?? ""),
@@ -216,7 +213,8 @@ export function mapPromoCodeStatsDto(json: Record<string, unknown>): {
   assigned: number;
 } {
   return {
-    total: typeof json.total === "number" ? json.total : Number(json.total ?? 0),
+    total:
+      typeof json.total === "number" ? json.total : Number(json.total ?? 0),
     available:
       typeof json.available === "number"
         ? json.available
@@ -229,7 +227,7 @@ export function mapPromoCodeStatsDto(json: Record<string, unknown>): {
 }
 
 export function mapPromoCodeListItemDto(
-  raw: Record<string, unknown>,
+  raw: Record<string, unknown>
 ): PromoCodeTableRow {
   const assignedToName =
     raw.assignedToName != null && String(raw.assignedToName).trim() !== ""
@@ -260,8 +258,7 @@ export function mapPromoCodeListPageDto(json: Record<string, unknown>): {
     total: typeof root.total === "number" ? root.total : itemsRaw.length,
     page: typeof root.page === "number" ? root.page : 1,
     limit: typeof root.limit === "number" ? root.limit : itemsRaw.length,
-    totalPages:
-      typeof root.totalPages === "number" ? root.totalPages : 1,
+    totalPages: typeof root.totalPages === "number" ? root.totalPages : 1,
   };
 }
 
@@ -275,14 +272,15 @@ export function mapPromoListToLegacy(json: Record<string, unknown>): {
   stats: { total: number; available: number; assigned: number };
 } {
   const root = unwrapNestPagedPayload(json);
-  const items = (root.items as
-    | {
-        id?: string;
-        code?: string;
-        status?: string;
-        assignedToName?: string | null;
-      }[]
-    | undefined) ?? [];
+  const items =
+    (root.items as
+      | {
+          id?: string;
+          code?: string;
+          status?: string;
+          assignedToName?: string | null;
+        }[]
+      | undefined) ?? [];
   const codes = items.map((p) => ({
     id: String(p.id ?? ""),
     code: String(p.code ?? ""),
@@ -293,8 +291,7 @@ export function mapPromoListToLegacy(json: Record<string, unknown>): {
         : null,
   }));
   const assigned = codes.filter((c) => c.status === "assigned").length;
-  const totalList =
-    typeof root.total === "number" ? root.total : codes.length;
+  const totalList = typeof root.total === "number" ? root.total : codes.length;
   return {
     codes,
     stats: {

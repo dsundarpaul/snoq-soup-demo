@@ -48,7 +48,14 @@ Thumbs.db
 .eslintcache
 .prettiercache
 
+# Serwist
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/swe-worker*
+
 # Temporary files
 tmp/
 temp/
 *.tmp
+
+/graphify-out/

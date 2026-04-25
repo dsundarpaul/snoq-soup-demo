@@ -25,6 +25,7 @@ export class ScannerService {
 
   async validateToken(token: string): Promise<ScannerValidationDto> {
     if (!token || token.length < 32) {
+      console.log("fail 1");
       return {
         valid: false,
         merchant: null,
@@ -42,6 +43,7 @@ export class ScannerService {
     });
 
     if (!merchant) {
+      console.log("fail 2");
       return {
         valid: false,
         merchant: null,

@@ -375,7 +375,9 @@ describe("Authentication E2E Tests", () => {
       expect(secondLoginRes.body.user.deviceId).toBe(deviceId);
 
       const r1 = refreshTokenFromSetCookie(loginRes.headers["set-cookie"]);
-      const r2 = refreshTokenFromSetCookie(secondLoginRes.headers["set-cookie"]);
+      const r2 = refreshTokenFromSetCookie(
+        secondLoginRes.headers["set-cookie"],
+      );
       expect(r2).not.toBe(r1);
     });
 
@@ -417,7 +419,9 @@ describe("Authentication E2E Tests", () => {
         .expect(200);
 
       expect(loginRes.body.user.email).toBe(email.toLowerCase());
-      expect(accessTokenFromSetCookie(loginRes.headers["set-cookie"])).toBeDefined();
+      expect(
+        accessTokenFromSetCookie(loginRes.headers["set-cookie"]),
+      ).toBeDefined();
     });
 
     it("should prevent duplicate device registration", async () => {
@@ -515,8 +519,12 @@ describe("Authentication E2E Tests", () => {
       expect(loginBody.user.type).toBe("admin");
       expect(loginBody.user.email).toBe(email.toLowerCase());
       expect(loginBody.user.name).toBe(name);
-      expect(accessTokenFromSetCookie(loginRes.headers["set-cookie"])).toBeDefined();
-      expect(refreshTokenFromSetCookie(loginRes.headers["set-cookie"])).toBeDefined();
+      expect(
+        accessTokenFromSetCookie(loginRes.headers["set-cookie"]),
+      ).toBeDefined();
+      expect(
+        refreshTokenFromSetCookie(loginRes.headers["set-cookie"]),
+      ).toBeDefined();
     });
 
     it("should prevent creating multiple admins", async () => {
@@ -838,19 +846,13 @@ describe("Authentication E2E Tests", () => {
       // All existing refresh tokens should be revoked
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .set(
-          "Cookie",
-          cookieHeaderFromSetCookie(login1.headers["set-cookie"]),
-        )
+        .set("Cookie", cookieHeaderFromSetCookie(login1.headers["set-cookie"]))
         .send({})
         .expect(401);
 
       await request(app.getHttpServer())
         .post("/api/v1/auth/refresh")
-        .set(
-          "Cookie",
-          cookieHeaderFromSetCookie(login2.headers["set-cookie"]),
-        )
+        .set("Cookie", cookieHeaderFromSetCookie(login2.headers["set-cookie"]))
         .send({})
         .expect(401);
     });

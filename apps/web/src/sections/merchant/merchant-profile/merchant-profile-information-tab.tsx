@@ -25,13 +25,13 @@ import {
 } from "lucide-react";
 import type { Merchant } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
-import { APP_NAME } from "@/lib/app-brand";
 import { apiFetchMaybeRetry, throwIfResNotOk } from "@/lib/api-client";
 import {
   merchantQueryKeys,
   useMerchantProfileMutation,
 } from "@/hooks/api/merchant/use-merchant";
 import { publicUrls } from "@/lib/app-config";
+import { APP_NAME } from "@/lib/app-brand";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
 import {

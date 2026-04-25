@@ -7,11 +7,11 @@ import { useLanguage } from "@/contexts/language-context";
 import { VoucherDisplay } from "@/components/voucher-display";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Trophy, Home, ArrowLeft } from "lucide-react";
+import { Loader2, AlertCircle, Home, ArrowLeft } from "lucide-react";
 import type { Voucher, Drop } from "@shared/schema";
 import { useVoucherByMagicTokenQuery } from "@/hooks/api/voucher/use-voucher";
 import { mapVoucherMagicDetailToView } from "@/lib/nest-mappers";
-import { APP_NAME } from "@/lib/app-brand";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 interface VoucherData {
   voucher: Voucher;
@@ -100,8 +100,14 @@ export default function VoucherViewPage() {
       </div>
       <div className="max-w-md mx-auto mb-6">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/30">
-            <Trophy className="w-8 h-8 text-teal" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <img
+              src={appLogo.src}
+              alt={APP_NAME}
+              width={appLogo.width}
+              height={appLogo.height}
+              className="h-12 w-auto max-w-[min(240px,80vw)] object-contain"
+            />
           </div>
           <h1 className="text-2xl font-bold text-foreground">{APP_NAME}</h1>
           <p className="text-muted-foreground mt-1">

@@ -32,11 +32,6 @@ export class S3Controller {
   async getSignedUrl(
     @Body() dto: GetSignedUrlDto,
   ): Promise<SignedUrlResponseDto> {
-    return this.s3Service.generateSignedUrl(
-      dto.namespace,
-      dto.fileName,
-      dto.contentType,
-      dto.size,
-    );
+    return this.s3Service.generateSignedUrl(dto);
   }
 }

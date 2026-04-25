@@ -1,6 +1,9 @@
 import type { StaticImageData } from "next/image";
-import appLogoImg from "@/assets/images/logo.png";
+import logo from "@/assets/images/logo.png";
 
-export const APP_NAME = "Scavly" as const;
+export const APP_NAME = "Scavly";
 
-export const appLogo: StaticImageData = appLogoImg;
+export const APP_DESCRIPTION =
+  "Hunt, claim, and redeem rewards at real locations near you.";
+
+export const appLogo: StaticImageData = logo;

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trophy, Lock, Mail } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/contexts/language-context";
@@ -38,7 +38,7 @@ import {
 } from "@/hooks/api/merchant/use-merchant";
 import { useRedirectIfMerchantLoggedIn } from "@/hooks/use-redirect-if-merchant-logged-in";
 import { clearSessionsExcept } from "@/lib/auth-session";
-import { APP_NAME } from "@/lib/app-brand";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 export default function MerchantLoginPage() {
   useRedirectIfMerchantLoggedIn();
@@ -114,12 +114,16 @@ export default function MerchantLoginPage() {
       </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/30">
-            <Trophy className="w-10 h-10 text-teal" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <img
+              src={appLogo.src}
+              alt={APP_NAME}
+              width={appLogo.width}
+              height={appLogo.height}
+              className="h-16 w-auto max-w-[min(280px,85vw)] object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {APP_NAME}
-          </h1>
+          {/* <h1 className="text-3xl font-bold text-foreground">{APP_NAME}</h1> */}
           <p className="text-muted-foreground mt-2">{t("merchant.portal")}</p>
         </div>
 

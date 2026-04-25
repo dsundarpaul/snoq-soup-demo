@@ -28,7 +28,10 @@ import {
 } from "@/lib/nest-mappers";
 import { useToast } from "@/hooks/use-toast";
 import type { Drop } from "@shared/schema";
-import type { AnalyticsData, DashboardStats } from "@/sections/merchant/merchant-dashboard.types";
+import type {
+  AnalyticsData,
+  DashboardStats,
+} from "@/sections/merchant/merchant-dashboard.types";
 import { DatePickerField } from "@/components/date-picker-field";
 import { MerchantDashboardHeader } from "@/sections/merchant/merchant-dashboard-header";
 import { MerchantScannerFab } from "@/sections/merchant/merchant-scanner-fab";
@@ -314,7 +317,8 @@ export default function MerchantDashboardPage() {
       if (text.length > MAX_PROMO_CODES_TEXT_LENGTH) {
         toast({
           title: "Import Failed",
-          description: "CSV content is too large. Please upload a smaller file.",
+          description:
+            "CSV content is too large. Please upload a smaller file.",
           variant: "destructive",
         });
         return;

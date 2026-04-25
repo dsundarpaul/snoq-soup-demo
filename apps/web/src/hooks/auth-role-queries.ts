@@ -16,7 +16,6 @@ export async function fetchMerchantMeCredential() {
   const path = CREDENTIAL_PATH.merchant;
   const res = await apiFetchMaybeRetry("GET", path, { auth: "merchant" });
   if (res.status === 401) return null;
-  if (res.status === 403) return null;
   await throwIfResNotOk(res, path, "merchant");
   const json = (await res.json()) as Record<string, unknown>;
   return mapMerchantMeToLegacy(json);

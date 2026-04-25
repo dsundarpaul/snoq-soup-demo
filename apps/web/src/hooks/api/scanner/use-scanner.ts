@@ -6,7 +6,6 @@ import {
   useQuery,
   type UseMutationOptions,
 } from "@tanstack/react-query";
-import { API_ORIGIN } from "@/lib/app-config";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
 import type {
@@ -79,18 +78,17 @@ export function useStaffScannerAssignments(): UseStaffScannerAssignmentsResult {
 }
 
 export const scannerQueryKeys = {
-  validate: (token: string) => ["/api/v1/scanner", token, "validate"] as const,
+  validate: (token: string) =>
+    ["/api/v1/scanner/validate", token] as const,
 };
 
 export function useStaffScannerValidateQuery(token: string) {
   return useQuery({
     queryKey: scannerQueryKeys.validate(token),
     queryFn: async () => {
-      const res = await fetch(
-        `${API_ORIGIN}/api/v1/scanner/${encodeURIComponent(token)}/validate`,
-        { credentials: "omit" }
-      );
-      if (!res.ok) throw new Error("Invalid scanner");
+      const res = await apiRequest("POST", "/api/v1/scanner/validate", {
+        token,
+      });
       const data = (await res.json()) as {
         valid: boolean;
         merchant?: { businessName?: string } | null;
@@ -118,11 +116,11 @@ export function useStaffScannerRedeemMutation(
   return useMutation({
     ...options,
     mutationFn: async (data: { voucherId: string; magicToken: string }) => {
-      const response = await apiRequest(
-        "POST",
-        `/api/v1/scanner/${encodeURIComponent(token)}/redeem`,
-        data
-      );
+      const response = await apiRequest("POST", "/api/v1/scanner/redeem", {
+        scannerToken: token,
+        voucherId: data.voucherId,
+        magicToken: data.magicToken,
+      });
       return response.json() as Promise<Record<string, unknown>>;
     },
     onSuccess: (...args) => {

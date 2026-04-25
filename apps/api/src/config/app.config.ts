@@ -6,48 +6,34 @@ const envDir = process.cwd();
 dotenv.config({ path: path.join(envDir, ".env") });
 dotenv.config({ path: path.join(envDir, ".env.local"), override: true });
 
-function inferDigitalOceanSpacesApiHost(publicURL: string): string {
-  const raw = publicURL?.trim();
-  if (!raw) return "";
-  try {
-    const hostname = new URL(
-      raw.includes("://") ? raw : `https://${raw}`,
-    ).hostname.toLowerCase();
-    const m =
-      /^[a-z0-9][a-z0-9-]*\.([a-z0-9-]+)\.(?:cdn\.)?digitaloceanspaces\.com$/.exec(
-        hostname,
-      );
-    if (m) return `${m[1]}.digitaloceanspaces.com`;
-  } catch {
-    return "";
-  }
-  return "";
-}
-
 const envSchema = z
   .object({
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
     PORT: z.coerce.number().default(3001),
-    FRONTEND_URL: z.string().default(""),
+    FRONTEND_URL: z.string(),
     CORS_ORIGIN: z.string().optional(),
-    JWT_SECRET: z.string().default(""),
-    JWT_EXPIRY: z.string().default("24h"),
-    REFRESH_TOKEN_EXPIRY: z.string().default("7d"),
-    MONGODB_URI: z.string().default(""),
-    S3_HOST: z.string().default(""),
-    S3_ACCESS_KEY: z.string().default(""),
-    S3_SECRET_KEY: z.string().default(""),
-    S3_DEFAULT_BUCKET: z.string().default("souqsnap-uploads"),
-    S3_SUB_PATH: z.string().default("uploads"),
-    S3_PUBLIC_URL: z.string().default(""),
-    S3_REGION: z.string().default("us-east-1"),
-    SMTP_HOST: z.string().default(""),
+    JWT_SECRET: z.string().optional(),
+    JWT_EXPIRY: z.string().default("1d"),
+    REFRESH_TOKEN_EXPIRY: z.string().optional(),
+    MONGODB_URI: z.string(),
+    S3_HOST: z.string(),
+    S3_ACCESS_KEY: z.string(),
+    S3_SECRET_KEY: z.string(),
+    S3_DEFAULT_BUCKET: z.string(),
+    S3_SUB_PATH: z.string().optional(),
+    S3_PUBLIC_URL: z.string(),
+    S3_REGION: z.string(),
+    SMTP_HOST: z.string(),
     SMTP_PORT: z.coerce.number().default(587),
-    SMTP_USER: z.string().default(""),
-    SMTP_PASS: z.string().default(""),
-    SMTP_FROM: z.string().default("noreply@souqsnap.com"),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z
+      .string()
+      .optional()
+      .pipe(z.string().min(1, "SMTP_FROM is required when set"))
+      .default("noreply@souqsnap.com"),
     TWILIO_ACCOUNT_SID: z.string().optional(),
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_PHONE: z.string().optional(),
@@ -61,17 +47,6 @@ const envSchema = z
       .transform((v) => v === "true" || v === "1"),
   })
   .transform((env) => {
-    const publicURL = env.S3_PUBLIC_URL?.trim() ?? "";
-    const host =
-      env.S3_HOST?.trim() ||
-      inferDigitalOceanSpacesApiHost(publicURL) ||
-      "";
-    let region = env.S3_REGION?.trim() || "us-east-1";
-    if (!env.S3_REGION?.trim() && host.endsWith(".digitaloceanspaces.com")) {
-      const m = /^([a-z0-9-]+)\.digitaloceanspaces\.com$/i.exec(host);
-      const fromHost = m?.[1];
-      if (fromHost) region = fromHost;
-    }
     return {
       NODE_ENV: env.NODE_ENV,
       PORT: env.PORT,
@@ -87,13 +62,13 @@ const envSchema = z
       ENABLE_EMAIL: env.ENABLE_EMAIL,
       ENABLE_SMS: env.ENABLE_SMS,
       s3: {
-        host,
-        accessKey: env.S3_ACCESS_KEY?.trim() ?? "",
-        secretKey: env.S3_SECRET_KEY?.trim() ?? "",
+        host: env.S3_HOST,
+        accessKey: env.S3_ACCESS_KEY,
+        secretKey: env.S3_SECRET_KEY,
         defaultBucket: env.S3_DEFAULT_BUCKET,
         subPath: env.S3_SUB_PATH,
-        publicURL,
-        region,
+        publicURL: env.S3_PUBLIC_URL,
+        region: env.S3_REGION,
       },
       jwt: {
         secret: env.JWT_SECRET,
@@ -130,32 +105,34 @@ const envSchema = z
     {
       message:
         "JWT_SECRET and MONGODB_URI are required in production environment",
-    },
+    }
   )
-  .refine(
-    (cfg) => {
-      if (cfg.NODE_ENV !== "production") return true;
-      const raw =
-        cfg.s3.publicURL?.trim() ||
-        (cfg.s3.host?.trim() ? `https://${cfg.s3.host.trim()}` : "");
-      if (!raw) return true;
-      try {
-        const url = new URL(
-          raw.includes("://") ? raw : `https://${raw.replace(/^\/\//, "")}`,
-        );
-        if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-          return false;
-        }
-      } catch {
-        return true;
-      }
-      return true;
-    },
-    {
-      message:
-        "S3_PUBLIC_URL or S3_HOST must not resolve to localhost in production environment",
-    },
-  );
+  .superRefine((cfg, ctx) => {
+    if (cfg.NODE_ENV !== "production") return;
+    const raw =
+      cfg.s3.publicURL || (cfg.s3.host ? `https://${cfg.s3.host}` : "");
+    if (!raw) return;
+    let url: URL;
+    try {
+      url = new URL(
+        raw.includes("://") ? raw : `https://${raw.replace(/^\/\//, "")}`
+      );
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "S3_PUBLIC_URL or S3_HOST must form a valid URL in production when set",
+      });
+      return;
+    }
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "S3_PUBLIC_URL or S3_HOST must not resolve to localhost in production environment",
+      });
+    }
+  });
 
 const parsed = envSchema.safeParse(process.env);
 

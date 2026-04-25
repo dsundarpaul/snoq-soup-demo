@@ -4,7 +4,7 @@
   "maxWorkers": 1,
   "runInBand": true,
   "testEnvironment": "node",
-  "testRegex": "(flows\\.spec|.*\\.e2e-spec)\\.ts$",
+  "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },

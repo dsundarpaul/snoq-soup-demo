@@ -71,7 +71,7 @@ const nullBytes = () => "\x00\x00\x00";
 const pathTraversal = () => "../../../etc/passwd";
 const commandInjection = () => "$(whoami)`whoami`;whoami";
 
-describe("SouqSnap E2E Security & Edge Cases", () => {
+describe("Scavly E2E Security & Edge Cases", () => {
   let app: INestApplication;
   let mongoServer: MongoMemoryReplSet;
   let jwtService: JwtService;
@@ -312,7 +312,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
         });
 
       if (merchantRes.status === 201) {
-        const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+        const token = accessTokenFromSetCookie(
+          merchantRes.headers["set-cookie"],
+        )!;
 
         const response = await request(app.getHttpServer())
           .post("/api/v1/merchants/me/drops")
@@ -345,7 +347,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
         .send({ deviceId: `device-${Date.now()}` });
 
       if (deviceRes.status === 200) {
-        const token = accessTokenFromSetCookie(deviceRes.headers["set-cookie"])!;
+        const token = accessTokenFromSetCookie(
+          deviceRes.headers["set-cookie"],
+        )!;
 
         const response = await request(app.getHttpServer())
           .patch("/api/v1/hunters/me/nickname")
@@ -401,7 +405,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
         });
 
       if (merchantRes.status === 201) {
-        const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+        const token = accessTokenFromSetCookie(
+          merchantRes.headers["set-cookie"],
+        )!;
 
         const response = await request(app.getHttpServer())
           .post("/api/v1/merchants/me/drops")
@@ -644,7 +650,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
         return; // Skip if setup failed
       }
 
-      const merchantToken = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const merchantToken = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const dropRes = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -708,7 +716,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const merchantToken = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const merchantToken = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const dropRes = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -904,7 +914,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const response = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -968,7 +980,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
 
@@ -1005,7 +1019,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
       const pastDate = new Date("2020-01-01");
 
       const response = await request(app.getHttpServer())
@@ -1041,7 +1057,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
       const now = new Date();
       const yesterday = new Date(now.getTime() - 86400000);
 
@@ -1077,7 +1095,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const response = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -1113,7 +1133,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const dropRes = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -1366,7 +1388,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (hunterRes.status !== 200) return;
 
-      const hunterToken = accessTokenFromSetCookie(hunterRes.headers["set-cookie"])!;
+      const hunterToken = accessTokenFromSetCookie(
+        hunterRes.headers["set-cookie"],
+      )!;
 
       const endpoints = [
         "/api/v1/admin/stats",
@@ -1469,7 +1493,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const dropRes = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")
@@ -1510,7 +1536,9 @@ describe("SouqSnap E2E Security & Edge Cases", () => {
 
       if (merchantRes.status !== 201) return;
 
-      const token = accessTokenFromSetCookie(merchantRes.headers["set-cookie"])!;
+      const token = accessTokenFromSetCookie(
+        merchantRes.headers["set-cookie"],
+      )!;
 
       const dropRes = await request(app.getHttpServer())
         .post("/api/v1/merchants/me/drops")

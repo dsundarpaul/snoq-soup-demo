@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AppProviders } from "@/providers/app-providers";
 import { WebVitalsReporter } from "./web-vitals-reporter";
-import { APP_NAME } from "@/lib/app-brand";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/app-brand";
 
 const inter = localFont({
   src: "../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
@@ -13,16 +13,29 @@ const inter = localFont({
 });
 
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: "Hunt, claim, and redeem rewards near you.",
-  openGraph: {
+  applicationName: APP_NAME,
+  title: {
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: APP_DESCRIPTION,
+  appleWebApp: {
+    capable: true,
     title: APP_NAME,
+  },
+  openGraph: {
+    type: "website",
     siteName: APP_NAME,
-    description: "Hunt, claim, and redeem rewards near you.",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
   },
   twitter: {
+    card: "summary_large_image",
     title: APP_NAME,
-    card: "summary",
+    description: APP_DESCRIPTION,
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DirectionProvider } from "@radix-ui/react-direction";
 import en from "@/locales/en";
 import ar from "@/locales/ar";
 import type { TranslationKey } from "@/locales/en";
@@ -51,9 +50,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, isRTL }}>
-      <DirectionProvider dir={isRTL ? "rtl" : "ltr"}>
-        {children}
-      </DirectionProvider>
+      {children}
     </LanguageContext.Provider>
   );
 }

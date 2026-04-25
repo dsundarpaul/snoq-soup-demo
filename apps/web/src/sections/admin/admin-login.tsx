@@ -21,7 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import {
   adminLoginSchema,
@@ -29,6 +29,7 @@ import {
 } from "@/hooks/api/admin/admin.api-types";
 import { useAdminLoginMutation } from "@/hooks/api/admin/use-admin";
 import { useRedirectIfAdminLoggedIn } from "@/hooks/use-redirect-if-admin-logged-in";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 export default function AdminLoginPage() {
   useRedirectIfAdminLoggedIn();
@@ -68,8 +69,14 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Shield className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <img
+              src={appLogo.src}
+              alt={APP_NAME}
+              width={appLogo.width}
+              height={appLogo.height}
+              className="h-14 w-auto max-w-[220px] object-contain"
+            />
           </div>
           <CardTitle className="text-2xl">Platform Admin</CardTitle>
           <CardDescription>

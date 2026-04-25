@@ -427,32 +427,20 @@ export class AdminController {
     required: false,
   })
   @ApiQuery({ name: "page", required: false, type: Number })
-  @ApiQuery({
-    name: "limit",
-    required: false,
-    type: Number,
-    description: "Items per page (capped on server)",
-  })
-  @ApiQuery({
-    name: "search",
-    required: false,
-    type: String,
-    description: "Case-insensitive substring match on code",
-  })
+  @ApiQuery({ name: "limit", required: false, type: Number })
   async adminListDropCodes(
     @Param("dropId") dropId: string,
     @Query("status") status?: PromoCodeStatus,
     @Query("page", new DefaultValuePipe(1), ParseIntPipe) page = 1,
     @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit = 20,
-    @Query("search") search?: string,
-  ): Promise<PromoCodeListDto> {
-    return this.promoCodesService.findByDropAsAdmin(
+  ) {
+    const result = await this.promoCodesService.findByDrop(
       dropId,
       status,
       page,
       limit,
-      search,
     );
+    return result;
   }
 
   @Post("drops/:dropId/codes")
@@ -466,7 +454,7 @@ export class AdminController {
     @Param("dropId") dropId: string,
     @Body() dto: BulkCreatePromoCodesDto,
   ): Promise<PromoCodeResponseDto[]> {
-    return this.promoCodesService.bulkCreateAsAdmin(dropId, dto);
+    return this.promoCodesService.bulkCreate(dropId, dto, { scope: "admin" });
   }
 
   @Delete("drops/:id")

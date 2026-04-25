@@ -113,11 +113,9 @@ export default function MerchantStorePage() {
                     alt={APP_NAME}
                     width={appLogo.width}
                     height={appLogo.height}
-                    className="w-9 h-9 rounded-lg object-contain"
+                    className="h-9 w-auto sm:h-10 max-w-[min(180px,45vw)] object-contain"
                   />
-                  <span className="font-bold text-lg">
-                    {APP_NAME}
-                  </span>
+                  <span className="font-bold text-lg">{APP_NAME}</span>
                 </div>
               </Link>
               <div className="flex items-center gap-1">
@@ -155,18 +153,16 @@ export default function MerchantStorePage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/">
-              <div className="flex items-center gap-2 cursor-pointer">
-                <img
-                  src={appLogo.src}
-                  alt={APP_NAME}
-                  width={appLogo.width}
-                  height={appLogo.height}
-                  className="w-9 h-9 rounded-lg object-contain"
-                />
-                <span className="font-bold text-lg">
-                  {APP_NAME}
-                </span>
-              </div>
+                <div className="flex items-center gap-2 cursor-pointer">
+                  <img
+                    src={appLogo.src}
+                    alt={APP_NAME}
+                    width={appLogo.width}
+                    height={appLogo.height}
+                    className="h-9 w-auto sm:h-10 max-w-[min(180px,45vw)] object-contain"
+                  />
+                  <span className="font-bold text-lg">{APP_NAME}</span>
+                </div>
             </Link>
             <div className="flex items-center gap-1">
               <Button

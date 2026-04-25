@@ -14,21 +14,6 @@ export function getPublicSiteUrl(): string {
   return trimTrailingSlash(baseUrl);
 }
 
-export function getPublicSiteHostnameOrFallback(
-  fallback = "scavly.com"
-): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
-  if (!baseUrl) return fallback;
-  try {
-    const withProto = /^https?:\/\//i.test(baseUrl)
-      ? baseUrl
-      : `https://${baseUrl}`;
-    return new URL(withProto).hostname;
-  } catch {
-    return fallback;
-  }
-}
-
 export function publicPageUrl(path: string): string {
   const base = getPublicSiteUrl();
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -44,3 +29,20 @@ export const publicUrls = {
   voucher: (magicToken: string) =>
     publicPageUrl(`/voucher/${encodeURIComponent(magicToken)}`),
 } as const;
+
+export function getPublicSiteHostnameOrFallback(
+  fallback = "scavly.com",
+): string {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  if (!baseUrl) {
+    return fallback;
+  }
+  try {
+    const { hostname } = new URL(
+      baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`,
+    );
+    return hostname || fallback;
+  } catch {
+    return fallback;
+  }
+}

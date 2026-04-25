@@ -6,11 +6,7 @@ import { AuthModule } from "../auth/auth.module";
 import { PromoCodesModule } from "../promo-codes/promo-codes.module";
 
 @Module({
-  imports: [
-    AuthModule,
-    DropsModule,
-    PromoCodesModule,
-  ],
+  imports: [AuthModule, DropsModule, PromoCodesModule],
   controllers: [AdminController],
   providers: [AdminService],
   exports: [AdminService],

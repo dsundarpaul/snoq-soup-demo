@@ -10,12 +10,13 @@ import {
   useAdminAnalyticsQuery,
   useAdminLogoutMutation,
 } from "@/hooks/api/admin/use-admin";
-import { Shield, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { AdminOverviewTab } from "@/sections/admin/admin-overview-tab";
 import { AdminMerchantsTab } from "@/sections/admin/admin-merchants-tab";
 import { AdminDropsTab } from "@/sections/admin/admin-drops-tab";
 import { AdminUsersTab } from "@/sections/admin/admin-users-tab";
 import { AdminAnalyticsTab } from "@/sections/admin/admin-analytics-tab";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -52,12 +53,16 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold">Platform Admin</h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src={appLogo.src}
+              alt={APP_NAME}
+              width={appLogo.width}
+              height={appLogo.height}
+              className="h-10 w-auto sm:h-11 max-w-[min(200px,45vw)] object-contain shrink-0"
+            />
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold leading-tight">Platform Admin</h1>
               <p className="text-xs text-muted-foreground">
                 {sessionQuery.data.admin.email}
               </p>

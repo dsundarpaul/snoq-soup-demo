@@ -173,7 +173,7 @@ const ar = {
   "voucher.countryCode": "رمز الدولة",
   "voucher.phoneNational": "رقم الجوال",
   "voucher.phoneInvalid": "أدخل رقماً صالحاً لهذه الدولة",
-  "voucher.emailSendSuccess": "تم حفظ بريدك الإلكتروني لهذه القسيمة.",
+  "voucher.emailSendSuccess": "تم إرسال القسيمة إلى بريدك الإلكتروني.",
   "voucher.emailSendError": "تعذر حفظ بريدك الإلكتروني. حاول مرة أخرى.",
   "voucher.saveViaWhatsApp": "حفظ عبر واتساب",
   "voucher.timeRemaining": "الوقت المتبقي",
@@ -589,7 +589,8 @@ const ar = {
   "merchant.form.availability.unlimited": "غير محدود",
   "merchant.form.availability.captureLimit": "حد الاقتناص",
   "merchant.form.availability.hintUnlimited": "لا حد لعدد من يمكنهم الاقتناص",
-  "merchant.form.availability.hintCapped": "عدد محدود من المستخدمين يمكنهم اقتناص هذا الكنز",
+  "merchant.form.availability.hintCapped":
+    "عدد محدود من المستخدمين يمكنهم اقتناص هذا الكنز",
   "merchant.form.availability.claimedIncreaseOnly":
     "مُقْتَنَص: {count}. يمكنك فقط رفع حد الاقتناص أو التبديل إلى غير محدود.",
   "merchant.form.availability.cannotSwitchToLimit":

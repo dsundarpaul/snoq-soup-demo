@@ -1,13 +1,13 @@
 import { IsOptional, IsString, MinLength } from "class-validator";
-import { ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class RefreshTokenDto {
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: "eyJhbGciOiJIUzI1NiIs...",
     description: "Refresh token (optional when sent via httpOnly cookie)",
   })
   @IsOptional()
   @IsString()
   @MinLength(1)
-  refreshToken?: string;
+  refreshToken!: string;
 }

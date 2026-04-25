@@ -121,6 +121,10 @@ export class MerchantsService {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
+    console.log(hashedToken);
+
+    console.log("p;-", plainToken);
+
     const merchant = await this.database.merchants
       .findOneAndUpdate(
         { _id: id, deletedAt: null },
@@ -130,7 +134,7 @@ export class MerchantsService {
             "scannerToken.createdAt": expiresAt,
           },
         },
-        { new: true },
+        { new: true }
       )
       .lean();
 
@@ -138,6 +142,7 @@ export class MerchantsService {
       throw new NotFoundException("Merchant not found");
     }
 
+    console.log("p2;-", plainToken);
     // Return plaintext token - merchant sees it once
     return {
       token: plainToken,
@@ -328,7 +333,6 @@ export class MerchantsService {
 
   async getStats(merchantId: string): Promise<MerchantStatsResponseDto> {
     const merchantObjectId = new Types.ObjectId(merchantId);
-    const now = new Date();
 
     const [dropsResult, vouchersResult] = await Promise.all([
       this.database.drops.aggregate([
@@ -345,14 +349,8 @@ export class MerchantsService {
                       { $eq: ["$active", true] },
                       {
                         $or: [
-                          { $eq: [{ $ifNull: ["$schedule.end", null] }, null] },
-                          { $gte: ["$schedule.end", now] },
-                        ],
-                      },
-                      {
-                        $or: [
-                          { $eq: [{ $ifNull: ["$schedule.start", null] }, null] },
-                          { $lte: ["$schedule.start", now] },
+                          { $eq: ["$schedule.end", null] },
+                          { $gte: ["$schedule.end", new Date()] },
                         ],
                       },
                     ],
@@ -406,7 +404,6 @@ export class MerchantsService {
     merchantId: string,
   ): Promise<MerchantAnalyticsResponseDto> {
     const merchantObjectId = new Types.ObjectId(merchantId);
-    const now = new Date();
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -425,14 +422,8 @@ export class MerchantsService {
                     { $eq: ["$active", true] },
                     {
                       $or: [
-                        { $eq: [{ $ifNull: ["$schedule.end", null] }, null] },
-                        { $gte: ["$schedule.end", now] },
-                      ],
-                    },
-                    {
-                      $or: [
-                        { $eq: [{ $ifNull: ["$schedule.start", null] }, null] },
-                        { $lte: ["$schedule.start", now] },
+                        { $eq: ["$schedule.end", null] },
+                        { $gte: ["$schedule.end", new Date()] },
                       ],
                     },
                   ],
@@ -448,7 +439,7 @@ export class MerchantsService {
                 {
                   $and: [
                     { $ne: ["$schedule.end", null] },
-                    { $lt: ["$schedule.end", now] },
+                    { $lt: ["$schedule.end", new Date()] },
                   ],
                 },
                 1,

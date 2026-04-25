@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Download, Smartphone } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
-import { APP_NAME } from "@/lib/app-brand";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -69,10 +69,14 @@ export function PWAInstallPrompt() {
         </button>
 
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-teal flex items-center justify-center flex-shrink-0 shadow-lg">
-            <svg className="w-8 h-8 text-teal-foreground" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5 3h14l-1.5 6H6.5L5 3zm2.5 8h9l-1 4H8.5l-1-4zm2 6h5l-.5 2h-4l-.5-2z"/>
-            </svg>
+          <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-white/10 p-1 shadow-lg ring-1 ring-white/20">
+            <img
+              src={appLogo.src}
+              alt=""
+              width={appLogo.width}
+              height={appLogo.height}
+              className="h-full w-full object-contain"
+            />
           </div>
 
           <div className="flex-1 min-w-0">

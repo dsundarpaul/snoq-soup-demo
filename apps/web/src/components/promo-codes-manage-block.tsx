@@ -154,7 +154,7 @@ export function PromoCodesManageBlock({
               <label
                 className={cn(
                   buttonVariants({ variant: "outline" }),
-                  "cursor-pointer",
+                  "cursor-pointer"
                 )}
                 data-testid={ids.importCsv}
               >

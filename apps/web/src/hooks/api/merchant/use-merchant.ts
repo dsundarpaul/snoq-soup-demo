@@ -42,9 +42,7 @@ export function clearMerchantSessionQueries(): void {
   queryClient.removeQueries({
     predicate: (q) => {
       const k0 = q.queryKey[0];
-      return (
-        typeof k0 === "string" && k0.includes("/api/v1/merchants/")
-      );
+      return typeof k0 === "string" && k0.includes("/api/v1/merchants/");
     },
   });
 }
@@ -57,14 +55,7 @@ export const merchantQueryKeys = {
     limit: number,
     search: string,
     status: MerchantDropsListStatus
-  ) =>
-    [
-      ...merchantQueryKeys.drops,
-      page,
-      limit,
-      search,
-      status,
-    ] as const,
+  ) => [...merchantQueryKeys.drops, page, limit, search, status] as const,
   stats: ["/api/v1/merchants/me/stats"] as const,
   analytics: (from: string, to: string) =>
     ["/api/v1/merchants/me/analytics", from, to] as const,
@@ -77,7 +68,7 @@ export const merchantQueryKeys = {
     page: number,
     limit: number,
     status: MerchantPromoCodesListStatus,
-    search: string,
+    search: string
   ) =>
     [
       "/api/v1/merchants/me/drops",
@@ -189,12 +180,9 @@ export function useMerchantForgotPasswordMutation(
   return useMutation({
     ...options,
     mutationFn: async (data: { email: string }) => {
-      await apiRequest(
-        "POST",
-        "/api/v1/auth/merchant/forgot-password",
-        data,
-        { auth: undefined }
-      );
+      await apiRequest("POST", "/api/v1/auth/merchant/forgot-password", data, {
+        auth: undefined,
+      });
     },
   });
 }
@@ -289,7 +277,7 @@ export function useMerchantDropCodesListQuery(params: {
             page,
             limit,
             status,
-            searchTrimmed,
+            searchTrimmed
           )
         : ["merchant-drop-codes-list-disabled"],
     queryFn: async () => {

@@ -29,7 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { APP_NAME } from "@/lib/app-brand";
 import { getPublicSiteHostnameOrFallback } from "@/lib/app-config";
 
-const CTA_HOST = getPublicSiteHostnameOrFallback();
+const PITCH_CTA_HOST = getPublicSiteHostnameOrFallback();
 
 function PhoneMockup({
   children,
@@ -335,7 +335,8 @@ const slides = [
     type: "solution",
     title: "The Solution",
     headline: "Gamified AR Treasure Hunts",
-    description: `${APP_NAME} turns finding deals into an exciting real-world game. Users hunt for virtual rewards at real locations, then redeem them in-store.`,
+    description:
+      "Scavly turns finding deals into an exciting real-world game. Users hunt for virtual rewards at real locations, then redeem them in-store.",
   },
   {
     id: 4,
@@ -472,7 +473,7 @@ const slides = [
     type: "closing",
     title: "Transform Retail",
     tagline: "Where Every Location Becomes an Opportunity",
-    cta: CTA_HOST,
+    cta: PITCH_CTA_HOST,
   },
 ];
 

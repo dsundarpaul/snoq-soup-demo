@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { type SubmitErrorHandler } from "react-hook-form";
 import {
@@ -49,8 +49,8 @@ import {
 import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-preview-dialog";
 import { adminQueryKeys } from "@/hooks/api/admin/use-admin";
 import { useMerchantMeQuery } from "@/hooks/api/merchant/use-merchant";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminMerchantAutocomplete } from "@/sections/merchant/admin-merchant-autocomplete";
 import { useLanguage } from "@/contexts/language-context";
 
 function invalidateDropRelatedQueries(): void {
@@ -142,6 +142,7 @@ export function MerchantDropSheet({
   const { toast } = useToast();
   const { t } = useLanguage();
   const isAdminMode = Boolean(adminContext);
+  const merchantSelectInputId = useId();
   const form = useMerchantDropForm();
   const [showPreview, setShowPreview] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -439,74 +440,40 @@ export function MerchantDropSheet({
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             {isAdminMode && adminContext && !editingDrop ? (
               <div className="mb-6 space-y-2">
-                <Label>Merchant</Label>
                 {adminContext.selectedMerchantId ? (
-                  <div className="flex items-center gap-2 rounded-md bg-muted p-2">
-                    <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1 text-sm font-medium">
-                      {
-                        adminContext.merchants.find(
-                          (m) => m.id === adminContext.selectedMerchantId
-                        )?.businessName
-                      }
-                    </span>
-                    <button
-                      type="button"
-                      className="select-none text-xs text-primary hover:underline"
-                      onClick={() => {
-                        adminContext.onSelectedMerchantIdChange("");
-                        adminContext.onMerchantSearchChange("");
-                      }}
-                    >
-                      Change
-                    </button>
-                  </div>
+                  <>
+                    <Label>Merchant</Label>
+                    <div className="flex items-center gap-2 rounded-md bg-muted p-2">
+                      <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 text-sm font-medium">
+                        {
+                          adminContext.merchants.find(
+                            (m) => m.id === adminContext.selectedMerchantId
+                          )?.businessName
+                        }
+                      </span>
+                      <button
+                        type="button"
+                        className="select-none text-xs text-primary hover:underline"
+                        onClick={() => {
+                          adminContext.onSelectedMerchantIdChange("");
+                          adminContext.onMerchantSearchChange("");
+                        }}
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </>
                 ) : (
                   <>
-                    <Input
-                      placeholder="Search merchants…"
-                      value={adminContext.merchantSearch}
-                      onChange={(e) =>
-                        adminContext.onMerchantSearchChange(e.target.value)
-                      }
-                      autoComplete="off"
+                    <Label htmlFor={merchantSelectInputId}>Merchant</Label>
+                    <AdminMerchantAutocomplete
+                      inputId={merchantSelectInputId}
+                      merchants={adminContext.merchants}
+                      search={adminContext.merchantSearch}
+                      onSearchChange={adminContext.onMerchantSearchChange}
+                      onSelectMerchant={adminContext.onSelectedMerchantIdChange}
                     />
-                    <div className="max-h-40 overflow-y-auto rounded-md border">
-                      {(() => {
-                        const filtered = adminContext.merchants
-                          .filter((m) => m.emailVerified !== false)
-                          .filter(
-                            (m) =>
-                              !adminContext.merchantSearch.trim() ||
-                              m.businessName
-                                .toLowerCase()
-                                .includes(
-                                  adminContext.merchantSearch.toLowerCase()
-                                )
-                          );
-                        if (filtered.length === 0) {
-                          return (
-                            <div className="px-3 py-2 text-sm text-muted-foreground">
-                              No merchants found
-                            </div>
-                          );
-                        }
-                        return filtered.map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            className="w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent hover:text-accent-foreground"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              adminContext.onSelectedMerchantIdChange(m.id);
-                              adminContext.onMerchantSearchChange("");
-                            }}
-                          >
-                            {m.businessName}
-                          </button>
-                        ));
-                      })()}
-                    </div>
                   </>
                 )}
               </div>

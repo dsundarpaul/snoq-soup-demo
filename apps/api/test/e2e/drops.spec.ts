@@ -1,6 +1,10 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
-import { MongooseModule, getModelToken, getConnectionToken } from "@nestjs/mongoose";
+import {
+  MongooseModule,
+  getModelToken,
+  getConnectionToken,
+} from "@nestjs/mongoose";
 import { Connection } from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { startE2eMongo } from "./mongo-test-server";
@@ -141,10 +145,12 @@ describe("Drops E2E Tests", () => {
       .expect(201);
 
     const conn = app.get<Connection>(getConnectionToken());
-    await conn.collection("merchants").updateOne(
-      { email: `testmerchant${timestamp}@test.com` },
-      { $set: { emailVerified: true } },
-    );
+    await conn
+      .collection("merchants")
+      .updateOne(
+        { email: `testmerchant${timestamp}@test.com` },
+        { $set: { emailVerified: true } },
+      );
 
     const loginRes = await request(app.getHttpServer())
       .post("/api/v1/auth/merchant/login")
@@ -154,9 +160,7 @@ describe("Drops E2E Tests", () => {
       })
       .expect(200);
 
-    merchantToken = accessTokenFromSetCookie(
-      loginRes.headers["set-cookie"],
-    )!;
+    merchantToken = accessTokenFromSetCookie(loginRes.headers["set-cookie"])!;
     merchantId = merchantResponse.body.user.id;
 
     // Get admin token

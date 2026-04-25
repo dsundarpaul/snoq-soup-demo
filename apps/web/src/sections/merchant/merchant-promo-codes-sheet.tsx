@@ -298,7 +298,7 @@ export function MerchantPromoCodesSheet({
       <SheetContent
         side="right"
         className={cn(
-          "flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[min(100vw,960px)]",
+          "flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[min(100vw,760px)]",
         )}
       >
         <div className="space-y-4 border-b p-6">

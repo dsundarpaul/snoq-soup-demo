@@ -16,11 +16,6 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
-const STRIPPED_RESPONSE_HEADERS = new Set([
-  "content-encoding",
-  "content-length",
-]);
-
 const FORWARD_REQUEST_HEADERS = [
   "accept",
   "accept-language",
@@ -30,6 +25,11 @@ const FORWARD_REQUEST_HEADERS = [
   "user-agent",
   "x-device-id",
 ] as const;
+
+const STRIPPED_RESPONSE_HEADERS = new Set([
+  "content-encoding",
+  "content-length",
+]);
 
 const DEFAULT_DEV_BACKEND = "http://127.0.0.1:3001";
 
@@ -41,16 +41,14 @@ function normalizeBackendBase(input: string): string | null {
   raw = raw.replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(raw)) {
     const host = raw.split("/")[0].split(":")[0].toLowerCase();
-    const isLocal =
-      LOOPBACK_HOSTS.has(host) || host.endsWith(".local");
+    const isLocal = LOOPBACK_HOSTS.has(host) || host.endsWith(".local");
     raw = `${isLocal ? "http" : "https"}://${raw}`;
   }
   try {
     const u = new URL(raw);
-    return `${u.protocol}//${u.host}${u.pathname === "/" ? "" : u.pathname}`.replace(
-      /\/+$/,
-      ""
-    );
+    return `${u.protocol}//${u.host}${
+      u.pathname === "/" ? "" : u.pathname
+    }`.replace(/\/+$/, "");
   } catch {
     return null;
   }
@@ -73,7 +71,8 @@ function isSelfProxy(req: NextRequest, backendBase: string): boolean {
       target.hostname === self.hostname ||
       (LOOPBACK_HOSTS.has(target.hostname) &&
         LOOPBACK_HOSTS.has(self.hostname));
-    const targetPort = target.port || (target.protocol === "https:" ? "443" : "80");
+    const targetPort =
+      target.port || (target.protocol === "https:" ? "443" : "80");
     const selfPort = self.port || (self.protocol === "https:" ? "443" : "80");
     return sameHost && targetPort === selfPort;
   } catch {

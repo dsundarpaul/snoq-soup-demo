@@ -33,7 +33,7 @@
  * All other helpers in this file rely on the array form.
  */
 function normalizeSetCookie(
-  setCookie: string | string[] | undefined
+  setCookie: string | string[] | undefined,
 ): string[] {
   if (setCookie == null) return [];
   return Array.isArray(setCookie) ? setCookie : [setCookie];
@@ -54,7 +54,7 @@ function normalizeSetCookie(
  */
 export function parseCookieFromSetCookie(
   setCookie: string | string[] | undefined,
-  name: string
+  name: string,
 ): string | null {
   const lines = normalizeSetCookie(setCookie);
   if (!lines.length) return null;
@@ -86,7 +86,7 @@ export function parseCookieFromSetCookie(
  *     .expect(200);
  */
 export function cookieHeaderFromSetCookie(
-  setCookie: string | string[] | undefined
+  setCookie: string | string[] | undefined,
 ): string {
   const lines = normalizeSetCookie(setCookie);
   if (!lines.length) return "";
@@ -101,7 +101,7 @@ export function cookieHeaderFromSetCookie(
  * cookie. Returns `null` when the cookie is absent (e.g. failed login).
  */
 export function accessTokenFromSetCookie(
-  setCookie: string | string[] | undefined
+  setCookie: string | string[] | undefined,
 ): string | null {
   return parseCookieFromSetCookie(setCookie, "access_token");
 }
@@ -113,7 +113,7 @@ export function accessTokenFromSetCookie(
  * without going through the browser cookie jar.
  */
 export function refreshTokenFromSetCookie(
-  setCookie: string | string[] | undefined
+  setCookie: string | string[] | undefined,
 ): string | null {
   return parseCookieFromSetCookie(setCookie, "refresh_token");
 }

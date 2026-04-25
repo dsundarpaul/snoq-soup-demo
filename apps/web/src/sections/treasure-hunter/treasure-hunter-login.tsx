@@ -30,6 +30,7 @@ import {
   type HunterLoginInput,
 } from "@/hooks/api/treasure-hunter/treasure-hunter.api-types";
 import { useTreasureHunterLoginMutation } from "@/hooks/api/treasure-hunter";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 function TreasureHunterSignInForm({
   nextPath,
@@ -75,89 +76,103 @@ function TreasureHunterSignInForm({
   };
 
   return (
-    <Card className="p-6">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="text-center mb-2">
-            <h2 className="font-semibold text-lg">{t("auth.signIn")}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t("profile.welcomeBack")}
-            </p>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("auth.email")}</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    data-testid="input-email"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+    <>
+      <div className="text-center mb-6">
+        <div className="mx-auto mb-3 flex justify-center">
+          <img
+            src={appLogo.src}
+            alt={APP_NAME}
+            width={appLogo.width}
+            height={appLogo.height}
+            className="h-14 w-auto max-w-[min(280px,85vw)] object-contain"
           />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground">{APP_NAME}</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t("profile.welcomeBack")}
+        </p>
+      </div>
+      <Card className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="text-center mb-2">
+              <h2 className="font-semibold text-lg">{t("auth.signIn")}</h2>
+            </div>
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("auth.password")}</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder={t("auth.enterPassword")}
-                    minLength={6}
-                    data-testid="input-password"
-                    {...field}
-                  />
-                </FormControl>
-                <Link href="/forgot-password">
-                  <span
-                    className="text-sm text-primary hover:underline cursor-pointer"
-                    data-testid="link-forgot-password"
-                  >
-                    {t("auth.forgotPassword")}
-                  </span>
-                </Link>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("auth.email")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="you@example.com"
+                      data-testid="input-email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loginMutation.isPending}
-            data-testid="button-submit-auth"
-          >
-            {loginMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              t("auth.signIn")
-            )}
-          </Button>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("auth.password")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder={t("auth.enterPassword")}
+                      minLength={6}
+                      data-testid="input-password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <Link href="/forgot-password">
+                    <span
+                      className="text-sm text-primary hover:underline cursor-pointer"
+                      data-testid="link-forgot-password"
+                    >
+                      {t("auth.forgotPassword")}
+                    </span>
+                  </Link>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <p className="text-center text-sm text-muted-foreground">
-            {t("auth.dontHaveAccount")}{" "}
-            <Link
-              href={signUpHref}
-              className="text-primary hover:underline font-medium"
-              data-testid="link-go-signup"
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loginMutation.isPending}
+              data-testid="button-submit-auth"
             >
-              {t("nav.signUp")}
-            </Link>
-          </p>
-        </form>
-      </Form>
-    </Card>
+              {loginMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                t("auth.signIn")
+              )}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              {t("auth.dontHaveAccount")}{" "}
+              <Link
+                href={signUpHref}
+                className="text-primary hover:underline font-medium"
+                data-testid="link-go-signup"
+              >
+                {t("nav.signUp")}
+              </Link>
+            </p>
+          </form>
+        </Form>
+      </Card>
+    </>
   );
 }
 

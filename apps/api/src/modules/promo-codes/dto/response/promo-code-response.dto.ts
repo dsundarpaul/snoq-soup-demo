@@ -5,6 +5,17 @@ export enum PromoCodeStatus {
   ASSIGNED = "assigned",
 }
 
+export class PromoCodeHunterSummaryDto {
+  @ApiProperty({ type: String, description: "Hunter ID" })
+  id!: string;
+
+  @ApiProperty({ type: String, nullable: true, description: "Hunter nickname" })
+  nickname!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: "Hunter email" })
+  email!: string | null;
+}
+
 export class PromoCodeResponseDto {
   @ApiProperty({ type: String, description: "Promo code ID" })
   id!: string;
@@ -31,9 +42,17 @@ export class PromoCodeResponseDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: "Hunter assigned to this code when claimed",
+    description: "Hunter ID when assigned (always string in API responses)",
   })
   hunterId!: string | null;
+
+  @ApiProperty({
+    type: PromoCodeHunterSummaryDto,
+    nullable: true,
+    description:
+      "Hunter profile when loaded (e.g. list endpoint with populate); null otherwise",
+  })
+  hunter!: PromoCodeHunterSummaryDto | null;
 
   @ApiProperty({
     nullable: true,
@@ -44,7 +63,7 @@ export class PromoCodeResponseDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: "Hunter display name (nickname, else email)",
+    description: "Display label: nickname, else email, when hunter is loaded",
   })
   assignedToName!: string | null;
 

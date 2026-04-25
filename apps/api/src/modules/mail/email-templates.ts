@@ -57,7 +57,7 @@ function layoutBrandedEmail(options: {
 <tr>
 <td style="background:linear-gradient(135deg,${COLOR_PRIMARY} 0%,${COLOR_PRIMARY_DARK} 100%);background-color:${COLOR_PRIMARY};padding:28px 32px;">
 <p style="margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:22px;font-weight:700;letter-spacing:-0.02em;color:#FFFFFF;">${escapeHtml(BRAND_NAME)}</p>
-<p style="margin:8px 0 0 0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.9);">HUNT. CLAIM. REDEEM.</p>
+<p style="margin:8px 0 0 0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;letter-spacing:0.12em;font-weight:600;color:rgba(255,255,255,0.92);">HUNT. CLAIM. REDEEM.</p>
 </td>
 </tr>
 <tr>

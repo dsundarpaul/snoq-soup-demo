@@ -28,7 +28,7 @@ import {
 import { APP_NAME } from "@/lib/app-brand";
 import { getPublicSiteHostnameOrFallback } from "@/lib/app-config";
 
-const CTA_HOST = getPublicSiteHostnameOrFallback();
+const PITCH_CTA_HOST = getPublicSiteHostnameOrFallback();
 
 function PhoneMockup({
   children,
@@ -334,9 +334,9 @@ export default function PitchDeckExportPage() {
                 Gamified AR Treasure Hunts
               </p>
               <p className="text-muted-foreground mb-6">
-                {APP_NAME} turns finding deals into an exciting real-world
-                game. Users hunt for virtual rewards at real locations, then
-                redeem them in-store.
+                Scavly turns finding deals into an exciting real-world game.
+                Users hunt for virtual rewards at real locations, then redeem
+                them in-store.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1">
@@ -679,7 +679,7 @@ export default function PitchDeckExportPage() {
             <div className="flex items-center gap-3 bg-primary/10 px-6 py-3 rounded-full">
               <Smartphone className="w-6 h-6 text-primary" />
               <span className="text-lg font-semibold text-primary">
-                {CTA_HOST}
+                {PITCH_CTA_HOST}
               </span>
             </div>
           </div>

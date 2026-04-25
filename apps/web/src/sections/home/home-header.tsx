@@ -88,7 +88,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
               alt={APP_NAME}
               width={appLogo.width}
               height={appLogo.height}
-              className="w-9 h-9 rounded-lg shrink-0 object-contain"
+              className="h-10 w-auto sm:h-11 max-w-[min(200px,52vw)] object-contain shrink-0"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">

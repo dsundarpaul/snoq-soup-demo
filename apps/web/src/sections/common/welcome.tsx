@@ -16,11 +16,10 @@ import {
   Star,
   Zap,
   Target,
-  Trophy,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { LanguageToggle } from "@/components/language-toggle";
-import { APP_NAME } from "@/lib/app-brand";
+import { APP_NAME, appLogo } from "@/lib/app-brand";
 
 const mockupHome = "/images/mockup-home.png";
 const mockupArHunt = "/images/mockup-ar-hunt.png";
@@ -487,11 +486,14 @@ export default function WelcomePage() {
       <footer className="py-8 border-t">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-teal flex items-center justify-center">
-                <Trophy className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-lg">{APP_NAME}</span>
+            <div className="flex items-center">
+              <img
+                src={appLogo.src}
+                alt={APP_NAME}
+                width={appLogo.width}
+                height={appLogo.height}
+                className="h-8 w-auto max-w-[min(200px,45vw)] object-contain"
+              />
             </div>
 
             <div className="flex items-center gap-6 text-sm text-muted-foreground">

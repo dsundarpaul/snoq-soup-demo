@@ -2,19 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useLanguage } from "@/contexts/language-context";
-import { useTheme } from "@/hooks/use-theme";
-import { Home, LogOut, Moon, Settings2, Sun, User } from "lucide-react";
+import { Home, LogOut, User } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { Merchant } from "@shared/schema";
 import { APP_NAME, appLogo } from "@/lib/app-brand";
 
@@ -28,8 +17,6 @@ export function MerchantDashboardHeader({
   onLogout,
 }: MerchantDashboardHeaderProps) {
   const router = useRouter();
-  const { t, language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
 
   return (
     <header className="border-b border-border bg-card">
@@ -44,15 +31,19 @@ export function MerchantDashboardHeader({
           <img
             src={merchant?.logoUrl || appLogo.src}
             alt={merchant?.businessName || APP_NAME}
-            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 ${
-              merchant?.logoUrl ? "object-cover" : "object-contain"
-            }`}
+            width={merchant?.logoUrl ? undefined : appLogo.width}
+            height={merchant?.logoUrl ? undefined : appLogo.height}
+            className={
+              merchant?.logoUrl
+                ? "h-11 w-11 sm:h-12 sm:w-12 rounded-lg flex-shrink-0 object-cover"
+                : "h-11 sm:h-12 w-auto max-w-[min(220px,50vw)] flex-shrink-0 object-contain"
+            }
           />
-          <div className="min-w-0">
-            <h1 className="font-bold text-foreground text-sm sm:text-base truncate">
+          <div className="min-w-0 flex flex-col justify-center">
+            <h1 className="font-bold text-foreground text-sm sm:text-base leading-tight truncate">
               {merchant?.businessName || "Merchant Dashboard"}
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block leading-tight">
               Merchant Dashboard
             </p>
           </div>
@@ -77,62 +68,7 @@ export function MerchantDashboardHeader({
             <Home className="w-4 h-4" />
             Home
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                data-testid="button-merchant-display-menu"
-                title={`${t("home.theme")}, ${t("common.language")}`}
-              >
-                <Settings2 className="h-4 w-4" />
-                <span className="sr-only">
-                  {t("home.theme")}, {t("common.language")}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Sun className="mr-2 h-4 w-4" />
-                  {t("home.theme")}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup
-                    value={theme}
-                    onValueChange={(v) => setTheme(v as "light" | "dark")}
-                  >
-                    <DropdownMenuRadioItem value="light">
-                      <Sun className="mr-2 h-4 w-4" />
-                      {t("home.light")}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="dark">
-                      <Moon className="mr-2 h-4 w-4" />
-                      {t("home.dark")}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  {t("common.language")}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup
-                    value={language}
-                    onValueChange={(v) => setLanguage(v as "en" | "ar")}
-                  >
-                    <DropdownMenuRadioItem value="en">
-                      {t("common.english")}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="ar">
-                      {t("common.arabic")}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="icon"
