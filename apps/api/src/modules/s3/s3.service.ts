@@ -32,8 +32,11 @@ export class S3Service {
     const bucket = this.s3Config.defaultBucket;
     const key = this.buildObjectKey(dto.namespace, dto.fileName);
 
-    const url = await this.client.presignedPutObject(bucket, key);
-    const publicUrl = this.buildPublicObjectUrl(bucket, key);
+    const url = await this.client.presignedUrl("PUT", bucket, key, undefined, {
+      "x-amz-acl": "public-read",
+    });
+    const parsed = new URL(url);
+    const publicUrl = `${parsed.origin}${parsed.pathname}`;
 
     this.logger.debug(`generated signed url: bucket=${bucket} key=${key}`);
 
@@ -54,36 +57,21 @@ export class S3Service {
     return parts.join("/");
   }
 
-  private buildPublicObjectUrl(bucket: string, objectKey: string): string {
-    const base = this.normalizePublicBase();
-    return this.isBucketInHost(base, bucket)
-      ? `${base}/${objectKey}`
-      : `${base}/${bucket}/${objectKey}`;
-  }
-
   private extractObjectKey(publicUrl: string, bucket: string): string {
-    const base = this.normalizePublicBase();
-    const prefix = this.isBucketInHost(base, bucket)
-      ? `${base}/`
-      : `${base}/${bucket}/`;
-    return publicUrl.startsWith(prefix)
-      ? publicUrl.slice(prefix.length)
-      : publicUrl;
-  }
-
-  private normalizePublicBase(): string {
-    return this.s3Config.publicURL.trim().replace(/\/$/, "");
-  }
-
-  private isBucketInHost(publicBase: string, bucket: string): boolean {
+    let u: URL;
     try {
-      const href = publicBase.includes("://")
-        ? publicBase
-        : `https://${publicBase}`;
-      const hostFirst = new URL(href).hostname.split(".")[0] ?? "";
-      return hostFirst.toLowerCase() === bucket.toLowerCase();
+      u = new URL(publicUrl);
     } catch {
-      return false;
+      return publicUrl;
     }
+    const path = u.pathname;
+    if (u.hostname.toLowerCase().startsWith(`${bucket.toLowerCase()}.`)) {
+      return path.replace(/^\//, "");
+    }
+    const withBucket = `/${bucket}/`;
+    if (path.startsWith(withBucket)) {
+      return path.slice(withBucket.length);
+    }
+    return path.replace(/^\//, "");
   }
 }

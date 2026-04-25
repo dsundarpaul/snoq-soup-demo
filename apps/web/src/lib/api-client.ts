@@ -145,10 +145,16 @@ export async function uploadFileViaS3Presigned(
     url: string;
     publicUrl: string;
   };
+  const contentType = file.type || "application/octet-stream";
+  const arrayBuffer = await file.arrayBuffer();
+  const blob = new Blob([arrayBuffer], { type: contentType });
   const putRes = await fetch(url, {
     method: "PUT",
-    body: file,
-    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: blob,
+    headers: {
+      "Content-Type": contentType,
+      "x-amz-acl": "public-read",
+    },
   });
   if (!putRes.ok) {
     const text = await putRes.text();
