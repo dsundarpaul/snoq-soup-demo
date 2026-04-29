@@ -92,9 +92,6 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-lg text-foreground">
-                  {APP_NAME}
-                </h1>
                 {geo.loading ? (
                   <Badge
                     variant="secondary"
@@ -115,9 +112,6 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
                   </Badge>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                {t("home.subtitle")}
-              </p>
             </div>
           </div>
 

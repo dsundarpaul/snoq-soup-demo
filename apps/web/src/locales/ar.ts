@@ -209,7 +209,7 @@ const ar = {
   "voucher.partnerCode": "كود الشريك",
   "voucher.copyCode": "نسخ الكود",
   "voucher.codeCopied": "تم نسخ الكود!",
-  "voucher.useInPartnerApp": "استخدم هذا الكود في تطبيق الشريك",
+  "voucher.useInPartnerApp": "اعرض هذا على التاجر",
 
   // Scanner
   "scanner.title": "ماسح القسائم",
@@ -523,6 +523,8 @@ const ar = {
   "merchant.form.location.arDesc":
     "ضع المكافأة في الواقع المعزز؛ يُحفظ ذلك كموقع الكنز.",
   "merchant.form.location.advancedToggle": "ضبط الإحداثيات يدوياً",
+  "merchant.form.location.mapBelowError":
+    "حدّد موقع الكنز على الخريطة، أو ابحث عن عنوان، أو استخدم نظام تحديد المواقع، أو أدخل الإحداثيات.",
   "merchant.form.location.or": "أو",
   "merchant.form.datetime.saudiIntent":
     "الجدول يُقصد به توقيت السعودية (٣+ توقيت عالمي).",

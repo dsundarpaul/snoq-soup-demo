@@ -34,4 +34,11 @@ export class ScannerRedeemResultDto {
     rewardValue: string;
     termsAndConditions?: string | null;
   } | null;
+
+  @ApiProperty({
+    example: "SUMMER2024",
+    description: "Partner promo code linked to this voucher (if assigned)",
+    nullable: true,
+  })
+  promoCode!: string | null;
 }

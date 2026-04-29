@@ -109,7 +109,6 @@ export default function VoucherViewPage() {
               className="h-12 w-auto max-w-[min(240px,80vw)] object-contain"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">{APP_NAME}</h1>
           <p className="text-muted-foreground mt-1">
             {t("voucher.yourRewardAwaits")}
           </p>

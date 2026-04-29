@@ -330,6 +330,7 @@ export function mapNestVoucherToLegacy(
 export function mapRedeemResultToLegacy(raw: Record<string, unknown>): {
   voucher: Voucher;
   drop: Drop;
+  promoCode: string | null;
 } {
   const vRaw = (raw.voucher as Record<string, unknown>) ?? {};
   const dropInfo = vRaw.drop as Record<string, unknown> | undefined;
@@ -346,12 +347,18 @@ export function mapRedeemResultToLegacy(raw: Record<string, unknown>): {
     location: { lat: 0, lng: 0 },
     radius: 15,
   });
-  return { voucher, drop };
+  const promoRaw = raw.promoCode;
+  const promoStr =
+    typeof promoRaw === "string" && promoRaw.trim().length > 0
+      ? promoRaw.trim()
+      : null;
+  return { voucher, drop, promoCode: promoStr };
 }
 
 export function mapStaffScannerRedeemToLegacy(raw: Record<string, unknown>): {
   voucher: Voucher;
   drop: Drop;
+  promoCode: string | null;
 } {
   const vid = String(raw.voucherId ?? "");
   const token = String(raw.magicToken ?? "");
@@ -391,7 +398,12 @@ export function mapStaffScannerRedeemToLegacy(raw: Record<string, unknown>): {
     location: { lat: 0, lng: 0 },
     radius: 15,
   });
-  return { voucher, drop };
+  const promoRaw = raw.promoCode;
+  const promoStr =
+    typeof promoRaw === "string" && promoRaw.trim().length > 0
+      ? promoRaw.trim()
+      : null;
+  return { voucher, drop, promoCode: promoStr };
 }
 
 export function mapMerchantPublicToStoreData(raw: Record<string, unknown>): {
@@ -889,8 +901,8 @@ export function mapMerchantStatsToLegacy(raw: Record<string, unknown>) {
 export function createDropFormToNestDto(data: {
   name: string;
   description: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   radius?: number;
   rewardValue: string;
   logoUrl?: string | null;
@@ -905,6 +917,16 @@ export function createDropFormToNestDto(data: {
   voucherAbsoluteExpiresAt?: string;
   voucherTtlHoursAfterClaim?: number;
 }): Record<string, unknown> {
+  const lat = data.latitude;
+  const lng = data.longitude;
+  if (
+    typeof lat !== "number" ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    throw new Error("latitude and longitude are required");
+  }
   const availabilityType =
     data.availabilityType === "captureLimit" ? "limited" : "unlimited";
   const availabilityLimit =
@@ -914,8 +936,8 @@ export function createDropFormToNestDto(data: {
   return {
     name: data.name,
     description: data.description,
-    latitude: data.latitude,
-    longitude: data.longitude,
+    latitude: lat,
+    longitude: lng,
     radius: data.radius,
     rewardValue: data.rewardValue,
     logoUrl: data.logoUrl || undefined,

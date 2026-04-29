@@ -196,8 +196,8 @@ export function VoucherDisplay({
 
   const appUrl = getPublicSiteUrl();
   const magicLink = publicUrls.voucher(voucher.magicToken);
-  const shareMessage = `I just caught a reward at ${businessName}! Join the hunt here: ${appUrl}`;
-  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+  const shareMessage = `I just found a hidden reward at ${businessName} using Scavly! \u{1F3C6}\n\nCan you find the next one? Join the hunt and start winning here: ${appUrl}`;
+  const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
     shareMessage
   )}`;
 

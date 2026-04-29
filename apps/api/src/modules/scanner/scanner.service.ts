@@ -172,6 +172,7 @@ export class ScannerService {
             termsAndConditions: termsFromDrop,
           }
         : null,
+      promoCode: result.promoCode ?? null,
     };
   }
 }

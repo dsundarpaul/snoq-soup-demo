@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const DROP_LOCATION_REQUIRED_MESSAGE_EN =
+  "Set a drop location on the map, search for an address, use GPS, or enter coordinates.";
+
+function emptyToOptionalNumber(val: unknown): unknown {
+  if (val === "" || val === null || val === undefined) return undefined;
+  const n = typeof val === "number" ? val : Number(val);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export const createDropSchema = z
   .object({
     name: z
@@ -10,8 +19,14 @@ export const createDropSchema = z
       .string()
       .min(1, "Description is required")
       .max(250, "Description must be at most 250 characters"),
-    latitude: z.coerce.number().min(-90).max(90),
-    longitude: z.coerce.number().min(-180).max(180),
+    latitude: z.preprocess(
+      emptyToOptionalNumber,
+      z.number().min(-90).max(90).optional()
+    ),
+    longitude: z.preprocess(
+      emptyToOptionalNumber,
+      z.number().min(-180).max(180).optional()
+    ),
     radius: z.preprocess((val) => {
       if (val === "" || val === null || val === undefined) return undefined;
       const n = Number(val);
@@ -54,6 +69,23 @@ export const createDropSchema = z
       .optional(),
   })
   .superRefine((data, ctx) => {
+    const latOk =
+      typeof data.latitude === "number" &&
+      Number.isFinite(data.latitude) &&
+      data.latitude >= -90 &&
+      data.latitude <= 90;
+    const lngOk =
+      typeof data.longitude === "number" &&
+      Number.isFinite(data.longitude) &&
+      data.longitude >= -180 &&
+      data.longitude <= 180;
+    if (!latOk || !lngOk) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: DROP_LOCATION_REQUIRED_MESSAGE_EN,
+        path: ["latitude"],
+      });
+    }
     if (data.availabilityType === "captureLimit") {
       if (
         data.captureLimit === undefined ||
@@ -75,8 +107,8 @@ export function getCreateDropEmptyValues(): CreateDropForm {
   return {
     name: "",
     description: "",
-    latitude: 24.7136,
-    longitude: 46.6753,
+    latitude: undefined,
+    longitude: undefined,
     radius: 15,
     rewardValue: "",
     logoUrl: "",

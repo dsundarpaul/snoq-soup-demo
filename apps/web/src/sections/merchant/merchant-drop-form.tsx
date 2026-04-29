@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { startOfDay, max } from "date-fns";
 import { Controller, useForm } from "react-hook-form";
 import type {
   Resolver,
@@ -50,14 +51,18 @@ import { DatetimePicker } from "@/components/datetime-picker";
 import { GooglePlacesAutocomplete } from "@/components/google-places-autocomplete";
 import {
   createDropSchema,
+  DROP_LOCATION_REQUIRED_MESSAGE_EN,
   getCreateDropEmptyValues,
   type CreateDropForm,
 } from "./create-drop-schema";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/upload-validation";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
+import { isValidMapPosition } from "@/components/map-picker";
 
 export const MERCHANT_DROP_FORM_ID = "merchant-drop-form";
+
+const DROP_MAP_DEFAULT_CENTER = { lat: 24.7136, lng: 46.6753 } as const;
 
 export function useMerchantDropForm(): UseFormReturn<CreateDropForm> {
   return useForm<CreateDropForm>({
@@ -87,6 +92,12 @@ function FieldTip({ text }: { text: string }) {
   );
 }
 
+function parseFormScheduleDate(isoOrLocal: string): Date | undefined {
+  if (!isoOrLocal?.trim()) return undefined;
+  const d = new Date(isoOrLocal);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 export interface MerchantDropFormProps {
   form: UseFormReturn<CreateDropForm>;
   mapPickerRemountKey: number;
@@ -101,6 +112,8 @@ export interface MerchantDropFormProps {
   captureCount?: number;
   originalAvailabilityType?: "unlimited" | "captureLimit";
   originalCaptureLimit?: number;
+  isEditingDrop?: boolean;
+  originalDropStartTimeIso?: string;
 }
 
 export function MerchantDropForm({
@@ -117,11 +130,14 @@ export function MerchantDropForm({
   captureCount = 0,
   originalAvailabilityType,
   originalCaptureLimit,
+  isEditingDrop = false,
+  originalDropStartTimeIso,
 }: MerchantDropFormProps) {
   const { t } = useLanguage();
   const [coordsOpen, setCoordsOpen] = useState(false);
   const redemptionType = form.watch("redemptionType");
   const availabilityTypeRaw = form.watch("availabilityType");
+  const startTimeValue = form.watch("startTime");
   const hasClaims = captureCount > 0;
   const lockToUnlimitedOnly =
     hasClaims && originalAvailabilityType === "unlimited";
@@ -133,6 +149,38 @@ export function MerchantDropForm({
     availabilityTypeRaw === "captureLimit" ? "captureLimit" : "unlimited";
   const err = form.formState.errors;
   const logoUrl = form.watch("logoUrl");
+  const latitudeWatch = form.watch("latitude");
+  const longitudeWatch = form.watch("longitude");
+  const hasDropPin = isValidMapPosition(latitudeWatch, longitudeWatch);
+
+  const scheduleDayMin = useMemo(() => {
+    const todayStart = startOfDay(new Date());
+    if (!isEditingDrop || !originalDropStartTimeIso?.trim()) {
+      return todayStart;
+    }
+    const original = new Date(originalDropStartTimeIso);
+    if (Number.isNaN(original.getTime())) {
+      return todayStart;
+    }
+    return startOfDay(original);
+  }, [isEditingDrop, originalDropStartTimeIso]);
+
+  const endScheduleDayMin = useMemo(() => {
+    const startParsed = parseFormScheduleDate(startTimeValue || "");
+    if (!startParsed) {
+      return scheduleDayMin;
+    }
+    return max([scheduleDayMin, startOfDay(startParsed)]);
+  }, [scheduleDayMin, startTimeValue]);
+
+  const scheduleDisabledBefore = useMemo(
+    () => ({ before: scheduleDayMin }),
+    [scheduleDayMin]
+  );
+  const endScheduleDisabledBefore = useMemo(
+    () => ({ before: endScheduleDayMin }),
+    [endScheduleDayMin]
+  );
 
   return (
     <form
@@ -276,6 +324,7 @@ export function MerchantDropForm({
             onPlaceSelect={(lat, lng) => {
               form.setValue("latitude", parseFloat(lat.toFixed(6)));
               form.setValue("longitude", parseFloat(lng.toFixed(6)));
+              form.clearErrors(["latitude", "longitude"]);
             }}
             label={t("merchant.form.location.searchInputLabel")}
             placeholder="Type an address to move the pin…"
@@ -462,17 +511,32 @@ export function MerchantDropForm({
         />
       </div>
 
-      <MapPickerLazy
-        remountKey={mapPickerRemountKey}
-        apiKey={googleMapsApiKey}
-        latitude={Number(form.watch("latitude")) || 24.7136}
-        longitude={Number(form.watch("longitude")) || 46.6753}
-        radiusMeters={Number(form.watch("radius")) || 15}
-        onLocationChange={(lat, lng) => {
-          form.setValue("latitude", parseFloat(lat.toFixed(6)));
-          form.setValue("longitude", parseFloat(lng.toFixed(6)));
-        }}
-      />
+      <div
+        className={cn(
+          err.latitude && "rounded-md ring-2 ring-destructive ring-offset-2 ring-offset-background"
+        )}
+      >
+        <MapPickerLazy
+          remountKey={mapPickerRemountKey}
+          apiKey={googleMapsApiKey}
+          latitude={hasDropPin ? latitudeWatch : undefined}
+          longitude={hasDropPin ? longitudeWatch : undefined}
+          defaultCenter={DROP_MAP_DEFAULT_CENTER}
+          radiusMeters={Number(form.watch("radius")) || 15}
+          onLocationChange={(lat, lng) => {
+            form.setValue("latitude", parseFloat(lat.toFixed(6)));
+            form.setValue("longitude", parseFloat(lng.toFixed(6)));
+            form.clearErrors(["latitude", "longitude"]);
+          }}
+        />
+      </div>
+      {err.latitude && (
+        <p className="text-sm text-destructive" role="alert" data-testid="drop-map-location-error">
+          {err.latitude.message === DROP_LOCATION_REQUIRED_MESSAGE_EN
+            ? t("merchant.form.location.mapBelowError")
+            : err.latitude.message}
+        </p>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -583,9 +647,10 @@ export function MerchantDropForm({
             onChange={(v) => form.setValue("redemptionDeadline", v)}
             data-testid="input-redemption-deadline"
             disabled={hasClaims}
+            disabledDays={scheduleDisabledBefore}
+            defaultMonth={scheduleDayMin}
           />
           <p className="text-xs text-muted-foreground">
-            {t("merchant.form.datetime.saudiIntent")}{" "}
             {t("merchant.form.datetime.localInputNote")}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -731,6 +796,8 @@ export function MerchantDropForm({
                   value={form.watch("startTime") || ""}
                   onChange={(v) => form.setValue("startTime", v)}
                   data-testid="input-start-time"
+                  disabledDays={scheduleDisabledBefore}
+                  defaultMonth={scheduleDayMin}
                 />
               </div>
               <Tooltip>
@@ -771,6 +838,8 @@ export function MerchantDropForm({
                   value={form.watch("endTime") || ""}
                   onChange={(v) => form.setValue("endTime", v)}
                   data-testid="input-end-time"
+                  disabledDays={endScheduleDisabledBefore}
+                  defaultMonth={endScheduleDayMin}
                 />
               </div>
               <Tooltip>

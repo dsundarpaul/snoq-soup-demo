@@ -361,6 +361,7 @@ export function MerchantDropSheet({
           "longitude",
           parseFloat(position.coords.longitude.toFixed(6))
         );
+        form.clearErrors(["latitude", "longitude"]);
         setIsGettingLocation(false);
         toast({
           title: "Location Found",
@@ -503,6 +504,12 @@ export function MerchantDropSheet({
               originalCaptureLimit={
                 editingDrop?.captureLimit ?? undefined
               }
+              isEditingDrop={Boolean(editingDrop)}
+              originalDropStartTimeIso={
+                editingDrop?.startTime
+                  ? dateToIsoOrEmpty(editingDrop.startTime) || undefined
+                  : undefined
+              }
             />
           </div>
           <SheetFooter className="sticky bottom-0 z-10 shrink-0 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:flex-wrap sm:justify-start sm:space-x-0">
@@ -595,6 +602,7 @@ export function MerchantDropSheet({
         onPlaceConfirm={(lat, lon) => {
           form.setValue("latitude", lat);
           form.setValue("longitude", lon);
+          form.clearErrors(["latitude", "longitude"]);
           toast({
             title: "Location Set",
             description: `Drop location set to ${lat}, ${lon}`,

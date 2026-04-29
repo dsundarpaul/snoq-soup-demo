@@ -168,11 +168,9 @@ export default function HomePage() {
       <HomeHeader geo={{ loading: geo.loading, error: geo.error }} />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {hunterSignedIn &&
-          (unredeemedVouchers.length > 0 || redeemedVouchers.length > 0) && (
+        {hunterSignedIn && unredeemedVouchers.length > 0 && (
             <div className="space-y-6">
-              {unredeemedVouchers.length > 0 && (
-                <section>
+              <section>
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <Gift className="w-5 h-5 shrink-0 text-teal" />
@@ -308,105 +306,6 @@ export default function HomePage() {
                     )}
                   </div>
                 </section>
-              )}
-
-              {redeemedVouchers.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <History className="w-5 h-5 shrink-0 text-muted-foreground" />
-                      <h2 className="font-semibold text-lg text-foreground truncate">
-                        {t("home.redeemedRewards")}
-                      </h2>
-                      <Badge variant="secondary" className="shrink-0">
-                        {redeemedTotal}
-                      </Badge>
-                    </div>
-                    {redeemedTotal > redeemedVouchers.length ? (
-                      <Link href="/history?tab=redeemed" className="shrink-0">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          data-testid="button-show-more-redeemed"
-                        >
-                          {t("home.showMore")}
-                          <ChevronRight className="w-4 h-4" aria-hidden />
-                        </Button>
-                      </Link>
-                    ) : null}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {redeemedVouchers.map(
-                      ({
-                        voucher,
-                        drop,
-                        businessName,
-                        merchantStoreLocation,
-                        merchantBusinessPhone,
-                        merchantBusinessHours,
-                      }) => (
-                        <Card
-                          key={voucher.id}
-                          className="p-4 border-muted cursor-pointer hover-elevate"
-                          onClick={() =>
-                            setSelectedVoucher({
-                              voucher,
-                              drop,
-                              claimedAt: voucher.claimedAt?.toString() || "",
-                              businessName,
-                              merchantStoreLocation,
-                              merchantBusinessPhone,
-                              merchantBusinessHours,
-                            })
-                          }
-                          data-testid={`card-redeemed-voucher-${voucher.id}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                              {drop.logoUrl ? (
-                                <img
-                                  src={drop.logoUrl}
-                                  alt={drop.name}
-                                  className="w-full h-full rounded-lg object-cover bg-white"
-                                />
-                              ) : (
-                                <QrCode className="w-6 h-6 text-muted-foreground" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-foreground truncate">
-                                {drop.name}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <Badge variant="secondary" className="text-xs">
-                                  {drop.rewardValue}
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs text-muted-foreground"
-                                >
-                                  {t("status.redeemed")}
-                                </Badge>
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="shrink-0 h-8 w-8"
-                              aria-label={t("home.view")}
-                            >
-                              <ChevronRight className="w-4 h-4" aria-hidden />
-                            </Button>
-                          </div>
-                        </Card>
-                      )
-                    )}
-                  </div>
-                </section>
-              )}
             </div>
           )}
 
@@ -520,6 +419,104 @@ export default function HomePage() {
               </section>
             )}
           </>
+        )}
+
+        {hunterSignedIn && redeemedVouchers.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <History className="w-5 h-5 shrink-0 text-muted-foreground" />
+                <h2 className="font-semibold text-lg text-foreground truncate">
+                  {t("home.redeemedRewards")}
+                </h2>
+                <Badge variant="secondary" className="shrink-0">
+                  {redeemedTotal}
+                </Badge>
+              </div>
+              {redeemedTotal > redeemedVouchers.length ? (
+                <Link href="/history?tab=redeemed" className="shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    data-testid="button-show-more-redeemed"
+                  >
+                    {t("home.showMore")}
+                    <ChevronRight className="w-4 h-4" aria-hidden />
+                  </Button>
+                </Link>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {redeemedVouchers.map(
+                ({
+                  voucher,
+                  drop,
+                  businessName,
+                  merchantStoreLocation,
+                  merchantBusinessPhone,
+                  merchantBusinessHours,
+                }) => (
+                  <Card
+                    key={voucher.id}
+                    className="p-4 cursor-pointer hover-elevate border-teal/20"
+                    onClick={() =>
+                      setSelectedVoucher({
+                        voucher,
+                        drop,
+                        claimedAt: voucher.claimedAt?.toString() || "",
+                        businessName,
+                        merchantStoreLocation,
+                        merchantBusinessPhone,
+                        merchantBusinessHours,
+                      })
+                    }
+                    data-testid={`card-redeemed-voucher-${voucher.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        {drop.logoUrl ? (
+                          <img
+                            src={drop.logoUrl}
+                            alt={drop.name}
+                            className="w-full h-full rounded-lg object-cover bg-white"
+                          />
+                        ) : (
+                          <QrCode className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-foreground truncate">
+                          {drop.name}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge variant="secondary" className="text-xs">
+                            {drop.rewardValue}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-muted-foreground"
+                          >
+                            {t("status.redeemed")}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="shrink-0 h-8 w-8"
+                        aria-label={t("home.view")}
+                      >
+                        <ChevronRight className="w-4 h-4" aria-hidden />
+                      </Button>
+                    </div>
+                  </Card>
+                )
+              )}
+            </div>
+          </section>
         )}
 
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2">

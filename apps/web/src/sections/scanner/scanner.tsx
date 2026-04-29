@@ -14,6 +14,9 @@ import {
   RefreshCw,
   Loader2,
   Gift,
+  Sparkles,
+  Copy,
+  Check,
 } from "lucide-react";
 import type { Voucher, Drop } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
@@ -23,7 +26,7 @@ import { parseVoucherQrPayload } from "@/lib/parse-voucher-qr";
 import { mapRedeemResultToLegacy } from "@/lib/nest-mappers";
 
 type ScanResult =
-  | { status: "success"; voucher: Voucher; drop: Drop }
+  | { status: "success"; voucher: Voucher; drop: Drop; promoCode: string | null }
   | { status: "invalid"; message: string }
   | { status: "already_redeemed"; voucher: Voucher }
   | null;
@@ -35,6 +38,7 @@ export default function ScannerPage() {
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult>(null);
   const [error, setError] = useState<string | null>(null);
+  const [partnerCodeCopied, setPartnerCodeCopied] = useState(false);
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<any>(null);
   const lastScanRef = useRef<{ voucherId: string } | null>(null);
@@ -49,11 +53,12 @@ export default function ScannerPage() {
         });
         return;
       }
-      const { voucher, drop } = mapRedeemResultToLegacy(data);
+      const { voucher, drop, promoCode } = mapRedeemResultToLegacy(data);
       setScanResult({
         status: "success",
         voucher,
         drop,
+        promoCode,
       });
       toast({
         title: t("scanner.success"),
@@ -168,8 +173,19 @@ export default function ScannerPage() {
   const resetScanner = () => {
     setScanResult(null);
     setError(null);
+    setPartnerCodeCopied(false);
     startScanner();
   };
+
+  const copyPartnerCode = useCallback(async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setPartnerCodeCopied(true);
+      setTimeout(() => setPartnerCodeCopied(false), 2000);
+    } catch {
+      setPartnerCodeCopied(false);
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -248,6 +264,46 @@ export default function ScannerPage() {
                         </span>
                       </div>
                     </div>
+                    {scanResult.promoCode ? (
+                      <div
+                        className="mt-4 text-left"
+                        data-testid="section-partner-code"
+                      >
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2 justify-center">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {t("voucher.partnerCode")}
+                        </h4>
+                        <div className="rounded-xl border-2 border-dashed border-primary/35 bg-muted/20 p-5 flex flex-col items-center gap-4 shadow-sm">
+                          <span
+                            className="text-2xl font-bold font-mono tracking-widest text-foreground text-center break-all"
+                            data-testid="text-partner-code"
+                          >
+                            {scanResult.promoCode}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="gap-2 shadow-sm"
+                            data-testid="button-copy-code"
+                            onClick={() =>
+                              copyPartnerCode(scanResult.promoCode!)
+                            }
+                          >
+                            {partnerCodeCopied ? (
+                              <Check className="w-4 h-4" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                            {partnerCodeCopied
+                              ? t("voucher.codeCopied")
+                              : t("voucher.copyCode")}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
+                          {t("voucher.useInPartnerApp")}
+                        </p>
+                      </div>
+                    ) : null}
                     {scanResult.drop.termsAndConditions?.trim() ? (
                       <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 text-left">
                         <p className="text-xs font-semibold text-foreground mb-1">

@@ -211,7 +211,7 @@ const en = {
   "voucher.partnerCode": "Partner Code",
   "voucher.copyCode": "Copy Code",
   "voucher.codeCopied": "Code Copied!",
-  "voucher.useInPartnerApp": "Use this code in the partner app",
+  "voucher.useInPartnerApp": "Show this to the merchant",
 
   // Scanner
   "scanner.title": "Voucher Scanner",
@@ -537,6 +537,8 @@ const en = {
   "merchant.form.location.arDesc":
     "Place the reward in augmented reality; saves that spot as the drop.",
   "merchant.form.location.advancedToggle": "Fine-tune coordinates",
+  "merchant.form.location.mapBelowError":
+    "Set a drop location on the map, search for an address, use GPS, or enter coordinates.",
   "merchant.form.location.or": "OR",
   "merchant.form.datetime.saudiIntent":
     "Schedule is intended for Saudi Arabia (AST, UTC+3).",

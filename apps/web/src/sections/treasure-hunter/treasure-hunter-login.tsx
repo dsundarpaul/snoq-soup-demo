@@ -186,7 +186,7 @@ export default function TreasureHunterLoginPage() {
 
   return (
     <TreasureHunterAuthShell title={t("auth.signIn")} Icon={LogIn}>
-      <TreasureHunterSignInForm nextPath={nextPath} signUpHref={signUpHref} />
+      <TreasureHunterSignInForm nextPath={"/"} signUpHref={signUpHref} />
     </TreasureHunterAuthShell>
   );
 }
