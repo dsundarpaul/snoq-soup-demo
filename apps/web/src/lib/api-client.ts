@@ -125,17 +125,33 @@ export async function apiFetchMaybeRetry(
 }
 
 const S3_SIGNED_URL_PATH = "/api/v1/s3/signed-url";
+const shouldSendS3PutAcl =
+  process.env.NEXT_PUBLIC_S3_PUT_ACL?.toLowerCase() !== "none";
+
+function resolveUploadContentType(file: File): string {
+  if (file.type && file.type.trim().length > 0) {
+    return file.type;
+  }
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "gif") return "image/gif";
+  if (extension === "webp") return "image/webp";
+  if (extension === "svg") return "image/svg+xml";
+  return "application/octet-stream";
+}
 
 export async function uploadFileViaS3Presigned(
   file: File,
   options: { namespace: string; auth?: AuthRole }
 ): Promise<{ publicUrl: string }> {
   const role = options.auth ?? inferAuthRoleFromPath(S3_SIGNED_URL_PATH);
+  const contentType = resolveUploadContentType(file);
   const signedRes = await apiFetchMaybeRetry("POST", S3_SIGNED_URL_PATH, {
     auth: role,
     body: {
       fileName: file.name,
-      contentType: file.type,
+      contentType,
       size: file.size,
       namespace: options.namespace,
     },
@@ -145,16 +161,18 @@ export async function uploadFileViaS3Presigned(
     url: string;
     publicUrl: string;
   };
-  const contentType = file.type || "application/octet-stream";
   const arrayBuffer = await file.arrayBuffer();
   const blob = new Blob([arrayBuffer], { type: contentType });
+  const putHeaders: Record<string, string> = {
+    "Content-Type": contentType,
+  };
+  if (shouldSendS3PutAcl) {
+    putHeaders["x-amz-acl"] = "public-read";
+  }
   const putRes = await fetch(url, {
     method: "PUT",
     body: blob,
-    headers: {
-      "Content-Type": contentType,
-      "x-amz-acl": "public-read",
-    },
+    headers: putHeaders,
   });
   if (!putRes.ok) {
     const text = await putRes.text();

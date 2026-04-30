@@ -64,10 +64,16 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
       { protocol: "https", hostname: "maps.googleapis.com" },
       { protocol: "https", hostname: "maps.gstatic.com" },
-      ...uniqueAssetHosts.map((hostname) => ({
-        protocol: "https" as const,
-        hostname,
-      })),
+      ...uniqueAssetHosts.flatMap((hostname) => [
+        {
+          protocol: "https" as const,
+          hostname,
+        },
+        {
+          protocol: "http" as const,
+          hostname,
+        },
+      ]),
     ],
   },
   async rewrites() {

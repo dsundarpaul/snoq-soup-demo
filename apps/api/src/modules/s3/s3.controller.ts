@@ -5,6 +5,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -32,6 +33,11 @@ export class S3Controller {
   async getSignedUrl(
     @Body() dto: GetSignedUrlDto,
   ): Promise<SignedUrlResponseDto> {
+    if (!this.s3Service.isReady()) {
+      throw new BadRequestException(
+        "S3 is not configured correctly. Check S3_* environment variables.",
+      );
+    }
     return this.s3Service.generateSignedUrl(dto);
   }
 }

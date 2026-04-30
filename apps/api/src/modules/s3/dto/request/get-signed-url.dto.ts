@@ -12,13 +12,14 @@ import { ApiProperty } from "@nestjs/swagger";
 export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
+  "image/gif",
   "image/webp",
   "image/svg+xml",
 ] as const;
 
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export class GetSignedUrlDto {
   @ApiProperty({ example: "logo.png", description: "Original filename" })
@@ -58,8 +59,8 @@ export class GetSignedUrlDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message: "Namespace must be alphanumeric (hyphens/underscores allowed)",
+  @Matches(/^[a-zA-Z0-9][a-zA-Z0-9-]*$/, {
+    message: "Namespace must be alphanumeric (hyphens allowed)",
   })
   namespace!: string;
 }

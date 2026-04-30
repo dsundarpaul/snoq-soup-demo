@@ -6,6 +6,20 @@ const envDir = process.cwd();
 dotenv.config({ path: path.join(envDir, ".env") });
 dotenv.config({ path: path.join(envDir, ".env.local"), override: true });
 
+function parseS3Host(input: string): { host: string; port?: number; useSSL: boolean } {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { host: "", useSSL: true };
+  }
+  const withScheme = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withScheme);
+  return {
+    host: parsed.hostname,
+    port: parsed.port ? Number(parsed.port) : undefined,
+    useSSL: parsed.protocol === "https:",
+  };
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z
@@ -18,13 +32,25 @@ const envSchema = z
     JWT_EXPIRY: z.string().default("1d"),
     REFRESH_TOKEN_EXPIRY: z.string().optional(),
     MONGODB_URI: z.string(),
-    S3_HOST: z.string(),
-    S3_ACCESS_KEY: z.string(),
-    S3_SECRET_KEY: z.string(),
-    S3_DEFAULT_BUCKET: z.string(),
+    S3_ENABLED: z
+      .string()
+      .default("true")
+      .transform((v) => v === "true" || v === "1"),
+    S3_HOST: z.string().default(""),
+    S3_ACCESS_KEY: z.string().default(""),
+    S3_SECRET_KEY: z.string().default(""),
+    S3_DEFAULT_BUCKET: z.string().default(""),
     S3_SUB_PATH: z.string().optional(),
-    S3_PUBLIC_URL: z.string(),
-    S3_REGION: z.string(),
+    S3_PUBLIC_URL: z.string().default(""),
+    S3_REGION: z.string().default("us-east-1"),
+    S3_REJECT_UNAUTHORIZED: z
+      .string()
+      .default("true")
+      .transform((v) => v === "true" || v === "1"),
+    S3_PUT_ACL: z
+      .string()
+      .default("public-read")
+      .transform((v) => v !== "none"),
     SMTP_HOST: z.string(),
     SMTP_PORT: z.coerce.number().default(587),
     SMTP_USER: z.string().optional(),
@@ -47,6 +73,10 @@ const envSchema = z
       .transform((v) => v === "true" || v === "1"),
   })
   .transform((env) => {
+    const parsedS3Host = parseS3Host(env.S3_HOST);
+    const normalizedS3SubPath = env.S3_SUB_PATH
+      ? env.S3_SUB_PATH.replace(/^\/+|\/+$/g, "")
+      : "";
     return {
       NODE_ENV: env.NODE_ENV,
       PORT: env.PORT,
@@ -62,13 +92,18 @@ const envSchema = z
       ENABLE_EMAIL: env.ENABLE_EMAIL,
       ENABLE_SMS: env.ENABLE_SMS,
       s3: {
-        host: env.S3_HOST,
+        enabled: env.S3_ENABLED,
+        host: parsedS3Host.host,
+        port: parsedS3Host.port,
+        useSSL: parsedS3Host.useSSL,
         accessKey: env.S3_ACCESS_KEY,
         secretKey: env.S3_SECRET_KEY,
         defaultBucket: env.S3_DEFAULT_BUCKET,
-        subPath: env.S3_SUB_PATH,
+        subPath: normalizedS3SubPath,
         publicURL: env.S3_PUBLIC_URL,
         region: env.S3_REGION,
+        rejectUnauthorized: env.S3_REJECT_UNAUTHORIZED,
+        putAcl: env.S3_PUT_ACL,
       },
       jwt: {
         secret: env.JWT_SECRET,
