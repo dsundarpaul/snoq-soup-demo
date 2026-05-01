@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -123,12 +123,28 @@ export function DropDetailsDialog({
   );
 
   const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const pendingScrollTopRef = useRef(0);
   const [bodyScrollTop, setBodyScrollTop] = useState(0);
+
+  const flushScrollTopFromRaf = useCallback(() => {
+    scrollRafRef.current = null;
+    setBodyScrollTop(pendingScrollTopRef.current);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current != null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     const el = bodyScrollRef.current;
     if (el) el.scrollTop = 0;
+    pendingScrollTopRef.current = 0;
     setBodyScrollTop(0);
   }, [open, drop.id]);
 
@@ -164,7 +180,7 @@ export function DropDetailsDialog({
               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10">
                 <Trophy
                   className={cn(
-                    "text-primary/35 transition-[width,height] duration-150",
+                    "text-primary/35",
                     headerCompact ? "h-9 w-9" : "h-16 w-16"
                   )}
                 />
@@ -179,7 +195,7 @@ export function DropDetailsDialog({
 
         <div
           className={cn(
-            "shrink-0 border-b border-border/60 px-6 transition-[padding] duration-150",
+            "shrink-0 border-b border-border/60 px-6",
             headerCompact ? "space-y-2 pb-2.5 pt-2" : "space-y-3 pb-5 pt-4"
           )}
         >
@@ -188,7 +204,7 @@ export function DropDetailsDialog({
           >
             <DialogTitle
               className={cn(
-                "pr-6 leading-tight transition-[font-size] duration-150",
+                "pr-6 leading-tight",
                 headerCompact ? "text-base" : "text-xl"
               )}
             >
@@ -208,8 +224,12 @@ export function DropDetailsDialog({
 
         <div
           ref={bodyScrollRef}
-          onScroll={(e) => setBodyScrollTop(e.currentTarget.scrollTop)}
-          className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-6"
+          onScroll={(e) => {
+            pendingScrollTopRef.current = e.currentTarget.scrollTop;
+            if (scrollRafRef.current != null) return;
+            scrollRafRef.current = requestAnimationFrame(flushScrollTopFromRaf);
+          }}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-5 space-y-6 [overflow-anchor:none]"
         >
           {showMerchantRow ? (
             <div

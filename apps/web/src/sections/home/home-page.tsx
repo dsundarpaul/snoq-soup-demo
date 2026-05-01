@@ -20,6 +20,7 @@ import {
   Gift,
   Target,
   Sparkles,
+  Trophy,
   QrCode,
   Timer,
   History,
@@ -208,45 +209,57 @@ export default function HomePage() {
                         merchantBusinessHours,
                       }) => {
                         const status = voucherStatuses[voucher.id];
+                        const openVoucher = () =>
+                          setSelectedVoucher({
+                            voucher,
+                            drop,
+                            claimedAt: voucher.claimedAt?.toString() || "",
+                            businessName,
+                            merchantLogoUrl,
+                            merchantStoreLocation,
+                            merchantBusinessPhone,
+                            merchantBusinessHours,
+                          });
                         return (
                           <Card
                             key={voucher.id}
-                            className="p-4 hover-elevate cursor-pointer border-teal/20"
-                            onClick={() =>
-                              setSelectedVoucher({
-                                voucher,
-                                drop,
-                                claimedAt: voucher.claimedAt?.toString() || "",
-                                businessName,
-                                merchantLogoUrl,
-                                merchantStoreLocation,
-                                merchantBusinessPhone,
-                                merchantBusinessHours,
-                              })
-                            }
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${drop.name}. ${t("home.view")}`}
+                            className="p-0 overflow-hidden hover-elevate cursor-pointer border-teal/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                            onClick={openVoucher}
+                            onKeyDown={(e) => {
+                              if (e.key !== "Enter" && e.key !== " ") return;
+                              e.preventDefault();
+                              openVoucher();
+                            }}
                             data-testid={`card-voucher-${voucher.id}`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-lg bg-teal/10 flex items-center justify-center shrink-0">
+                            <div className="flex min-h-[9rem]">
+                              <div className="relative w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
                                 {drop.logoUrl ? (
                                   <img
                                     src={drop.logoUrl}
-                                    alt={drop.name}
-                                    className="w-full h-full rounded-lg object-cover bg-white"
+                                    alt=""
+                                    loading="lazy"
+                                    className="absolute inset-0 h-full w-full object-cover"
                                   />
                                 ) : (
-                                  <QrCode className="w-6 h-6 text-teal" />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Trophy className="w-10 h-10 text-primary/50" />
+                                  </div>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-foreground truncate">
+                              <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+                                <h3 className="font-semibold text-foreground leading-tight line-clamp-2">
                                   {drop.name}
                                 </h3>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
                                   <Badge
                                     variant="secondary"
-                                    className="bg-teal/10 text-teal text-xs"
+                                    className="bg-teal/10 text-teal border-teal/20 gap-1 px-1.5 py-0.5 text-xs"
                                   >
+                                    <Gift className="w-3 h-3" />
                                     {drop.rewardValue}
                                   </Badge>
                                   {status?.timeRemaining === 0 && (
@@ -291,16 +304,12 @@ export default function HomePage() {
                                     )}
                                 </div>
                               </div>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                className="shrink-0 h-8 w-8"
-                                data-testid={`button-view-voucher-${voucher.id}`}
-                                aria-label={t("home.view")}
+                              <div
+                                className="flex w-11 shrink-0 flex-col items-center justify-center border-s border-border/60 bg-muted/15"
+                                aria-hidden
                               >
-                                <ChevronRight className="w-4 h-4" aria-hidden />
-                              </Button>
+                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                              </div>
                             </div>
                           </Card>
                         );
@@ -360,6 +369,7 @@ export default function HomePage() {
                           distance={drop.distance}
                           claimed={drop.claimed}
                           hunterSignedIn={hunterSignedIn}
+                          variant="inRange"
                         />
                       ))}
                     </div>
@@ -385,6 +395,7 @@ export default function HomePage() {
                           distance={drop.distance}
                           claimed={drop.claimed}
                           hunterSignedIn={hunterSignedIn}
+                          variant="browse"
                         />
                       ))}
                     </div>
@@ -415,6 +426,7 @@ export default function HomePage() {
                       distance={drop.distance}
                       claimed={drop.claimed}
                       hunterSignedIn={hunterSignedIn}
+                      variant="browse"
                     />
                   ))}
                 </div>

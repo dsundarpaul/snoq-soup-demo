@@ -35,6 +35,7 @@ const ar = {
   "home.noDrops": "لا توجد كنوز متاحة",
   "home.noDropsDesc": "تحقق لاحقاً لمكافآت جديدة!",
   "home.hunt": "ابدأ",
+  "home.claim": "استلم",
   "home.directions": "الاتجاهات",
   "home.map": "الخريطة",
   "home.merchant": "التاجر",

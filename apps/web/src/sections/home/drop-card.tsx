@@ -29,6 +29,7 @@ export type DropCardProps = {
   distance: number | null;
   claimed: boolean;
   hunterSignedIn: boolean;
+  variant: "inRange" | "browse";
 };
 
 type HuntState =
@@ -43,6 +44,7 @@ export function DropCard({
   distance,
   claimed,
   hunterSignedIn,
+  variant,
 }: DropCardProps) {
   const { t } = useLanguage();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -138,36 +140,47 @@ export function DropCard({
               {drop.rewardValue}
             </Badge>
 
-            {distance !== null ? (
-              <button
-                type="button"
-                onClick={handleGetDirections}
-                aria-label={`${formatDistance(distance)}. ${t(
-                  "home.directions"
-                )}`}
-                title={t("home.directions")}
-                data-testid={`button-directions-${drop.id}`}
-                className="group inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
-              >
-                <Navigation className="w-3 h-3 transition-transform group-hover:-rotate-12" />
-                <span>{formatDistance(distance)}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70 group-hover:opacity-100">
-                  {t("home.map")}
-                </span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleGetDirections}
-                aria-label={t("home.directions")}
-                title={t("home.directions")}
-                data-testid={`button-directions-${drop.id}`}
-                className="group inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/40 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
-              >
-                <Navigation className="w-3 h-3 transition-transform group-hover:-rotate-12" />
-                {t("home.map")}
-              </button>
-            )}
+            {variant === "browse" && distance !== null ? (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground pointer-events-none">
+                <Navigation className="w-3 h-3 shrink-0 opacity-80" />
+                {formatDistance(distance)}
+              </span>
+            ) : null}
+
+            {variant === "inRange" ? (
+              <>
+                {distance !== null ? (
+                  <button
+                    type="button"
+                    onClick={handleGetDirections}
+                    aria-label={`${formatDistance(distance)}. ${t(
+                      "home.directions"
+                    )}`}
+                    title={t("home.directions")}
+                    data-testid={`button-directions-${drop.id}`}
+                    className="group inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
+                  >
+                    <Navigation className="w-3 h-3 transition-transform group-hover:-rotate-12" />
+                    <span>{formatDistance(distance)}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70 group-hover:opacity-100">
+                      {t("home.map")}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGetDirections}
+                    aria-label={t("home.directions")}
+                    title={t("home.directions")}
+                    data-testid={`button-directions-${drop.id}`}
+                    className="group inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/40 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
+                  >
+                    <Navigation className="w-3 h-3 transition-transform group-hover:-rotate-12" />
+                    {t("home.map")}
+                  </button>
+                )}
+              </>
+            ) : null}
 
             {remaining !== null && (
               <span
@@ -215,9 +228,13 @@ export function DropCard({
           isActive={isActive}
           huntHref={huntHref}
           onHuntClick={handleHuntClick}
+          onDirections={handleGetDirections}
+          variant={variant}
           dropId={drop.id}
           labels={{
             hunt: t("home.hunt"),
+            claim: t("home.claim"),
+            directions: t("home.directions"),
             claimed: t("status.claimed"),
             soldOut: t("status.soldOut"),
             expired: t("status.expired"),
@@ -245,9 +262,13 @@ type HuntActionPanelProps = {
   isActive: boolean;
   huntHref: string;
   onHuntClick: (e: MouseEvent<HTMLAnchorElement>) => void;
+  onDirections: () => void;
+  variant: "inRange" | "browse";
   dropId: string;
   labels: {
     hunt: string;
+    claim: string;
+    directions: string;
     claimed: string;
     soldOut: string;
     expired: string;
@@ -260,6 +281,8 @@ function HuntActionPanel({
   isActive,
   huntHref,
   onHuntClick,
+  onDirections,
+  variant,
   dropId,
   labels,
 }: HuntActionPanelProps) {
@@ -284,7 +307,10 @@ function HuntActionPanel({
   return (
     <div
       className={cn(
-        "pointer-events-auto relative flex w-[4.75rem] shrink-0 flex-col items-stretch overflow-hidden",
+        "pointer-events-auto relative flex shrink-0 flex-col items-stretch overflow-hidden",
+        variant === "browse" && state.kind === "hunt"
+          ? "w-[5.5rem]"
+          : "w-[4.75rem]",
         panelTone
       )}
     >
@@ -296,7 +322,67 @@ function HuntActionPanel({
         )}
       />
 
-      {state.kind === "hunt" ? (
+      {state.kind === "hunt" && variant === "browse" ? (
+        <div className="flex min-h-0 flex-1 flex-col divide-y divide-primary/20">
+          <Link
+            href={huntHref}
+            onClick={onHuntClick}
+            aria-disabled={!isActive}
+            tabIndex={isActive ? undefined : -1}
+            data-testid={`button-hunt-${dropId}`}
+            className={cn(
+              "group relative flex flex-1 flex-col items-center justify-center gap-1.5 px-1.5 py-2 text-center transition-colors",
+              isActive
+                ? "hover:bg-primary/10 active:bg-primary/15"
+                : "pointer-events-none opacity-60"
+            )}
+          >
+            <span className="relative flex h-9 w-9 items-center justify-center">
+              {isActive ? (
+                <>
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 rounded-full bg-primary/30 opacity-70 animate-ping [animation-duration:2.4s]"
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute -inset-1 rounded-full bg-primary/25 blur-md animate-pulse [animation-duration:2.4s]"
+                  />
+                </>
+              ) : null}
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-primary/35 bg-gradient-to-br from-primary/25 to-primary/10 shadow-[inset_0_1px_0_0_hsl(var(--primary)/0.3),0_6px_14px_-6px_hsl(var(--primary)/0.7)] transition-transform group-hover:scale-105 group-active:scale-95">
+                <Target
+                  className="h-3.5 w-3.5 text-primary transition-transform group-hover:rotate-12"
+                  strokeWidth={2.5}
+                />
+              </span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary leading-tight">
+              {labels.hunt}
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDirections();
+            }}
+            data-testid={`button-panel-directions-${dropId}`}
+            aria-label={labels.directions}
+            className="group flex flex-1 flex-col items-center justify-center gap-1.5 px-1.5 py-2 text-center transition-colors hover:bg-primary/10 active:bg-primary/15"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/80 transition-transform group-hover:scale-105 group-active:scale-95">
+              <Navigation
+                className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:-rotate-12 group-hover:text-primary"
+                strokeWidth={2.25}
+              />
+            </span>
+            <span className="text-[10px] font-bold uppercase leading-tight tracking-[0.08em] text-muted-foreground group-hover:text-primary">
+              {labels.directions}
+            </span>
+          </button>
+        </div>
+      ) : state.kind === "hunt" ? (
         <Link
           href={huntHref}
           onClick={onHuntClick}
@@ -331,7 +417,7 @@ function HuntActionPanel({
             </span>
           </span>
           <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
-            {labels.hunt}
+            {labels.claim}
           </span>
         </Link>
       ) : (

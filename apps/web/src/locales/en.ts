@@ -35,6 +35,7 @@ const en = {
   "home.noDrops": "No Treasures Available",
   "home.noDropsDesc": "Check back soon for new rewards to hunt!",
   "home.hunt": "Hunt",
+  "home.claim": "Claim",
   "home.directions": "Directions",
   "home.map": "Map",
   "home.merchant": "Merchant",
