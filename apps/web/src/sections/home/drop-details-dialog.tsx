@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -79,6 +80,10 @@ function formatRadiusMeters(radius: number): string {
   return `${Math.round(radius)} m`;
 }
 
+const SCROLL_COLLAPSE_RANGE = 96;
+const HERO_HEIGHT_EXPANDED_PX = 220;
+const HERO_HEIGHT_COLLAPSED_PX = 56;
+
 export type DropDetailsDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -117,14 +122,36 @@ export function DropDetailsDialog({
       (drop.merchantLogoUrl && drop.merchantLogoUrl.trim())
   );
 
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const [bodyScrollTop, setBodyScrollTop] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = bodyScrollRef.current;
+    if (el) el.scrollTop = 0;
+    setBodyScrollTop(0);
+  }, [open, drop.id]);
+
+  const collapseT = Math.min(
+    1,
+    Math.max(0, bodyScrollTop / SCROLL_COLLAPSE_RANGE)
+  );
+  const heroHeightPx =
+    HERO_HEIGHT_EXPANDED_PX -
+    (HERO_HEIGHT_EXPANDED_PX - HERO_HEIGHT_COLLAPSED_PX) * collapseT;
+  const headerCompact = collapseT > 0.35;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-lg max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col sm:rounded-xl"
         data-testid={`dialog-drop-details-${drop.id}`}
       >
-        <div className="relative shrink-0 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
-          <div className="relative aspect-[16/10] min-h-[11rem] max-h-[15rem] w-full sm:aspect-[16/9] sm:min-h-[12rem]">
+        <div
+          className="relative shrink-0 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10"
+          style={{ height: heroHeightPx }}
+        >
+          <div className="relative h-full w-full overflow-hidden">
             {drop.logoUrl ? (
               <img
                 src={drop.logoUrl}
@@ -135,7 +162,12 @@ export function DropDetailsDialog({
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10">
-                <Trophy className="h-16 w-16 text-primary/35" />
+                <Trophy
+                  className={cn(
+                    "text-primary/35 transition-[width,height] duration-150",
+                    headerCompact ? "h-9 w-9" : "h-16 w-16"
+                  )}
+                />
               </div>
             )}
             <div
@@ -145,7 +177,40 @@ export function DropDetailsDialog({
           </div>
         </div>
 
-        <div className="shrink-0 space-y-3 border-b border-border/60 px-6 pb-5 pt-4">
+        <div
+          className={cn(
+            "shrink-0 border-b border-border/60 px-6 transition-[padding] duration-150",
+            headerCompact ? "space-y-2 pb-2.5 pt-2" : "space-y-3 pb-5 pt-4"
+          )}
+        >
+          <DialogHeader
+            className={cn("p-0 text-left", headerCompact ? "space-y-2" : "space-y-3")}
+          >
+            <DialogTitle
+              className={cn(
+                "pr-6 leading-tight transition-[font-size] duration-150",
+                headerCompact ? "text-base" : "text-xl"
+              )}
+            >
+              {drop.name}
+            </DialogTitle>
+            <div className="flex flex-wrap gap-2">
+              <Badge className="border-teal/25 bg-teal/15 font-medium text-teal hover:bg-teal/20 gap-1">
+                <Gift className="w-3.5 h-3.5" />
+                {drop.rewardValue}
+              </Badge>
+            </div>
+            <DialogDescription className="sr-only">
+              {t("home.dropDetails")}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div
+          ref={bodyScrollRef}
+          onScroll={(e) => setBodyScrollTop(e.currentTarget.scrollTop)}
+          className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-6"
+        >
           {showMerchantRow ? (
             <div
               className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-3"
@@ -175,23 +240,6 @@ export function DropDetailsDialog({
             </div>
           ) : null}
 
-          <DialogHeader className="space-y-3 p-0 text-left">
-            <DialogTitle className="pr-6 text-xl leading-tight">
-              {drop.name}
-            </DialogTitle>
-            <div className="flex flex-wrap gap-2">
-              <Badge className="border-teal/25 bg-teal/15 font-medium text-teal hover:bg-teal/20 gap-1">
-                <Gift className="w-3.5 h-3.5" />
-                {drop.rewardValue}
-              </Badge>
-            </div>
-            <DialogDescription className="sr-only">
-              {t("home.dropDetails")}
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-
-        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-6">
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
               {t("home.dropFacts")}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Collapsible,
@@ -119,6 +119,10 @@ function formatTimeRemaining(seconds: number, expiredLabel: string): string {
   }
   return `${secs}s`;
 }
+
+const VOUCHER_SCROLL_COLLAPSE_RANGE = 96;
+const VOUCHER_HERO_HEIGHT_EXPANDED_PX = 220;
+const VOUCHER_HERO_HEIGHT_COLLAPSED_PX = 56;
 
 interface VoucherDisplayProps {
   voucher: Voucher;
@@ -364,6 +368,34 @@ export function VoucherDisplay({
   const showMerchantBlock =
     merchantBusinessPhone || merchantBusinessHours || merchantStoreLocation;
 
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const [bodyScrollTop, setBodyScrollTop] = useState(0);
+
+  useEffect(() => {
+    if (layout !== "dialog") {
+      setBodyScrollTop(0);
+      return;
+    }
+    const el = bodyScrollRef.current;
+    if (el) el.scrollTop = 0;
+    setBodyScrollTop(0);
+  }, [layout, voucher.id]);
+
+  const collapseT =
+    layout === "dialog"
+      ? Math.min(
+          1,
+          Math.max(0, bodyScrollTop / VOUCHER_SCROLL_COLLAPSE_RANGE)
+        )
+      : 0;
+  const dialogHeroHeightPx =
+    layout === "dialog"
+      ? VOUCHER_HERO_HEIGHT_EXPANDED_PX -
+        (VOUCHER_HERO_HEIGHT_EXPANDED_PX - VOUCHER_HERO_HEIGHT_COLLAPSED_PX) *
+          collapseT
+      : undefined;
+  const headerCompact = layout === "dialog" && collapseT > 0.35;
+
   const shellClass = cn(
     "flex w-full flex-col overflow-hidden bg-card",
     layout === "dialog"
@@ -382,8 +414,25 @@ export function VoucherDisplay({
         <p className="sr-only">{t("voucher.rewardClaimed")}</p>
       ) : null}
 
-      <div className="relative shrink-0 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
-        <div className="relative aspect-[16/10] min-h-[11rem] max-h-[15rem] w-full sm:aspect-[16/9] sm:min-h-[12rem]">
+      <div
+        className={cn(
+          "relative shrink-0 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10",
+          layout !== "dialog" && "min-h-0"
+        )}
+        style={
+          dialogHeroHeightPx !== undefined
+            ? { height: dialogHeroHeightPx }
+            : undefined
+        }
+      >
+        <div
+          className={cn(
+            "relative w-full overflow-hidden",
+            layout === "dialog"
+              ? "h-full"
+              : "aspect-[16/10] min-h-[11rem] max-h-[15rem] sm:aspect-[16/9] sm:min-h-[12rem]"
+          )}
+        >
           {drop.logoUrl ? (
             <img
               src={drop.logoUrl}
@@ -394,7 +443,12 @@ export function VoucherDisplay({
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10">
-              <Trophy className="h-16 w-16 text-primary/35" />
+              <Trophy
+                className={cn(
+                  "text-primary/35 transition-[width,height] duration-150",
+                  headerCompact ? "h-9 w-9" : "h-16 w-16"
+                )}
+              />
             </div>
           )}
           <div
@@ -404,7 +458,56 @@ export function VoucherDisplay({
         </div>
       </div>
 
-      <div className="shrink-0 space-y-4 border-b border-border/60 px-6 pb-6 pt-4">
+      <div
+        className={cn(
+          "shrink-0 border-b border-border/60 px-6 transition-[padding] duration-150",
+          headerCompact ? "space-y-2 pb-2.5 pt-2" : "space-y-2 pb-6 pt-4"
+        )}
+      >
+        <div className="space-y-2">
+          <h2
+            className={cn(
+              "pr-2 font-semibold text-foreground leading-tight transition-[font-size] duration-150",
+              headerCompact ? "text-base" : "text-xl"
+            )}
+          >
+            {t("voucher.rewardClaimed")}
+          </h2>
+          <p
+            className={cn(
+              "text-muted-foreground leading-snug transition-[font-size] duration-150",
+              headerCompact ? "text-xs line-clamp-1" : "text-sm"
+            )}
+          >
+            {drop.name}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Badge className="border-teal/25 bg-teal/15 font-medium text-teal hover:bg-teal/20 gap-1">
+              <Gift className="w-3.5 h-3.5" />
+              {drop.rewardValue}
+            </Badge>
+            {voucher.redeemed ? (
+              <Badge
+                variant="secondary"
+                className="gap-1 border border-primary/20"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {t("voucher.alreadyRedeemed")}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref={layout === "dialog" ? bodyScrollRef : null}
+        onScroll={(e) => {
+          if (layout === "dialog") {
+            setBodyScrollTop(e.currentTarget.scrollTop);
+          }
+        }}
+        className={bodyClass}
+      >
         {showMerchantAttribution ? (
           <div
             className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-3"
@@ -434,32 +537,6 @@ export function VoucherDisplay({
           </div>
         ) : null}
 
-        <div className="space-y-2">
-          <h2 className="pr-2 text-xl font-semibold text-foreground leading-tight">
-            {t("voucher.rewardClaimed")}
-          </h2>
-          <p className="text-sm text-muted-foreground leading-snug">
-            {drop.name}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Badge className="border-teal/25 bg-teal/15 font-medium text-teal hover:bg-teal/20 gap-1">
-              <Gift className="w-3.5 h-3.5" />
-              {drop.rewardValue}
-            </Badge>
-            {voucher.redeemed ? (
-              <Badge
-                variant="secondary"
-                className="gap-1 border border-primary/20"
-              >
-                <Check className="w-3.5 h-3.5" />
-                {t("voucher.alreadyRedeemed")}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <div className={bodyClass}>
         {drop.description.trim() ? (
           <div data-testid="section-drop-description">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-2">
