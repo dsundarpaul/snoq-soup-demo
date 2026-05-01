@@ -29,6 +29,7 @@ import {
   HunterVouchersPageDto,
   HunterVoucherItemDto,
 } from "./dto/response/hunter-vouchers-buckets.dto";
+import { config } from "../../config/app.config";
 import { MailService } from "../mail/mail.service";
 import { DropsService } from "../drops/drops.service";
 
@@ -75,6 +76,29 @@ export class VouchersService {
       }
       return result === 0;
     }
+  }
+
+  private buildPublicVoucherUrl(magicToken: string): string {
+    const base = config.FRONTEND_URL.replace(/\/$/, "");
+    return `${base}/voucher/${encodeURIComponent(magicToken)}`;
+  }
+
+  private async resolveHunterNotificationEmail(
+    voucher: VoucherDocument,
+  ): Promise<string | null> {
+    const direct = voucher.claimedBy?.email?.trim();
+    if (direct) return direct;
+
+    const hunterId = voucher.claimedBy?.hunterId;
+    if (!hunterId) return null;
+
+    const hunter = await this.database.hunters
+      .findOne({ _id: hunterId, deletedAt: null })
+      .select("email")
+      .lean();
+
+    const resolved = hunter?.email?.trim();
+    return resolved ?? null;
   }
 
   constructor(
@@ -231,12 +255,37 @@ export class VouchersService {
       )
       .lean();
 
+    const merchantRecord = merchantDoc as Record<string, unknown> | null;
+    const merchantDisplayName =
+      merchantRecord &&
+      typeof merchantRecord.businessName === "string" &&
+      merchantRecord.businessName.trim()
+        ? merchantRecord.businessName.trim()
+        : "";
+    const dropName =
+      drop && typeof drop.name === "string" && drop.name.trim()
+        ? drop.name.trim()
+        : "Reward";
+
+    void this.mailService
+      .sendRewardClaimedNotification(
+        hunter.email,
+        this.buildPublicVoucherUrl(magicToken),
+        dropName,
+        merchantDisplayName,
+      )
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send reward claimed notification: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      });
+
     const base = this.toResponseDto(voucher, drop);
     return {
       ...base,
-      merchant: this.mapMerchantLeanToInfoDto(
-        merchantDoc as Record<string, unknown> | null,
-      ),
+      merchant: this.mapMerchantLeanToInfoDto(merchantRecord),
     };
   }
 
@@ -372,6 +421,43 @@ export class VouchersService {
         },
       );
     }
+
+    void (async () => {
+      try {
+        const to = await this.resolveHunterNotificationEmail(redeemedVoucher);
+        if (!to) return;
+
+        const merchantLean = await this.database.merchants
+          .findById(redeemedVoucher.merchantId)
+          .select("businessName")
+          .lean();
+
+        const mr = merchantLean as { businessName?: string } | null;
+        const merchantDisplayName =
+          mr?.businessName && typeof mr.businessName === "string"
+            ? mr.businessName.trim()
+            : "";
+
+        const dropDisplayName =
+          typeof drop.name === "string" && drop.name.trim()
+            ? drop.name.trim()
+            : "Reward";
+
+        await this.mailService.sendRewardRedeemedNotification(
+          to,
+          this.buildPublicVoucherUrl(magicToken),
+          dropDisplayName,
+          merchantDisplayName,
+          redeemedVoucher.redeemedAt!,
+        );
+      } catch (err: unknown) {
+        this.logger.warn(
+          `Failed to send reward redeemed notification: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    })();
 
     // Get promo code if assigned
     const promoCode = await this.database.promoCodes.findOne({

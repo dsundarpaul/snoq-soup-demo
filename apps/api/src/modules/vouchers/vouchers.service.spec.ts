@@ -12,7 +12,11 @@ import { DropsService } from "../drops/drops.service";
 
 describe("VouchersService", () => {
   let service: VouchersService;
-  let mailService: { sendVoucherMagicLink: jest.Mock };
+  let mailService: {
+    sendVoucherMagicLink: jest.Mock;
+    sendRewardClaimedNotification: jest.Mock;
+    sendRewardRedeemedNotification: jest.Mock;
+  };
   let dropsService: { toResponseDto: jest.Mock };
   let database: {
     vouchers: {
@@ -20,6 +24,7 @@ describe("VouchersService", () => {
       find: jest.Mock;
       countDocuments: jest.Mock;
       create: jest.Mock;
+      findOneAndUpdate: jest.Mock;
     };
     drops: { findOne: jest.Mock; findById: jest.Mock };
     promoCodes: { findOne: jest.Mock; findOneAndUpdate: jest.Mock };
@@ -30,6 +35,8 @@ describe("VouchersService", () => {
   beforeEach(() => {
     mailService = {
       sendVoucherMagicLink: jest.fn().mockResolvedValue(undefined),
+      sendRewardClaimedNotification: jest.fn().mockResolvedValue(undefined),
+      sendRewardRedeemedNotification: jest.fn().mockResolvedValue(undefined),
     };
     dropsService = {
       toResponseDto: jest.fn().mockReturnValue({
@@ -52,6 +59,7 @@ describe("VouchersService", () => {
         find: jest.fn(),
         countDocuments: jest.fn(),
         create: jest.fn(),
+        findOneAndUpdate: jest.fn(),
       },
       drops: { findOne: jest.fn(), findById: jest.fn() },
       promoCodes: { findOne: jest.fn(), findOneAndUpdate: jest.fn() },
@@ -234,6 +242,13 @@ describe("VouchersService", () => {
         hunterId,
         { $inc: { "stats.totalClaims": 1 } },
       );
+
+      expect(mailService.sendRewardClaimedNotification).toHaveBeenCalledWith(
+        "hunter@test.com",
+        expect.stringMatching(/\/voucher\/[0-9a-f]{32}(?:\/)?$/i),
+        "Reward",
+        "Test Merchant",
+      );
     });
   });
 
@@ -289,6 +304,7 @@ describe("VouchersService", () => {
 
     it("allows hunter redeem when redeemerMerchantId matches voucher merchant", async () => {
       const hunterDbId = new Types.ObjectId();
+      const now = new Date();
       const v = mockVoucher({ expiresAt: null });
       database.vouchers.findOne.mockResolvedValue(v);
       database.drops.findById.mockResolvedValue({
@@ -306,6 +322,17 @@ describe("VouchersService", () => {
           deletedAt: null,
         }),
       });
+
+      database.vouchers.findOneAndUpdate.mockResolvedValue({
+        ...v,
+        redeemed: true,
+        redeemedAt: now,
+        redeemedBy: {
+          type: "hunter",
+          id: hunterDbId.toString(),
+        },
+      });
+
       database.promoCodes.findOne.mockResolvedValue(null);
 
       await service.redeem(
@@ -317,15 +344,7 @@ describe("VouchersService", () => {
         hunterDbId.toString(),
       );
 
-      expect(v.save).toHaveBeenCalled();
-      expect(v.redeemed).toBe(true);
-      expect(
-        (v as unknown as { redeemedBy: { type: string; id: string } })
-          .redeemedBy,
-      ).toEqual({
-        type: "hunter",
-        id: hunterDbId.toString(),
-      });
+      expect(database.vouchers.findOneAndUpdate).toHaveBeenCalled();
     });
 
     it("rejects hunter redeem when not linked to merchant", async () => {

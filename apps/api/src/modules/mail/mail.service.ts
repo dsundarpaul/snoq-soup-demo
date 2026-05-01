@@ -5,6 +5,8 @@ import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { config } from "../../config/app.config";
 import {
   buildPasswordResetEmailContent,
+  buildRewardClaimedNotificationEmailContent,
+  buildRewardRedeemedNotificationEmailContent,
   buildVerificationEmailContent,
   buildVoucherMagicLinkEmailContent,
 } from "./email-templates";
@@ -105,6 +107,68 @@ export class MailService {
     const { subject, text, html } = buildVoucherMagicLinkEmailContent(
       magicLink,
       dropName,
+      base,
+    );
+
+    const transporter = this.getTransporter();
+    await transporter.sendMail({
+      from: config.smtp.from,
+      to,
+      subject,
+      text,
+      html,
+    });
+  }
+
+  async sendRewardClaimedNotification(
+    to: string,
+    voucherUrl: string,
+    dropName: string,
+    merchantDisplayName: string,
+  ): Promise<void> {
+    const base = config.FRONTEND_URL.replace(/\/$/, "");
+
+    if (!config.ENABLE_EMAIL || !config.smtp.host) {
+      this.logger.debug(`Reward claimed notification would be sent to ${to}`);
+      return;
+    }
+
+    const { subject, text, html } = buildRewardClaimedNotificationEmailContent(
+      voucherUrl,
+      dropName,
+      merchantDisplayName,
+      base,
+    );
+
+    const transporter = this.getTransporter();
+    await transporter.sendMail({
+      from: config.smtp.from,
+      to,
+      subject,
+      text,
+      html,
+    });
+  }
+
+  async sendRewardRedeemedNotification(
+    to: string,
+    voucherUrl: string,
+    dropName: string,
+    merchantDisplayName: string,
+    redeemedAt: Date,
+  ): Promise<void> {
+    const base = config.FRONTEND_URL.replace(/\/$/, "");
+
+    if (!config.ENABLE_EMAIL || !config.smtp.host) {
+      this.logger.debug(`Reward redeemed notification would be sent to ${to}`);
+      return;
+    }
+
+    const { subject, text, html } = buildRewardRedeemedNotificationEmailContent(
+      voucherUrl,
+      dropName,
+      merchantDisplayName,
+      redeemedAt,
       base,
     );
 

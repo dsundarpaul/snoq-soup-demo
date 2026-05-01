@@ -160,6 +160,89 @@ ${frontendBase}`;
   return { subject, text, html };
 }
 
+export function buildRewardClaimedNotificationEmailContent(
+  voucherUrl: string,
+  dropName: string,
+  merchantDisplayName: string,
+  frontendBase: string,
+): { readonly subject: string; readonly text: string; readonly html: string } {
+  const storeLine = merchantDisplayName.trim()
+    ? `Congratulations — you've secured "${dropName}" from ${merchantDisplayName.trim()}!`
+    : `Congratulations — you've secured "${dropName}"!`;
+
+  const subject = `Reward claimed — ${dropName}`;
+  const preheader = `You've claimed "${dropName}" in ${BRAND_NAME}.`;
+
+  const text = `${BRAND_NAME} — reward claimed
+
+${storeLine}
+
+View your voucher anytime:
+${voucherUrl}
+
+${frontendBase}`;
+
+  const html = layoutBrandedEmail({
+    preheader,
+    title: "You claimed a reward!",
+    lead: storeLine,
+    bodyLines: [
+      "Your voucher is saved to your hunter account. You can open it below whenever you're ready — at the venue, show the voucher or QR code to complete redemption.",
+      "We'll also email you again when your reward has been redeemed at the merchant.",
+    ],
+    ctaUrl: voucherUrl.replace(/"/g, "%22"),
+    ctaLabel: "View my voucher",
+    secondaryNote:
+      "Keep this link handy until you've redeemed — it is unique to your claim.",
+    frontendBase,
+  });
+
+  return { subject, text, html };
+}
+
+export function buildRewardRedeemedNotificationEmailContent(
+  voucherUrl: string,
+  dropName: string,
+  merchantDisplayName: string,
+  redeemedAt: Date,
+  frontendBase: string,
+): { readonly subject: string; readonly text: string; readonly html: string } {
+  const when = redeemedAt.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  const storeLine = merchantDisplayName.trim()
+    ? `Your reward for "${dropName}" at ${merchantDisplayName.trim()} was redeemed on ${when}.`
+    : `Your reward for "${dropName}" was redeemed on ${when}.`;
+
+  const subject = `Reward redeemed — ${dropName}`;
+  const preheader = `Your "${dropName}" reward was marked as redeemed.`;
+
+  const text = `${BRAND_NAME} — reward redeemed
+
+${storeLine}
+
+You can still open your voucher page for your records:
+${voucherUrl}
+
+${frontendBase}`;
+
+  const html = layoutBrandedEmail({
+    preheader,
+    title: "Reward redeemed",
+    lead: "This is a quick confirmation for your records.",
+    bodyLines: [storeLine, "Thanks for hunting with us — we hope you enjoyed the drop."],
+    ctaUrl: voucherUrl.replace(/"/g, "%22"),
+    ctaLabel: "Open voucher page",
+    secondaryNote:
+      "If you did not complete this redemption, contact the merchant or reach out to support through the app.",
+    frontendBase,
+  });
+
+  return { subject, text, html };
+}
+
 export function buildPasswordResetEmailContent(
   resetUrl: string,
   frontendBase: string,
