@@ -200,7 +200,10 @@ export function DropDetailsDialog({
           )}
         >
           <DialogHeader
-            className={cn("p-0 text-left", headerCompact ? "space-y-2" : "space-y-3")}
+            className={cn(
+              "p-0 text-left",
+              headerCompact ? "space-y-2" : "space-y-3"
+            )}
           >
             <DialogTitle
               className={cn(
@@ -307,8 +310,8 @@ export function DropDetailsDialog({
                     timeWindowInfo.isExpired
                       ? "destructive"
                       : timeWindowInfo.notYetActive
-                        ? "amber"
-                        : "default"
+                      ? "amber"
+                      : "default"
                   }
                 >
                   {timeWindowInfo.status}
@@ -317,12 +320,12 @@ export function DropDetailsDialog({
             </div>
           </div>
 
-          <div className="flex items-start gap-2 rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+          {/* <div className="flex items-start gap-2 rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
             <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
             <span className="font-mono leading-relaxed">
               {drop.latitude.toFixed(5)}, {drop.longitude.toFixed(5)}
             </span>
-          </div>
+          </div> */}
 
           <Separator />
 
