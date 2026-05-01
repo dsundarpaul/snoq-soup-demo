@@ -7,6 +7,7 @@ export interface StoredVoucher {
   drop: Drop;
   claimedAt: string;
   businessName: string;
+  merchantLogoUrl?: string | null;
   merchantStoreLocation: {
     lat: number;
     lng: number;

@@ -37,6 +37,7 @@ const en = {
   "home.hunt": "Hunt",
   "home.directions": "Directions",
   "home.map": "Map",
+  "home.merchant": "Merchant",
   "home.dropDetails": "Drop details",
   "home.dropFacts": "At a glance",
   "home.captureZone": "Capture zone",

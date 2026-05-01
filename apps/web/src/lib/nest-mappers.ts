@@ -53,9 +53,22 @@ export function mapNestDropToLegacy(
     captureLimit = availability.limit ?? null;
   }
 
+  const merchantNameRaw = raw.merchantName;
+  const merchantName =
+    merchantNameRaw != null && String(merchantNameRaw).trim() !== ""
+      ? String(merchantNameRaw)
+      : null;
+  const merchantLogoRaw = raw.merchantLogoUrl as string | null | undefined;
+  const merchantLogoUrl =
+    merchantLogoRaw != null && String(merchantLogoRaw).trim() !== ""
+      ? String(merchantLogoRaw)
+      : null;
+
   const out: DropWithCount = {
     id: String(raw.id ?? ""),
     merchantId: String(raw.merchantId ?? ""),
+    merchantName,
+    merchantLogoUrl,
     name: String(raw.name ?? ""),
     description: String(raw.description ?? ""),
     latitude: lat,
@@ -430,6 +443,7 @@ export function mapMerchantPublicToStoreData(raw: Record<string, unknown>): {
 
 export type HunterVoucherMerchantDisplay = {
   businessName: string;
+  merchantLogoUrl: string | null;
   merchantStoreLocation: {
     lat: number;
     lng: number;
@@ -450,6 +464,7 @@ function nestMerchantRecordToVoucherDisplayFields(
   if (!merchant) {
     return {
       businessName: "",
+      merchantLogoUrl: null,
       merchantStoreLocation: null,
       merchantBusinessPhone: null,
       merchantBusinessHours: null,
@@ -484,11 +499,44 @@ function nestMerchantRecordToVoucherDisplayFields(
         }
       : null;
 
+  const logoRaw = merchant.logoUrl as string | null | undefined;
+  const merchantLogoUrl =
+    logoRaw != null && String(logoRaw).trim() !== ""
+      ? String(logoRaw)
+      : null;
+
   return {
-    businessName: String(merchant.name ?? ""),
+    businessName: String(merchant.businessName ?? merchant.name ?? ""),
+    merchantLogoUrl,
     merchantStoreLocation,
     merchantBusinessPhone: (merchant.businessPhone as string | null) ?? null,
     merchantBusinessHours: (merchant.businessHours as string | null) ?? null,
+  };
+}
+
+function enrichDropWithMerchantProfile(
+  drop: Drop,
+  merchant: Record<string, unknown> | undefined
+): Drop {
+  const m = nestMerchantRecordToVoucherDisplayFields(merchant);
+  const name = m.businessName.trim();
+  const logo = m.merchantLogoUrl;
+  return {
+    ...drop,
+    merchantName:
+      name.length > 0
+        ? name
+        : drop.merchantName != null &&
+          String(drop.merchantName).trim() !== ""
+        ? drop.merchantName
+        : null,
+    merchantLogoUrl:
+      logo != null
+        ? logo
+        : drop.merchantLogoUrl != null &&
+          String(drop.merchantLogoUrl).trim() !== ""
+        ? drop.merchantLogoUrl
+        : null,
   };
 }
 
@@ -496,6 +544,7 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
   voucher: Voucher;
   drop: Drop;
   businessName: string;
+  merchantLogoUrl: string | null;
   merchantStoreLocation: {
     lat: number;
     lng: number;
@@ -534,25 +583,28 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
       ? toDate(raw.expiresAt as Date | string | null | undefined)
       : null,
   } as Voucher;
-  const drop = mapNestDropToLegacy({
-    id: String(dropInfo?.id ?? ""),
-    merchantId: String(merchant?.id ?? ""),
-    name: String(dropInfo?.name ?? ""),
-    description: String(dropInfo?.description ?? ""),
-    rewardValue: String(dropInfo?.rewardValue ?? ""),
-    logoUrl: dropInfo?.logoUrl ?? null,
-    termsAndConditions:
-      (dropInfo?.termsAndConditions as string | null | undefined) ?? null,
-    location: { lat: 0, lng: 0 },
-    radius: 15,
-    redemption: redemptionConfig
-      ? {
-          type: redemptionConfig.type,
-          minutes: redemptionConfig.minutes,
-          deadline: redemptionConfig.deadline,
-        }
-      : undefined,
-  });
+  const drop = enrichDropWithMerchantProfile(
+    mapNestDropToLegacy({
+      id: String(dropInfo?.id ?? ""),
+      merchantId: String(merchant?.id ?? ""),
+      name: String(dropInfo?.name ?? ""),
+      description: String(dropInfo?.description ?? ""),
+      rewardValue: String(dropInfo?.rewardValue ?? ""),
+      logoUrl: dropInfo?.logoUrl ?? null,
+      termsAndConditions:
+        (dropInfo?.termsAndConditions as string | null | undefined) ?? null,
+      location: { lat: 0, lng: 0 },
+      radius: 15,
+      redemption: redemptionConfig
+        ? {
+            type: redemptionConfig.type,
+            minutes: redemptionConfig.minutes,
+            deadline: redemptionConfig.deadline,
+          }
+        : undefined,
+    }),
+    merchant
+  );
 
   return {
     voucher,
@@ -567,7 +619,7 @@ export function mapClaimResponseToLegacy(raw: Record<string, unknown>): {
 } & HunterVoucherMerchantDisplay {
   const voucher = mapNestVoucherToLegacy(raw);
   const dropRaw = raw.drop as Record<string, unknown> | undefined;
-  const drop = dropRaw
+  const dropBase = dropRaw
     ? mapNestDropToLegacy({
         ...dropRaw,
         id: dropRaw.id ?? voucher.dropId,
@@ -582,6 +634,10 @@ export function mapClaimResponseToLegacy(raw: Record<string, unknown>): {
         radius: 15,
         rewardValue: "",
       });
+  const drop = enrichDropWithMerchantProfile(
+    dropBase,
+    raw.merchant as Record<string, unknown> | undefined
+  );
   return {
     voucher,
     drop,
@@ -598,11 +654,14 @@ export function mapHunterVoucherBundleToLegacy(row: {
 }): { voucher: Voucher; drop: Drop } & HunterVoucherMerchantDisplay {
   const voucher = mapNestVoucherToLegacy(row.voucher);
   const dropRaw = row.drop;
-  const drop = mapNestDropToLegacy({
-    ...dropRaw,
-    id: dropRaw.id ?? voucher.dropId,
-    merchantId: (dropRaw.merchantId as string) ?? voucher.merchantId,
-  });
+  const drop = enrichDropWithMerchantProfile(
+    mapNestDropToLegacy({
+      ...dropRaw,
+      id: dropRaw.id ?? voucher.dropId,
+      merchantId: (dropRaw.merchantId as string) ?? voucher.merchantId,
+    }),
+    row.merchant
+  );
   return {
     voucher,
     drop,

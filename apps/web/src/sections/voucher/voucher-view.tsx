@@ -17,6 +17,7 @@ interface VoucherData {
   voucher: Voucher;
   drop: Drop;
   businessName: string;
+  merchantLogoUrl: string | null;
   merchantStoreLocation: {
     lat: number;
     lng: number;
@@ -119,6 +120,7 @@ export default function VoucherViewPage() {
         voucher={data.voucher}
         drop={data.drop}
         businessName={data.businessName}
+        merchantLogoUrl={data.merchantLogoUrl}
         merchantStoreLocation={data.merchantStoreLocation}
         merchantBusinessPhone={data.merchantBusinessPhone}
         merchantBusinessHours={data.merchantBusinessHours}

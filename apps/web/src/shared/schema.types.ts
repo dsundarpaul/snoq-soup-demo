@@ -30,6 +30,10 @@ export interface Merchant {
 export interface Drop {
   id: string;
   merchantId: string;
+  /** Populated on active-drops API responses */
+  merchantName?: string | null;
+  /** Merchant profile logo (distinct from drop marketing `logoUrl`) */
+  merchantLogoUrl?: string | null;
   name: string;
   description: string;
   latitude: number;

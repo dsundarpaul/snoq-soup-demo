@@ -963,6 +963,7 @@ export default function ARGamePage() {
         voucher: existingVoucher.voucher,
         drop: existingVoucher.drop,
         businessName: existingVoucher.businessName,
+        merchantLogoUrl: existingVoucher.merchantLogoUrl,
         merchantStoreLocation: existingVoucher.merchantStoreLocation,
         merchantBusinessPhone: existingVoucher.merchantBusinessPhone,
         merchantBusinessHours: existingVoucher.merchantBusinessHours,
@@ -975,6 +976,7 @@ export default function ARGamePage() {
       if (!prev?.voucher.id) return prev;
       if (
         prev.businessName ||
+        prev.merchantLogoUrl ||
         prev.merchantStoreLocation ||
         prev.merchantBusinessPhone
       ) {
@@ -984,6 +986,7 @@ export default function ARGamePage() {
       if (
         !row ||
         (!row.businessName &&
+          !row.merchantLogoUrl &&
           !row.merchantStoreLocation &&
           !row.merchantBusinessPhone)
       ) {
@@ -993,6 +996,7 @@ export default function ARGamePage() {
         voucher: row.voucher,
         drop: row.drop,
         businessName: row.businessName,
+        merchantLogoUrl: row.merchantLogoUrl,
         merchantStoreLocation: row.merchantStoreLocation,
         merchantBusinessPhone: row.merchantBusinessPhone,
         merchantBusinessHours: row.merchantBusinessHours,
@@ -1143,14 +1147,15 @@ export default function ARGamePage() {
           <ChevronLeft className="w-4 h-4 mr-2" />
           {t("nav.backToHunt")}
         </Button>
-        <VoucherDisplay
-          voucher={claimedVoucher.voucher}
-          drop={claimedVoucher.drop}
-          businessName={claimedVoucher.businessName}
-          merchantStoreLocation={claimedVoucher.merchantStoreLocation}
-          merchantBusinessPhone={claimedVoucher.merchantBusinessPhone}
-          merchantBusinessHours={claimedVoucher.merchantBusinessHours}
-        />
+          <VoucherDisplay
+            voucher={claimedVoucher.voucher}
+            drop={claimedVoucher.drop}
+            businessName={claimedVoucher.businessName}
+            merchantLogoUrl={claimedVoucher.merchantLogoUrl}
+            merchantStoreLocation={claimedVoucher.merchantStoreLocation}
+            merchantBusinessPhone={claimedVoucher.merchantBusinessPhone}
+            merchantBusinessHours={claimedVoucher.merchantBusinessHours}
+          />
       </div>
     );
   }

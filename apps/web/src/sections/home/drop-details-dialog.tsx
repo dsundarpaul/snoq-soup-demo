@@ -10,6 +10,7 @@ import {
   Gift,
   MapPin,
   Navigation,
+  Store,
   Target,
   Trophy,
   FileText,
@@ -111,37 +112,78 @@ export function DropDetailsDialog({
         : `${drop.redemptionMinutes}min`
       : null;
 
+  const showMerchantRow = Boolean(
+    (drop.merchantName && drop.merchantName.trim()) ||
+      (drop.merchantLogoUrl && drop.merchantLogoUrl.trim())
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-lg max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col sm:rounded-xl"
         data-testid={`dialog-drop-details-${drop.id}`}
       >
-        <div className="relative shrink-0 bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10 px-6 pt-8 pb-6 border-b border-border/60">
-          <DialogHeader className="space-y-4 text-left">
-            <div className="flex gap-4 items-start">
-              {drop.logoUrl ? (
+        <div className="relative shrink-0 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
+          <div className="relative aspect-[16/10] min-h-[11rem] max-h-[15rem] w-full sm:aspect-[16/9] sm:min-h-[12rem]">
+            {drop.logoUrl ? (
+              <img
+                src={drop.logoUrl}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover"
+                data-testid={`dialog-drop-hero-${drop.id}`}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10">
+                <Trophy className="h-16 w-16 text-primary/35" />
+              </div>
+            )}
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"
+              aria-hidden
+            />
+          </div>
+        </div>
+
+        <div className="shrink-0 space-y-3 border-b border-border/60 px-6 pb-5 pt-4">
+          {showMerchantRow ? (
+            <div
+              className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-3"
+              data-testid={`dialog-merchant-row-${drop.id}`}
+            >
+              {drop.merchantLogoUrl ? (
                 <img
-                  src={drop.logoUrl}
+                  src={drop.merchantLogoUrl}
                   alt=""
-                  className="w-16 h-16 rounded-xl object-cover bg-white border border-border/50 shadow-md shrink-0"
+                  loading="lazy"
+                  className="h-12 w-12 shrink-0 rounded-xl border border-border/50 bg-white object-cover shadow-sm"
+                  data-testid={`dialog-merchant-logo-${drop.id}`}
                 />
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0 shadow-inner">
-                  <Trophy className="w-8 h-8 text-primary" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-primary/10">
+                  <Store className="h-6 w-6 text-primary" />
                 </div>
               )}
-              <div className="min-w-0 flex-1 space-y-2 pt-0.5">
-                <DialogTitle className="text-xl leading-tight pr-6">
-                  {drop.name}
-                </DialogTitle>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-teal/15 text-teal border-teal/25 hover:bg-teal/20 gap-1 font-medium">
-                    <Gift className="w-3.5 h-3.5" />
-                    {drop.rewardValue}
-                  </Badge>
-                </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("home.merchant")}
+                </p>
+                <p className="truncate text-base font-semibold text-foreground">
+                  {drop.merchantName?.trim() || "—"}
+                </p>
               </div>
+            </div>
+          ) : null}
+
+          <DialogHeader className="space-y-3 p-0 text-left">
+            <DialogTitle className="pr-6 text-xl leading-tight">
+              {drop.name}
+            </DialogTitle>
+            <div className="flex flex-wrap gap-2">
+              <Badge className="border-teal/25 bg-teal/15 font-medium text-teal hover:bg-teal/20 gap-1">
+                <Gift className="w-3.5 h-3.5" />
+                {drop.rewardValue}
+              </Badge>
             </div>
             <DialogDescription className="sr-only">
               {t("home.dropDetails")}

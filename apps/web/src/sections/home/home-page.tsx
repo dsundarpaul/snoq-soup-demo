@@ -202,6 +202,7 @@ export default function HomePage() {
                         voucher,
                         drop,
                         businessName,
+                        merchantLogoUrl,
                         merchantStoreLocation,
                         merchantBusinessPhone,
                         merchantBusinessHours,
@@ -217,6 +218,7 @@ export default function HomePage() {
                                 drop,
                                 claimedAt: voucher.claimedAt?.toString() || "",
                                 businessName,
+                                merchantLogoUrl,
                                 merchantStoreLocation,
                                 merchantBusinessPhone,
                                 merchantBusinessHours,
@@ -454,6 +456,7 @@ export default function HomePage() {
                   voucher,
                   drop,
                   businessName,
+                  merchantLogoUrl,
                   merchantStoreLocation,
                   merchantBusinessPhone,
                   merchantBusinessHours,
@@ -467,6 +470,7 @@ export default function HomePage() {
                         drop,
                         claimedAt: voucher.claimedAt?.toString() || "",
                         businessName,
+                        merchantLogoUrl,
                         merchantStoreLocation,
                         merchantBusinessPhone,
                         merchantBusinessHours,
@@ -558,6 +562,7 @@ export default function HomePage() {
               voucher={selectedVoucher.voucher}
               drop={selectedVoucher.drop}
               businessName={selectedVoucher.businessName}
+              merchantLogoUrl={selectedVoucher.merchantLogoUrl}
               merchantStoreLocation={selectedVoucher.merchantStoreLocation}
               merchantBusinessPhone={selectedVoucher.merchantBusinessPhone}
               merchantBusinessHours={selectedVoucher.merchantBusinessHours}

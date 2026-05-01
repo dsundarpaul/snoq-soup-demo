@@ -342,9 +342,7 @@ export function MerchantDropForm({
               form.clearErrors(["latitude", "longitude"]);
               const trimmed = (address ?? "").trim();
               setSelectedAddress(
-                trimmed
-                  ? { lat: lat6, lng: lng6, address: trimmed }
-                  : null
+                trimmed ? { lat: lat6, lng: lng6, address: trimmed } : null
               );
             }}
             label={t("merchant.form.location.searchInputLabel")}
@@ -449,11 +447,11 @@ export function MerchantDropForm({
                 >
                   {selectedAddress!.address}
                 </p>
-                {formattedCoords && (
+                {/* {formattedCoords && (
                   <p className="text-xs text-muted-foreground">
                     {formattedCoords}
                   </p>
-                )}
+                )} */}
               </>
             ) : (
               <>
@@ -521,7 +519,8 @@ export function MerchantDropForm({
 
       <div
         className={cn(
-          err.latitude && "rounded-md ring-2 ring-destructive ring-offset-2 ring-offset-background"
+          err.latitude &&
+            "rounded-md ring-2 ring-destructive ring-offset-2 ring-offset-background"
         )}
       >
         <MapPickerLazy
@@ -540,7 +539,11 @@ export function MerchantDropForm({
         />
       </div>
       {err.latitude && (
-        <p className="text-sm text-destructive" role="alert" data-testid="drop-map-location-error">
+        <p
+          className="text-sm text-destructive"
+          role="alert"
+          data-testid="drop-map-location-error"
+        >
           {err.latitude.message === DROP_LOCATION_REQUIRED_MESSAGE_EN
             ? t("merchant.form.location.mapBelowError")
             : err.latitude.message}

@@ -406,7 +406,7 @@ export class DropsService {
       logoUrl: 1,
       termsAndConditions: 1,
       merchantId: 1,
-      merchantName: "$merchant.name",
+      merchantName: "$merchant.businessName",
       merchantLogoUrl: "$merchant.logoUrl",
     };
 

@@ -37,6 +37,7 @@ const ar = {
   "home.hunt": "ابدأ",
   "home.directions": "الاتجاهات",
   "home.map": "الخريطة",
+  "home.merchant": "التاجر",
   "home.dropDetails": "تفاصيل الكنز",
   "home.dropFacts": "نظرة سريعة",
   "home.captureZone": "نطاق الالتقاط",

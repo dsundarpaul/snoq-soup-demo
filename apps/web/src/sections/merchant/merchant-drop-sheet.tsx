@@ -48,7 +48,7 @@ import {
 } from "@/sections/merchant/merchant-drop-form";
 import { MerchantDropPreviewDialog } from "@/sections/merchant/merchant-drop-preview-dialog";
 import { adminQueryKeys } from "@/hooks/api/admin/use-admin";
-// import { useMerchantMeQuery } from "@/hooks/api/merchant/use-merchant";
+import { useMerchantMeQuery } from "@/hooks/api/merchant/use-merchant";
 import { Label } from "@/components/ui/label";
 import { AdminMerchantAutocomplete } from "@/sections/merchant/admin-merchant-autocomplete";
 import { useLanguage } from "@/contexts/language-context";
@@ -104,9 +104,7 @@ function dropToFormValues(drop: Drop): CreateDropForm {
     captureLimit: drop.captureLimit ?? undefined,
     startTime: dateToIsoOrEmpty(drop.startTime),
     endTime: dateToIsoOrEmpty(drop.endTime),
-    voucherAbsoluteExpiresAt: dateToIsoOrEmpty(
-      drop.voucherAbsoluteExpiresAt,
-    ),
+    voucherAbsoluteExpiresAt: dateToIsoOrEmpty(drop.voucherAbsoluteExpiresAt),
     voucherTtlHoursAfterClaim: drop.voucherTtlHoursAfterClaim ?? undefined,
     termsAndConditions: drop.termsAndConditions ?? "",
   };
@@ -394,11 +392,19 @@ export function MerchantDropSheet({
     );
   };
 
-  // const { data: merchantMe } = useMerchantMeQuery({
-  //   enabled: !Boolean(adminContext),
-  // });
-  // const missingStoreLocation =
-  //   !Boolean(adminContext) && !merchantMe?.storeLocation?.lat;
+  const { data: merchantMe } = useMerchantMeQuery({
+    enabled: !Boolean(adminContext),
+  });
+
+  const previewMerchantBusinessName = adminContext
+    ? adminContext.merchants.find(
+        (m) => m.id === adminContext.selectedMerchantId
+      )?.businessName ?? null
+    : merchantMe?.businessName ?? null;
+
+  const previewMerchantLogoUrl = adminContext
+    ? null
+    : merchantMe?.logoUrl ?? null;
 
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const isSubmitting =
@@ -588,6 +594,8 @@ export function MerchantDropSheet({
         form={form}
         editingDrop={editingDrop}
         isSubmitting={isSubmitting}
+        // merchantBusinessName={previewMerchantBusinessName}
+        // merchantLogoUrl={previewMerchantLogoUrl}
         onPublish={() => {
           setShowPreview(false);
           void form.handleSubmit(onSubmit, handleValidationError)();

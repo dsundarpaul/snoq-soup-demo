@@ -124,6 +124,7 @@ interface VoucherDisplayProps {
   voucher: Voucher;
   drop: Drop;
   businessName?: string;
+  merchantLogoUrl?: string | null;
   merchantStoreLocation?: {
     lat: number;
     lng: number;
@@ -141,6 +142,7 @@ export function VoucherDisplay({
   voucher,
   drop,
   businessName = "Merchant",
+  merchantLogoUrl: merchantLogoUrlProp,
   merchantStoreLocation,
   merchantBusinessPhone,
   merchantBusinessHours,
@@ -194,9 +196,24 @@ export function VoucherDisplay({
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [termsOpen, setTermsOpen] = useState(false);
 
+  const merchantProfileName =
+    drop.merchantName?.trim() || businessName.trim() || "";
+  const merchantProfileLogo =
+    merchantLogoUrlProp != null && String(merchantLogoUrlProp).trim() !== ""
+      ? String(merchantLogoUrlProp)
+      : drop.merchantLogoUrl != null &&
+        String(drop.merchantLogoUrl).trim() !== ""
+      ? drop.merchantLogoUrl
+      : null;
+
+  const showMerchantAttribution =
+    merchantProfileLogo != null || merchantProfileName.length > 0;
+
   const appUrl = getPublicSiteUrl();
   const magicLink = publicUrls.voucher(voucher.magicToken);
-  const shareMessage = `I just found a hidden reward at ${businessName} using Scavly! \u{1F3C6}\n\nCan you find the next one? Join the hunt and start winning here: ${appUrl}`;
+  const shareMessage = `I just found a hidden reward at ${
+    merchantProfileName || businessName || "Merchant"
+  } using Scavly! \u{1F3C6}\n\nCan you find the next one? Join the hunt and start winning here: ${appUrl}`;
   const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
     shareMessage
   )}`;
@@ -365,42 +382,79 @@ export function VoucherDisplay({
         <p className="sr-only">{t("voucher.rewardClaimed")}</p>
       ) : null}
 
-      <div className="relative shrink-0 bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10 px-6 pt-8 pb-6 border-b border-border/60">
-        <div className="flex gap-4 items-start">
+      <div className="relative shrink-0 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
+        <div className="relative aspect-[16/10] min-h-[11rem] max-h-[15rem] w-full sm:aspect-[16/9] sm:min-h-[12rem]">
           {drop.logoUrl ? (
             <img
               src={drop.logoUrl}
               alt=""
-              className="w-16 h-16 rounded-xl object-cover bg-background border border-border/50 shadow-md shrink-0"
-              data-testid="img-merchant-logo"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+              data-testid="img-voucher-drop-hero"
             />
           ) : (
-            <div className="w-16 h-16 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0 shadow-inner">
-              <Trophy className="w-8 h-8 text-primary" />
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/8 to-teal/10">
+              <Trophy className="h-16 w-16 text-primary/35" />
             </div>
           )}
-          <div className="min-w-0 flex-1 space-y-2 pt-0.5">
-            <h2 className="text-xl font-semibold text-foreground leading-tight pr-2">
-              {t("voucher.rewardClaimed")}
-            </h2>
-            <p className="text-sm text-muted-foreground leading-snug">
-              {drop.name}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Badge className="bg-teal/15 text-teal border-teal/25 hover:bg-teal/20 gap-1 font-medium">
-                <Gift className="w-3.5 h-3.5" />
-                {drop.rewardValue}
-              </Badge>
-              {voucher.redeemed ? (
-                <Badge
-                  variant="secondary"
-                  className="gap-1 border border-primary/20"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  {t("voucher.alreadyRedeemed")}
-                </Badge>
-              ) : null}
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"
+            aria-hidden
+          />
+        </div>
+      </div>
+
+      <div className="shrink-0 space-y-4 border-b border-border/60 px-6 pb-6 pt-4">
+        {showMerchantAttribution ? (
+          <div
+            className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-3"
+            data-testid="voucher-merchant-row"
+          >
+            {merchantProfileLogo ? (
+              <img
+                src={merchantProfileLogo}
+                alt=""
+                loading="lazy"
+                className="h-12 w-12 shrink-0 rounded-xl border border-border/50 bg-white object-cover shadow-sm"
+                data-testid="img-merchant-profile-logo"
+              />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-primary/10">
+                <Store className="h-6 w-6 text-primary" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("home.merchant")}
+              </p>
+              <p className="truncate text-base font-semibold text-foreground">
+                {merchantProfileName || "—"}
+              </p>
             </div>
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <h2 className="pr-2 text-xl font-semibold text-foreground leading-tight">
+            {t("voucher.rewardClaimed")}
+          </h2>
+          <p className="text-sm text-muted-foreground leading-snug">
+            {drop.name}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Badge className="border-teal/25 bg-teal/15 font-medium text-teal hover:bg-teal/20 gap-1">
+              <Gift className="w-3.5 h-3.5" />
+              {drop.rewardValue}
+            </Badge>
+            {voucher.redeemed ? (
+              <Badge
+                variant="secondary"
+                className="gap-1 border border-primary/20"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {t("voucher.alreadyRedeemed")}
+              </Badge>
+            ) : null}
           </div>
         </div>
       </div>
@@ -506,17 +560,10 @@ export function VoucherDisplay({
             className="rounded-xl border border-border/70 bg-gradient-to-br from-primary/[0.07] via-muted/25 to-teal/[0.06] p-4 sm:p-5 shadow-sm space-y-4"
             data-testid="section-way-to-redeem"
           >
-            <div className="space-y-1.5">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                <Store className="w-3.5 h-3.5 shrink-0 text-primary" />
-                {t("voucher.wayToRedeem")}
-              </h4>
-              {businessName.trim() ? (
-                <p className="text-lg font-semibold text-foreground leading-snug text-left">
-                  {businessName}
-                </p>
-              ) : null}
-            </div>
+            <h4 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <Store className="w-3.5 h-3.5 shrink-0 text-primary" />
+              {t("voucher.wayToRedeem")}
+            </h4>
 
             {merchantBusinessPhone || merchantBusinessHours ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
