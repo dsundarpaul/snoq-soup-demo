@@ -1,9 +1,9 @@
 import { isAfter, isValid, parse, startOfDay, subYears } from "date-fns";
 
-export const HUNTER_MIN_AGE_YEARS = 5;
+export const HUNTER_MIN_AGE_YEARS = 4;
 
 export const HUNTER_DOB_ZOD_MESSAGE =
-  "You must be at least 5 years old. Choose a valid date of birth.";
+  "You must be at least 4 years old. Choose a valid date of birth.";
 
 export function latestAllowedHunterDobDate(now = new Date()): Date {
   return startOfDay(subYears(now, HUNTER_MIN_AGE_YEARS));

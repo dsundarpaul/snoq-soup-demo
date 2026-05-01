@@ -1,4 +1,4 @@
-export const HUNTER_MIN_AGE_YEARS = 5;
+export const HUNTER_MIN_AGE_YEARS = 4;
 
 function parseYmdLocal(ymd: string): Date | undefined {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
@@ -21,13 +21,13 @@ function latestAllowedHunterDobLocal(now: Date): Date {
   return new Date(
     now.getFullYear() - HUNTER_MIN_AGE_YEARS,
     now.getMonth(),
-    now.getDate(),
+    now.getDate()
   );
 }
 
 export function isValidHunterDobYmdString(
   ymd: string,
-  now = new Date(),
+  now = new Date()
 ): boolean {
   const dob = parseYmdLocal(ymd);
   if (!dob) return false;

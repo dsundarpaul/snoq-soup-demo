@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { startOfDay, max } from "date-fns";
 import { Controller, useForm } from "react-hook-form";
 import type {
@@ -32,14 +32,8 @@ import {
   Calendar,
   Info,
   Lock,
-  ChevronDown,
   X,
 } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
@@ -134,7 +128,16 @@ export function MerchantDropForm({
   originalDropStartTimeIso,
 }: MerchantDropFormProps) {
   const { t } = useLanguage();
-  const [coordsOpen, setCoordsOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<{
+    lat: number;
+    lng: number;
+    address: string;
+  } | null>(null);
+
+  useEffect(() => {
+    setSelectedAddress(null);
+  }, [mapPickerRemountKey]);
+
   const redemptionType = form.watch("redemptionType");
   const availabilityTypeRaw = form.watch("availabilityType");
   const startTimeValue = form.watch("startTime");
@@ -152,6 +155,16 @@ export function MerchantDropForm({
   const latitudeWatch = form.watch("latitude");
   const longitudeWatch = form.watch("longitude");
   const hasDropPin = isValidMapPosition(latitudeWatch, longitudeWatch);
+  const addressMatchesPin =
+    !!selectedAddress &&
+    typeof latitudeWatch === "number" &&
+    typeof longitudeWatch === "number" &&
+    Math.abs(selectedAddress.lat - latitudeWatch) < 1e-4 &&
+    Math.abs(selectedAddress.lng - longitudeWatch) < 1e-4;
+  const formattedCoords =
+    typeof latitudeWatch === "number" && typeof longitudeWatch === "number"
+      ? `${latitudeWatch.toFixed(6)}, ${longitudeWatch.toFixed(6)}`
+      : "";
 
   const scheduleDayMin = useMemo(() => {
     const todayStart = startOfDay(new Date());
@@ -321,10 +334,18 @@ export function MerchantDropForm({
           </p>
           <GooglePlacesAutocomplete
             apiKey={googleMapsApiKey}
-            onPlaceSelect={(lat, lng) => {
-              form.setValue("latitude", parseFloat(lat.toFixed(6)));
-              form.setValue("longitude", parseFloat(lng.toFixed(6)));
+            onPlaceSelect={(lat, lng, address) => {
+              const lat6 = parseFloat(lat.toFixed(6));
+              const lng6 = parseFloat(lng.toFixed(6));
+              form.setValue("latitude", lat6);
+              form.setValue("longitude", lng6);
               form.clearErrors(["latitude", "longitude"]);
+              const trimmed = (address ?? "").trim();
+              setSelectedAddress(
+                trimmed
+                  ? { lat: lat6, lng: lng6, address: trimmed }
+                  : null
+              );
             }}
             label={t("merchant.form.location.searchInputLabel")}
             placeholder="Type an address to move the pin…"
@@ -407,62 +428,49 @@ export function MerchantDropForm({
         </div>
       </div>
 
-      <Collapsible open={coordsOpen} onOpenChange={setCoordsOpen}>
-        <CollapsibleTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1 px-0 text-muted-foreground"
-          >
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 transition-transform",
-                coordsOpen && "rotate-180"
-              )}
-            />
-            {t("merchant.form.location.advancedToggle")}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3 pt-2">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude</Label>
-              <Input
-                id="latitude"
-                type="number"
-                step="any"
-                className={cn(err.latitude && "border-destructive")}
-                {...form.register("latitude")}
-                data-testid="input-drop-latitude"
-              />
-              {err.latitude && (
-                <p className="text-sm text-destructive">
-                  {err.latitude.message ??
-                    "Valid latitude required (-90 to 90)"}
+      {hasDropPin && (
+        <div
+          className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/15 px-3 py-2"
+          role="status"
+          data-testid="drop-location-summary"
+        >
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {addressMatchesPin
+                ? t("merchant.form.location.pinnedAddressLabel")
+                : t("merchant.form.location.pinnedCoordsLabel")}
+            </p>
+            {addressMatchesPin ? (
+              <>
+                <p
+                  className="break-words text-sm text-foreground"
+                  data-testid="drop-location-address"
+                >
+                  {selectedAddress!.address}
                 </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="longitude">Longitude</Label>
-              <Input
-                id="longitude"
-                type="number"
-                step="any"
-                className={cn(err.longitude && "border-destructive")}
-                {...form.register("longitude")}
-                data-testid="input-drop-longitude"
-              />
-              {err.longitude && (
-                <p className="text-sm text-destructive">
-                  {err.longitude.message ??
-                    "Valid longitude required (-180 to 180)"}
+                {formattedCoords && (
+                  <p className="text-xs text-muted-foreground">
+                    {formattedCoords}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p
+                  className="break-words text-sm text-foreground"
+                  data-testid="drop-location-coords"
+                >
+                  {formattedCoords}
                 </p>
-              )}
-            </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("merchant.form.location.pinnedNoAddress")}
+                </p>
+              </>
+            )}
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -527,6 +535,7 @@ export function MerchantDropForm({
             form.setValue("latitude", parseFloat(lat.toFixed(6)));
             form.setValue("longitude", parseFloat(lng.toFixed(6)));
             form.clearErrors(["latitude", "longitude"]);
+            setSelectedAddress(null);
           }}
         />
       </div>

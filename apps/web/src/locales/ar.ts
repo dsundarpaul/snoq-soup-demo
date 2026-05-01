@@ -36,6 +36,7 @@ const ar = {
   "home.noDropsDesc": "تحقق لاحقاً لمكافآت جديدة!",
   "home.hunt": "ابدأ",
   "home.directions": "الاتجاهات",
+  "home.map": "الخريطة",
   "home.dropDetails": "تفاصيل الكنز",
   "home.dropFacts": "نظرة سريعة",
   "home.captureZone": "نطاق الالتقاط",
@@ -141,10 +142,10 @@ const ar = {
   "profile.dateOfBirth": "تاريخ الميلاد",
   "profile.mobileLengthHint": "الطول المتوقع: {range}",
   "profile.dobMinAgeHint":
-    "يجب أن يكون عمرك 5 سنوات على الأقل. لا يمكن اختيار تواريخ مستقبلية.",
+    "يجب أن يكون عمرك 4 سنوات على الأقل. لا يمكن اختيار تواريخ مستقبلية.",
   "profile.dobInvalidMinAge": "تاريخ ميلاد غير صالح",
   "profile.dobInvalidMinAgeDesc":
-    "اختر تاريخاً ليس في المستقبل ويكون قبل 5 سنوات على الأقل.",
+    "اختر تاريخاً ليس في المستقبل ويكون قبل 4 سنوات على الأقل.",
   "profile.gender": "الجنس",
   "profile.selectGender": "اختر الجنس",
   "profile.male": "ذكر",
@@ -534,7 +535,11 @@ const ar = {
   "merchant.form.schedule.clearEnd": "مسح النهاية",
   "merchant.form.logo.remove": "إزالة الشعار",
   "merchant.form.logo.uploadHint":
-    "ارفع صورة بصيغة ‎.jpg‎ أو ‎.jpeg‎ أو ‎.png‎.",
+    "يُفضّل صورة مربعة (مثلاً ١٠٨٠×١٠٨٠ بكسل)، بحد أقصى ٥ ميجابايت. الصيغ المدعومة: ‎.jpg‎، ‎.jpeg‎، ‎.png‎، ‎.webp‎.",
+  "merchant.form.location.pinnedAddressLabel": "العنوان المحدّد",
+  "merchant.form.location.pinnedCoordsLabel": "الموقع المثبَّت",
+  "merchant.form.location.pinnedNoAddress":
+    "العنوان غير متاح — يتم استخدام إحداثيات الخريطة.",
   "merchant.form.terms.label": "الشروط والأحكام (اختياري)",
   "merchant.form.terms.placeholder":
     "يُعرض للمستخدمين عند عرض القسيمة أو استبدالها…",

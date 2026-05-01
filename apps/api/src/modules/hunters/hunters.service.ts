@@ -113,7 +113,7 @@ export class HuntersService {
       if (dto.dateOfBirth) {
         if (!isValidHunterDobYmdString(dto.dateOfBirth)) {
           throw new BadRequestException(
-            "Date of birth must be a valid date, not in the future, and at least 5 years ago",
+            "Date of birth must be a valid date, not in the future, and at least 4 years ago"
           );
         }
         updateData.profile.dateOfBirth = new Date(dto.dateOfBirth);

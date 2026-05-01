@@ -36,6 +36,7 @@ const en = {
   "home.noDropsDesc": "Check back soon for new rewards to hunt!",
   "home.hunt": "Hunt",
   "home.directions": "Directions",
+  "home.map": "Map",
   "home.dropDetails": "Drop details",
   "home.dropFacts": "At a glance",
   "home.captureZone": "Capture zone",
@@ -142,10 +143,10 @@ const en = {
   "profile.dateOfBirth": "Date of Birth",
   "profile.mobileLengthHint": "Expected length: {range}",
   "profile.dobMinAgeHint":
-    "You must be at least 5 years old. Future dates cannot be selected.",
+    "You must be at least 4 years old. Future dates cannot be selected.",
   "profile.dobInvalidMinAge": "Invalid date of birth",
   "profile.dobInvalidMinAgeDesc":
-    "Choose a date that is not in the future and is at least 5 years ago.",
+    "Choose a date that is not in the future and is at least 4 years ago.",
   "profile.gender": "Gender",
   "profile.selectGender": "Select gender",
   "profile.male": "Male",
@@ -548,7 +549,11 @@ const en = {
   "merchant.form.schedule.clearEnd": "Clear end",
   "merchant.form.logo.remove": "Remove logo",
   "merchant.form.logo.uploadHint":
-    "Upload an image in .jpg or .jpeg or .png format.",
+    "Recommended: square image (e.g. 1080×1080 px), max 5 MB. Formats: .jpg, .jpeg, .png, .webp.",
+  "merchant.form.location.pinnedAddressLabel": "Selected address",
+  "merchant.form.location.pinnedCoordsLabel": "Pinned location",
+  "merchant.form.location.pinnedNoAddress":
+    "Address not available — using map coordinates.",
   "merchant.form.terms.label": "Terms and conditions (optional)",
   "merchant.form.terms.placeholder":
     "Shown to users when they view or redeem the voucher…",
