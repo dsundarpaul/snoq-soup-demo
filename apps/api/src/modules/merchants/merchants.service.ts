@@ -93,6 +93,22 @@ export class MerchantsService {
     return this.toResponseDto(merchant);
   }
 
+  async clearStoreLocation(id: string): Promise<MerchantResponseDto> {
+    const merchant = await this.database.merchants
+      .findOneAndUpdate(
+        { _id: id, deletedAt: null },
+        { $set: { storeLocation: null } },
+        { new: true },
+      )
+      .lean();
+
+    if (!merchant) {
+      throw new NotFoundException("Merchant not found");
+    }
+
+    return this.toResponseDto(merchant);
+  }
+
   async updateLogo(id: string, logoUrl: string): Promise<MerchantResponseDto> {
     const merchant = await this.database.merchants
       .findOneAndUpdate(
@@ -134,7 +150,7 @@ export class MerchantsService {
             "scannerToken.createdAt": expiresAt,
           },
         },
-        { new: true }
+        { new: true },
       )
       .lean();
 

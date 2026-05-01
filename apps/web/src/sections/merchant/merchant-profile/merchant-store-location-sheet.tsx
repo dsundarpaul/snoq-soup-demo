@@ -32,10 +32,22 @@ import {
   type GooglePlaceStructuredAddress,
 } from "@/components/google-places-autocomplete";
 import { MapPickerLazy } from "@/components/map-picker-lazy";
-import { useMerchantStoreLocationMutation } from "@/hooks/api/merchant/use-merchant";
+import {
+  useMerchantStoreLocationMutation,
+  useMerchantClearStoreLocationMutation,
+} from "@/hooks/api/merchant/use-merchant";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { StoreLocation } from "@shared/schema";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MerchantStoreLocationSheetProps {
   open: boolean;
@@ -62,9 +74,13 @@ export function MerchantStoreLocationSheet({
   const [coordsOpen, setCoordsOpen] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [mapKey, setMapKey] = useState(0);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setClearDialogOpen(false);
+      return;
+    }
     setLat(currentLocation?.lat ?? 24.7136);
     setLng(currentLocation?.lng ?? 46.6753);
     setAddress(currentLocation?.address ?? "");
@@ -85,6 +101,25 @@ export function MerchantStoreLocationSheet({
       toast({ title: "Failed to save location", variant: "destructive" });
     },
   });
+
+  const clearMutation = useMerchantClearStoreLocationMutation({
+    onSuccess: () => {
+      toast({ title: "Store location removed" });
+      setClearDialogOpen(false);
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({
+        title: "Failed to remove store location",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const hasExistingLocation =
+    currentLocation != null &&
+    currentLocation.lat != null &&
+    currentLocation.lng != null;
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -178,6 +213,7 @@ export function MerchantStoreLocationSheet({
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         showClose={false}
@@ -372,7 +408,18 @@ export function MerchantStoreLocationSheet({
           </div>
         </div>
 
-        <SheetFooter className="sticky bottom-0 z-10 shrink-0 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:justify-start sm:space-x-0">
+        <SheetFooter className="sticky bottom-0 z-10 shrink-0 flex-col gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:flex-wrap sm:justify-start sm:space-x-0">
+          {hasExistingLocation && (
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full sm:w-auto sm:order-last sm:ml-auto"
+              onClick={() => setClearDialogOpen(true)}
+              disabled={mutation.isPending || clearMutation.isPending}
+            >
+              Remove store location
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -391,5 +438,36 @@ export function MerchantStoreLocationSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+
+    <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove store location?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Claimed vouchers will no longer show this address until you set a
+            store location again.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={clearMutation.isPending}>
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            variant="destructive"
+            className="gap-2"
+            disabled={clearMutation.isPending}
+            onClick={() => {
+              clearMutation.mutate();
+            }}
+          >
+            {clearMutation.isPending ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            ) : null}
+            Remove
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

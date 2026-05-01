@@ -348,6 +348,27 @@ export function useMerchantStoreLocationMutation(
   });
 }
 
+export function useMerchantClearStoreLocationMutation(
+  options?: Omit<UseMutationOptions<unknown, Error, void>, "mutationFn">
+) {
+  return useMutation({
+    ...options,
+    mutationFn: async () => {
+      const res = await apiRequest(
+        "DELETE",
+        "/api/v1/merchants/me/store-location",
+        undefined,
+        { auth: "merchant" }
+      );
+      return res.json();
+    },
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.me });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
 export function useMerchantLogoMutation(
   options?: Omit<
     UseMutationOptions<unknown, Error, { logoUrl: string }>,

@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Body,
   UseGuards,
   Param,
@@ -80,6 +81,19 @@ export class MerchantsController {
       user.userId,
       dto.storeLocation,
     );
+  }
+
+  @Delete("me/store-location")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Clear merchant store location" })
+  @ApiResponse({ status: 200, type: MerchantResponseDto })
+  @HttpCode(HttpStatus.OK)
+  async clearStoreLocation(
+    @CurrentUser() user: CurrentUserType,
+  ): Promise<MerchantResponseDto> {
+    return this.merchantsService.clearStoreLocation(user.userId);
   }
 
   @Patch("me/logo")
