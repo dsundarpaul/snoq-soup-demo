@@ -126,28 +126,37 @@ export class MailService {
     dropName: string,
     merchantDisplayName: string,
   ): Promise<void> {
-    const base = config.FRONTEND_URL.replace(/\/$/, "");
+    try {
+      this.logger.log(`Sending reward claimed notification to ${to}`);
 
-    if (!config.ENABLE_EMAIL || !config.smtp.host) {
-      this.logger.debug(`Reward claimed notification would be sent to ${to}`);
-      return;
+      const base = config.FRONTEND_URL.replace(/\/$/, "");
+
+      if (!config.ENABLE_EMAIL || !config.smtp.host) {
+        this.logger.debug(`Reward claimed notification would be sent to ${to}`);
+        return;
+      }
+
+      const { subject, text, html } =
+        buildRewardClaimedNotificationEmailContent(
+          voucherUrl,
+          dropName,
+          merchantDisplayName,
+          base
+        );
+
+      const transporter = this.getTransporter();
+      await transporter.sendMail({
+        from: config.smtp.from,
+        to,
+        subject,
+        text,
+        html,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send reward claimed notification to ${to}: ${error}`
+      );
     }
-
-    const { subject, text, html } = buildRewardClaimedNotificationEmailContent(
-      voucherUrl,
-      dropName,
-      merchantDisplayName,
-      base,
-    );
-
-    const transporter = this.getTransporter();
-    await transporter.sendMail({
-      from: config.smtp.from,
-      to,
-      subject,
-      text,
-      html,
-    });
   }
 
   async sendRewardRedeemedNotification(
