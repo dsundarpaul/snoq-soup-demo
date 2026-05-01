@@ -342,11 +342,11 @@ function HuntActionPanel({
                 <>
                   <span
                     aria-hidden
-                    className="absolute inset-0 rounded-full bg-primary/30 opacity-70 animate-ping [animation-duration:2.4s]"
+                    className="absolute inset-0 rounded-full bg-primary/30 opacity-70"
                   />
                   <span
                     aria-hidden
-                    className="absolute -inset-1 rounded-full bg-primary/25 blur-md animate-pulse [animation-duration:2.4s]"
+                    className="absolute -inset-1 rounded-full bg-primary/25 blur-md"
                   />
                 </>
               ) : null}
@@ -405,7 +405,7 @@ function HuntActionPanel({
                 />
                 <span
                   aria-hidden
-                  className="absolute -inset-1 rounded-full bg-primary/25 blur-md animate-pulse [animation-duration:2.4s]"
+                  className="absolute -inset-1 rounded-full bg-primary/25 blur-md [animation-duration:2.4s]"
                 />
               </>
             ) : null}
