@@ -60,14 +60,26 @@ export default function HomePage() {
   const { t } = useLanguage();
   const geo = useGeolocation();
   const hasHunterCreds = useHasRoleCredentials("hunter");
-  const { data: hunterVoucherBuckets } = useHunterVouchersQuery({
+  const { data: hunterProfile, isPending: hunterProfilePending } =
+    useTreasureHunterProfileQuery();
+
+  const {
+    data: hunterVoucherBuckets,
+    isPending: hunterVouchersPending,
+  } = useHunterVouchersQuery({
     unredeemedLimit: HOME_UNREDEEMED_LIMIT,
     redeemedLimit: HOME_REDEEMED_LIMIT,
   });
 
-  const { data: hunterProfile } = useTreasureHunterProfileQuery();
+  const { data: drops = [], isPending: activeDropsPending } =
+    useHomeActiveDropsQuery(hasHunterCreds);
 
   const hunterSignedIn = Boolean(hunterProfile?.email);
+
+  const homeListsPending =
+    hunterProfilePending ||
+    activeDropsPending ||
+    (hasHunterCreds && hunterVouchersPending);
 
   const unredeemedVouchers =
     hunterVoucherBuckets?.unredeemed ?? EMPTY_VOUCHER_ROWS;
@@ -110,9 +122,6 @@ export default function HomePage() {
       { active: boolean; status: string; timeRemaining: number | null }
     >
   >({});
-
-  const { data: drops = [], isLoading } =
-    useHomeActiveDropsQuery(hasHunterCreds);
 
   useEffect(() => {
     const updateStatuses = () => {
@@ -169,6 +178,13 @@ export default function HomePage() {
       <HomeHeader geo={{ loading: geo.loading, error: geo.error }} />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
+        {homeListsPending ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">{t("home.loadingDrops")}</p>
+          </div>
+        ) : (
+          <>
         {hunterSignedIn && unredeemedVouchers.length > 0 && (
             <div className="space-y-6">
               <section>
@@ -320,12 +336,7 @@ export default function HomePage() {
             </div>
           )}
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">{t("home.loadingDrops")}</p>
-          </div>
-        ) : drops.length === 0 ? (
+        {drops.length === 0 ? (
           <Card className="p-8 text-center">
             <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -533,6 +544,8 @@ export default function HomePage() {
               )}
             </div>
           </section>
+        )}
+          </>
         )}
 
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2">

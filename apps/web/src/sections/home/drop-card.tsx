@@ -99,7 +99,12 @@ export function DropCard({
         onClick={openDetails}
       />
 
-      <div className="relative z-[1] flex min-h-[9rem] pointer-events-none">
+      <div
+        className={cn(
+          "relative z-[1] flex pointer-events-none",
+          variant === "browse" ? "min-h-[7rem]" : "min-h-[9rem]"
+        )}
+      >
         <div className="relative w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
           {drop.logoUrl ? (
             <img
@@ -218,7 +223,7 @@ export function DropCard({
           </div>
 
           {variant === "browse" && state.kind === "hunt" ? (
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 pointer-events-auto">
+            <div className="mt-1.5 flex w-full flex-wrap items-center justify-end gap-2 pointer-events-auto">
               {distance !== null ? (
                 <button
                   type="button"
