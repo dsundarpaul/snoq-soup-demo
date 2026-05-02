@@ -36,7 +36,7 @@ const en = {
   "home.noDropsDesc": "Check back soon for new rewards to hunt!",
   "home.hunt": "Hunt",
   "home.claim": "Claim",
-  "home.directions": "Directions",
+  "home.directions": "Direction",
   "home.map": "Map",
   "home.merchant": "Merchant",
   "home.dropDetails": "Drop details",
