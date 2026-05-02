@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   BadgeX,
   Hourglass,
+  ChevronsRightLeft,
+  ChevronRightIcon,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { DropDetailsDialog } from "@/sections/home/drop-details-dialog";
@@ -271,6 +273,7 @@ export function DropCard({
               >
                 <Target className="w-3 h-3" strokeWidth={2.5} />
                 {t("home.hunt")}
+                <ChevronRightIcon className="w-3 h-3" strokeWidth={2.5} />
               </Link>
             </div>
           ) : null}
