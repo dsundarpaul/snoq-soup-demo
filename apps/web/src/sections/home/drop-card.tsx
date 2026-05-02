@@ -129,7 +129,7 @@ export function DropCard({
             {drop.name}
           </h3>
 
-          {drop.description ? (
+          {drop.description && variant === "inRange" ? (
             <p
               className="text-xs text-muted-foreground leading-snug line-clamp-2"
               data-testid={`text-drop-description-${drop.id}`}
