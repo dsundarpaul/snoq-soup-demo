@@ -235,7 +235,7 @@ export default function HomePage() {
                             }}
                             data-testid={`card-voucher-${voucher.id}`}
                           >
-                            <div className="flex min-h-[9rem]">
+                            <div className="flex min-h-[7rem]">
                               <div className="relative w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
                                 {drop.logoUrl ? (
                                   <img
@@ -305,7 +305,7 @@ export default function HomePage() {
                                 </div>
                               </div>
                               <div
-                                className="flex w-11 shrink-0 flex-col items-center justify-center border-s border-border/60 bg-muted/15"
+                                className="flex w-11 shrink-0 flex-col items-center justify-center"
                                 aria-hidden
                               >
                                 <ChevronRight className="h-5 w-5 text-muted-foreground" />

@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RequireTreasureHunterSession } from "@/components/require-treasure-hunter-session";
+import { isVoucherActive } from "@/sections/home/home-voucher-helpers";
+import type { Drop } from "@shared/schema";
 import {
   useHunterVouchersInfiniteQuery,
   useTreasureHunterProfileQuery,
@@ -47,6 +49,12 @@ function resolveTab(value: string | null): HunterVoucherStatus {
   }
   return "all";
 }
+
+const DROP_REDEMPTION_FALLBACK = {
+  redemptionType: "anytime",
+  redemptionMinutes: null,
+  redemptionDeadline: null,
+} as Drop;
 
 export default function ClaimHistoryPage() {
   const { t } = useLanguage();
@@ -202,7 +210,13 @@ function VoucherInfiniteList({ status }: { status: HunterVoucherStatus }) {
 
   return (
     <div className="space-y-3">
-      {items.map(({ voucher, drop }) => (
+      {items.map(({ voucher, drop }) => {
+        const redemptionStatus = isVoucherActive(
+          voucher,
+          drop ?? DROP_REDEMPTION_FALLBACK,
+          t
+        );
+        return (
         <Card
           key={voucher.id}
           className="p-4"
@@ -234,6 +248,11 @@ function VoucherInfiniteList({ status }: { status: HunterVoucherStatus }) {
                     <Check className="w-3 h-3 mr-1" />
                     {t("status.redeemed")}
                   </Badge>
+                ) : !redemptionStatus.active ? (
+                  <Badge variant="destructive" className="shrink-0">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {redemptionStatus.status}
+                  </Badge>
                 ) : (
                   <Badge variant="secondary" className="shrink-0">
                     <Clock className="w-3 h-3 mr-1" />
@@ -261,7 +280,7 @@ function VoucherInfiniteList({ status }: { status: HunterVoucherStatus }) {
             </div>
           </div>
 
-          {!voucher.redeemed && (
+          {!voucher.redeemed && redemptionStatus.active && (
             <Link href={`/voucher/${voucher.magicToken}`}>
               <Button
                 className="w-full mt-3"
@@ -273,7 +292,8 @@ function VoucherInfiniteList({ status }: { status: HunterVoucherStatus }) {
             </Link>
           )}
         </Card>
-      ))}
+        );
+      })}
 
       <div
         ref={sentinelRef}
