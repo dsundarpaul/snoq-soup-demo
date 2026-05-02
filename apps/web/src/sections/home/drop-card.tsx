@@ -26,6 +26,8 @@ import { getCaptureRemaining, isDropActive } from "@/lib/hunt-drop-filters";
 import { clearSessionsExcept } from "@/lib/auth-session";
 import { cn } from "@/lib/utils";
 
+const DISTANCE_CLIP_THRESHOLD_METERS = 99 * 1000;
+
 export type DropCardProps = {
   drop: DropWithCount;
   distance: number | null;
@@ -231,15 +233,27 @@ export function DropCard({
                     e.stopPropagation();
                     handleGetDirections();
                   }}
-                  aria-label={`${formatDistance(distance)}. ${t(
-                    "home.directions"
-                  )}`}
-                  title={t("home.directions")}
+                  aria-label={`${
+                    distance > DISTANCE_CLIP_THRESHOLD_METERS
+                      ? t("home.distanceOver999KmAria")
+                      : formatDistance(distance)
+                  }. ${t("home.directions")}`}
+                  title={
+                    distance > DISTANCE_CLIP_THRESHOLD_METERS
+                      ? `${t("home.distanceOver999KmAria")}. ${t(
+                          "home.directions"
+                        )}`
+                      : t("home.directions")
+                  }
                   data-testid={`button-directions-${drop.id}`}
                   className="group inline-flex h-7 shrink-0 items-center gap-1 rounded-sm border border-border/70 bg-background/40 px-2 text-xs leading-none text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
                 >
                   <Navigation className="h-3 w-3 text-white shrink-0 transition-transform group-hover:-rotate-12" />
-                  <span className="text-white">{formatDistance(distance)}</span>
+                  <span className="max-w-[4.5rem] truncate text-white">
+                    {distance > DISTANCE_CLIP_THRESHOLD_METERS
+                      ? t("home.distanceOver999Km")
+                      : formatDistance(distance)}
+                  </span>
                   <span className="text-[10px] text-white font-semibold leading-none tracking-wider group-hover:opacity-100">
                     Directions
                   </span>

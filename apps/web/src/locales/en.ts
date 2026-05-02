@@ -43,6 +43,8 @@ const en = {
   "home.dropFacts": "At a glance",
   "home.captureZone": "Capture zone",
   "home.yourDistance": "Your distance",
+  "home.distanceOver999Km": "99> km",
+  "home.distanceOver999KmAria": "More than 99 kilometers away",
   "home.aboutDrop": "About this hunt",
   "home.captureLimit": "Spots remaining",
   "home.availability": "Schedule",

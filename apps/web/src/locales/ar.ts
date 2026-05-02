@@ -43,6 +43,8 @@ const ar = {
   "home.dropFacts": "نظرة سريعة",
   "home.captureZone": "نطاق الالتقاط",
   "home.yourDistance": "بعدك",
+  "home.distanceOver999Km": "99> كم",
+  "home.distanceOver999KmAria": "أكثر من 99 كيلومترًا",
   "home.aboutDrop": "عن هذا الصيد",
   "home.captureLimit": "الأماكن المتبقية",
   "home.availability": "الجدول الزمني",
