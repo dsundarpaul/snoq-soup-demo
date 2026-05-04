@@ -19,11 +19,11 @@ export class S3Service {
   constructor() {
     this.isConfigured = Boolean(
       this.s3Config.enabled &&
-        this.s3Config.host &&
-        this.s3Config.accessKey &&
-        this.s3Config.secretKey &&
-        this.s3Config.defaultBucket &&
-        this.s3Config.publicURL,
+      this.s3Config.host &&
+      this.s3Config.accessKey &&
+      this.s3Config.secretKey &&
+      this.s3Config.defaultBucket &&
+      this.s3Config.publicURL,
     );
     this.putObjectRequestHeaders = this.s3Config.putAcl
       ? { "x-amz-acl": "public-read" }
@@ -31,7 +31,9 @@ export class S3Service {
 
     if (!this.isConfigured) {
       this.client = null;
-      this.logger.warn("S3 is not fully configured; signed URL uploads disabled.");
+      this.logger.warn(
+        "S3 is not fully configured; signed URL uploads disabled.",
+      );
       return;
     }
 

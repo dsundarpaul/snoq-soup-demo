@@ -215,4 +215,11 @@ export class VoucherDetailResponseDto {
     description: "Last update timestamp",
   })
   updatedAt!: Date;
+
+  @ApiProperty({
+    example: false,
+    description:
+      "True if claimed before hunter completed registration; show fragile-access UX",
+  })
+  claimedWithoutRegisteredAccount!: boolean;
 }

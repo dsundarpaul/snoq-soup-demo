@@ -300,11 +300,7 @@ export function DropDetailsDialog({
           </Button>
           {showHuntAction ? (
             <Link
-              href={
-                hunterSignedIn
-                  ? `/hunt?drop=${drop.id}`
-                  : `/login?next=${encodeURIComponent(`/hunt?drop=${drop.id}`)}`
-              }
+              href={`/hunt?drop=${drop.id}`}
               className="min-w-0 flex-1"
               onClick={
                 hunterSignedIn ? undefined : () => clearSessionsExcept("hunter")

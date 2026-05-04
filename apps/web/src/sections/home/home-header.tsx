@@ -1,5 +1,6 @@
 "use client";
 
+import { useReducer, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -35,7 +36,7 @@ import {
   useTreasureHunterProfileQuery,
   useTreasureHunterLogoutMutation,
 } from "@/hooks/api/treasure-hunter/use-treasure-hunter";
-import { clearSessionsExcept } from "@/lib/auth-session";
+import { clearSessionsExcept, hadAuthSessionHint } from "@/lib/auth-session";
 import { useRoleCredentialState } from "@/hooks/use-role-credentials";
 import { APP_NAME, appLogo } from "@/lib/app-brand";
 
@@ -57,6 +58,13 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
 
   const { hasCredentials: hasMerchantSession } =
     useRoleCredentialState("merchant");
+  const [authEpoch, bumpAuthUi] = useReducer((x: number) => x + 1, 0);
+  useEffect(() => {
+    const fn = () => bumpAuthUi();
+    window.addEventListener("souqsnap-auth-changed", fn);
+    return () => window.removeEventListener("souqsnap-auth-changed", fn);
+  }, []);
+
   const { data: profile } = useTreasureHunterProfileQuery();
 
   const logoutMutation = useTreasureHunterLogoutMutation({
@@ -76,10 +84,15 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
     },
   });
 
-  const isSignedIn = Boolean(profile?.email);
+  const isRegisteredHunter = Boolean(profile?.email);
+  const hunterDeviceOrCookieSession =
+    hadAuthSessionHint() || isRegisteredHunter;
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
+    <header
+      className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b"
+      data-auth-epoch={authEpoch}
+    >
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -133,7 +146,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
                   <p className="text-sm font-medium leading-none">
                     {t("home.accountMenu")}
                   </p>
-                  {isSignedIn && profile?.email && (
+                  {isRegisteredHunter && profile?.email && (
                     <p className="text-xs leading-none text-muted-foreground truncate">
                       {profile.email}
                     </p>
@@ -144,7 +157,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
               <DropdownMenuItem asChild>
                 <Link
                   href={
-                    isSignedIn
+                    isRegisteredHunter
                       ? "/profile"
                       : `/login?next=${encodeURIComponent("/profile")}`
                   }
@@ -209,7 +222,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
                 <Store className="mr-2 h-4 w-4" />
                 {t("nav.loginAsMerchant")}
               </DropdownMenuItem>
-              {!isSignedIn && (
+              {!hunterDeviceOrCookieSession && (
                 <DropdownMenuItem
                   onClick={() => {
                     clearSessionsExcept("hunter");
@@ -221,7 +234,7 @@ export function HomeHeader({ geo }: HomeHeaderProps) {
                   {t("nav.loginAsUser")}
                 </DropdownMenuItem>
               )}
-              {isSignedIn && (
+              {hunterDeviceOrCookieSession && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

@@ -421,6 +421,7 @@ describe("Voucher Lifecycle E2E Tests", () => {
       expect(magicRes.body).toHaveProperty("magicToken", magicToken);
       expect(magicRes.body).toHaveProperty("drop");
       expect(magicRes.body.drop).toHaveProperty("id", drop.id);
+      expect(magicRes.body.claimedWithoutRegisteredAccount).toBe(true);
     });
 
     it("should return 404 for invalid magic token", async () => {
@@ -470,6 +471,105 @@ describe("Voucher Lifecycle E2E Tests", () => {
         .expect(200);
 
       expect(promoRes.body.promoCode).toBeNull();
+    });
+  });
+
+  describe("Anonymous hunter identity", () => {
+    it("should claim after device-login while hunter has no email", async () => {
+      const merchant = await createMerchant();
+      const drop = await createDrop(merchant.token);
+      const deviceId = generateDeviceId();
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/device-login")
+        .send({ deviceId })
+        .expect(200);
+
+      const hunter = await database.hunters
+        .findOne({ deviceId, deletedAt: null })
+        .lean();
+      expect(hunter?.email).toBeFalsy();
+
+      const claimRes = await claimVoucher(drop.id, deviceId).expect(201);
+      expect(claimRes.body.claimedWithoutRegisteredAccount).toBe(true);
+    });
+
+    it("should reject GET hunters/me for anonymous hunter", async () => {
+      const deviceId = generateDeviceId();
+      const login = await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/device-login")
+        .send({ deviceId })
+        .expect(200);
+      const token = accessTokenFromSetCookie(login.headers["set-cookie"]);
+      await request(app.getHttpServer())
+        .get("/api/v1/hunters/me")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it("should list hunter vouchers by X-Device-Id without bearer", async () => {
+      const merchant = await createMerchant();
+      const drop = await createDrop(merchant.token);
+      const deviceId = generateDeviceId();
+      const claimRes = await claimVoucher(drop.id, deviceId).expect(201);
+      const listRes = await request(app.getHttpServer())
+        .get("/api/v1/hunters/me/vouchers?unredeemedLimit=10&redeemedLimit=10")
+        .set("X-Device-Id", deviceId)
+        .expect(200);
+      const all = [
+        ...(listRes.body.unredeemed ?? []),
+        ...(listRes.body.redeemed ?? []),
+      ];
+      expect(
+        all.some(
+          (row: { voucher?: { id?: string } }) =>
+            row.voucher?.id === claimRes.body.id,
+        ),
+      ).toBe(true);
+    });
+
+    it("should keep voucher on same hunter after anonymous claim and register upgrade", async () => {
+      const merchant = await createMerchant();
+      const drop = await createDrop(merchant.token);
+      const deviceId = generateDeviceId();
+
+      const claimRes = await claimVoucher(drop.id, deviceId).expect(201);
+      expect(claimRes.body.claimedWithoutRegisteredAccount).toBe(true);
+      const hunterId = claimRes.body.claimedBy?.hunterId as string | undefined;
+      expect(hunterId).toBeDefined();
+
+      const email = generateEmail("upgrade");
+      const registerRes = await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/register")
+        .set("X-Requested-With", "fetch")
+        .send({
+          deviceId,
+          email,
+          password: "TestPass123!",
+          nickname: "Reg",
+        })
+        .expect(201);
+
+      expect(registerRes.body.user.id).toBe(hunterId);
+
+      const access = accessTokenFromSetCookie(
+        registerRes.headers["set-cookie"],
+      );
+      const vouchersRes = await request(app.getHttpServer())
+        .get("/api/v1/hunters/me/vouchers")
+        .set("Authorization", `Bearer ${access}`)
+        .expect(200);
+
+      const all = [
+        ...vouchersRes.body.unredeemed,
+        ...vouchersRes.body.redeemed,
+      ];
+      expect(
+        all.some(
+          (row: { voucher?: { id?: string } }) =>
+            row.voucher?.id === claimRes.body.id,
+        ),
+      ).toBe(true);
     });
   });
 

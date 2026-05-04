@@ -35,12 +35,15 @@ export function useHomeActiveDropsQuery(hunterAuthenticated: boolean) {
       ? dropQueryKeys.activeForHunt()
       : dropQueryKeys.active(),
     queryFn: async () => {
-      const path = hunterAuthenticated
-        ? "/api/v1/hunters/me/active-drops"
-        : "/api/v1/drops/active";
-      const res = await apiFetchMaybeRetry("GET", path, {
+      const hunterPath = "/api/v1/hunters/me/active-drops";
+      const publicPath = "/api/v1/drops/active";
+      const path = hunterAuthenticated ? hunterPath : publicPath;
+      let res = await apiFetchMaybeRetry("GET", path, {
         auth: hunterAuthenticated ? "hunter" : undefined,
       });
+      if (res.status === 401 && hunterAuthenticated) {
+        res = await apiFetch("GET", publicPath);
+      }
       await throwIfResNotOk(res, path, hunterAuthenticated ? "hunter" : undefined);
       const json = (await res.json()) as {
         drops?: Record<string, unknown>[];

@@ -5,6 +5,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiHeader,
 } from "@nestjs/swagger";
 import { HuntersService } from "./hunters.service";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -12,6 +13,10 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { CurrentHunterId } from "../../common/decorators/current-hunter-id.decorator";
+import { OptionalJwtAuthGuard } from "../../common/guards/optional-jwt-auth.guard";
+import { HunterResourceGuard } from "../../common/guards/hunter-resource.guard";
+import { RegisteredHunterGuard } from "../../common/guards/registered-hunter.guard";
 import { UpdateProfileDto } from "./dto/request/update-profile.dto";
 import { UpdateNicknameDto } from "./dto/request/update-nickname.dto";
 import { HunterResponseDto } from "./dto/response/hunter-response.dto";
@@ -25,11 +30,17 @@ export class HuntersController {
   constructor(private readonly huntersService: HuntersService) {}
 
   @Get("hunters/me")
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RegisteredHunterGuard)
   @Roles("hunter")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get current hunter profile" })
+  @ApiOperation({
+    summary: "Registered hunter profile (requires email on account)",
+  })
   @ApiResponse({ status: 200, type: HunterResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: "Anonymous / incomplete registration",
+  })
   @ApiResponse({ status: 404, description: "Hunter not found" })
   async getMe(
     @CurrentUser("userId") hunterId: string,
@@ -38,38 +49,54 @@ export class HuntersController {
   }
 
   @Get("hunters/me/history")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("hunter")
+  @UseGuards(OptionalJwtAuthGuard, HunterResourceGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get current hunter's voucher history" })
+  @ApiHeader({
+    name: "X-Device-Id",
+    required: false,
+    description:
+      "Used when no valid hunter JWT is sent; must match an existing hunter",
+  })
+  @ApiOperation({
+    summary:
+      "Voucher history for the hunter from JWT or, when absent, from device id",
+  })
   @ApiResponse({ status: 200, type: HunterHistoryResponseDto })
   async getHistory(
-    @CurrentUser("userId") hunterId: string,
+    @CurrentHunterId() hunterId: string,
   ): Promise<HunterHistoryResponseDto> {
     return this.huntersService.getHistory(hunterId);
   }
 
   @Get("hunters/me/active-drops")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("hunter")
+  @UseGuards(OptionalJwtAuthGuard, HunterResourceGuard)
   @ApiBearerAuth()
+  @ApiHeader({
+    name: "X-Device-Id",
+    required: false,
+    description:
+      "Used when no valid hunter JWT is sent; must match an existing hunter",
+  })
   @ApiOperation({
-    summary:
-      "List active drops excluding drops this hunter has already claimed",
+    summary: "Active drops excluding claims for hunter from JWT or device id",
   })
   @ApiResponse({ status: 200, type: ActiveDropsResponseDto })
   async getActiveDropsForHunt(
-    @CurrentUser("userId") hunterId: string,
+    @CurrentHunterId() hunterId: string,
   ): Promise<ActiveDropsResponseDto> {
     return this.huntersService.getActiveDropsForHunt(hunterId);
   }
 
   @Patch("hunters/me/profile")
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RegisteredHunterGuard)
   @Roles("hunter")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Update hunter profile" })
+  @ApiOperation({ summary: "Update hunter profile (registered accounts only)" })
   @ApiResponse({ status: 200, type: HunterResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: "Anonymous / incomplete registration",
+  })
   @ApiResponse({ status: 404, description: "Hunter not found" })
   async updateProfile(
     @CurrentUser("userId") hunterId: string,
@@ -79,11 +106,17 @@ export class HuntersController {
   }
 
   @Patch("hunters/me/nickname")
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RegisteredHunterGuard)
   @Roles("hunter")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Update hunter nickname only" })
+  @ApiOperation({
+    summary: "Update hunter nickname (registered accounts only)",
+  })
   @ApiResponse({ status: 200, type: HunterResponseDto })
+  @ApiResponse({
+    status: 403,
+    description: "Anonymous / incomplete registration",
+  })
   @ApiResponse({ status: 404, description: "Hunter not found" })
   async updateNickname(
     @CurrentUser("userId") hunterId: string,

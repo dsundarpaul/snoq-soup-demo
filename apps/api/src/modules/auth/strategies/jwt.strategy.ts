@@ -1,34 +1,18 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
-import { ExtractJwt, Strategy } from "passport-jwt";
-import { Request } from "express";
+import { Strategy } from "passport-jwt";
 import { config } from "../../../config/app.config";
 import { AuthService } from "../auth.service";
 import { UserRole } from "../../../common/enums/user-role.enum";
-
-export interface JwtPayload {
-  sub: string;
-  type: UserRole;
-  iat: number;
-  exp: number;
-}
+import {
+  extractJwtFromCookieOrHeader,
+  type JwtPayload,
+} from "../jwt-auth-shared";
 
 export interface RequestUser {
   userId: string;
   type: UserRole;
   email?: string;
-}
-
-const COOKIE_NAME = "access_token";
-
-export function extractJwtFromCookieOrHeader(req: Request): string | null {
-  // First, try cookie
-  const cookieToken = req.cookies?.[COOKIE_NAME];
-  if (cookieToken) {
-    return cookieToken;
-  }
-  // Fall back to Authorization header
-  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 }
 
 @Injectable()
@@ -52,7 +36,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("Account has been deleted");
     }
 
-    // Check email verification for merchants
     if (
       payload.type === UserRole.MERCHANT &&
       "emailVerified" in user &&

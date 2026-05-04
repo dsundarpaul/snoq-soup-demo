@@ -17,6 +17,7 @@ const LOGIN_PATHS: Record<AuthRole, string> = {
 export function setAuthSessionHint(): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(SESSION_HINT_KEY, "1");
+  emitAuthChanged();
 }
 
 export function clearAuthSessionHint(): void {

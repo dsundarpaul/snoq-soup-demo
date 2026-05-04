@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { Request } from "express";
 import { DatabaseService } from "../../database/database.service";
+import { extractDeviceIdFromRequest } from "../http/extract-device-id";
 
 interface RequestWithDevice extends Request {
   deviceId?: string;
@@ -26,8 +27,7 @@ export class DeviceGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithDevice>();
 
-    // Extract deviceId from various sources
-    const deviceId = this.extractDeviceId(request);
+    const deviceId = extractDeviceIdFromRequest(request);
 
     if (!deviceId) {
       throw new BadRequestException(
@@ -45,14 +45,23 @@ export class DeviceGuard implements CanActivate {
     }
 
     // Try to find existing hunter by deviceId
-    let hunter = await this.databaseService.hunters.findOne({ deviceId });
+    let hunter = await this.databaseService.hunters.findOne({
+      deviceId,
+      deletedAt: null,
+    });
 
-    // Auto-create hunter if not found
     if (!hunter) {
       hunter = await this.databaseService.hunters.create({
         deviceId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        email: null,
+        password: null,
+        nickname: null,
+        profile: {},
+        passwordReset: {},
+        stats: { totalClaims: 0, totalRedemptions: 0 },
+        deletedAt: null,
+        registrationCompleted: false,
+        mergeStatus: "none",
       });
     }
 
@@ -67,27 +76,5 @@ export class DeviceGuard implements CanActivate {
     }
 
     return true;
-  }
-
-  private extractDeviceId(request: Request): string | null {
-    // Check X-Device-Id header (preferred)
-    const headerDeviceId = request.headers["x-device-id"] as string | undefined;
-    if (headerDeviceId) {
-      return headerDeviceId;
-    }
-
-    // Check query params
-    const queryDeviceId = request.query.deviceId as string | undefined;
-    if (queryDeviceId) {
-      return queryDeviceId;
-    }
-
-    // Check body
-    const bodyDeviceId = request.body?.deviceId as string | undefined;
-    if (bodyDeviceId) {
-      return bodyDeviceId;
-    }
-
-    return null;
   }
 }

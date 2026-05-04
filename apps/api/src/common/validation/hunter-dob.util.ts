@@ -21,13 +21,13 @@ function latestAllowedHunterDobLocal(now: Date): Date {
   return new Date(
     now.getFullYear() - HUNTER_MIN_AGE_YEARS,
     now.getMonth(),
-    now.getDate()
+    now.getDate(),
   );
 }
 
 export function isValidHunterDobYmdString(
   ymd: string,
-  now = new Date()
+  now = new Date(),
 ): boolean {
   const dob = parseYmdLocal(ymd);
   if (!dob) return false;

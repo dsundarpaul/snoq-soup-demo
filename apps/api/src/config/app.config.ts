@@ -6,7 +6,11 @@ const envDir = process.cwd();
 dotenv.config({ path: path.join(envDir, ".env") });
 dotenv.config({ path: path.join(envDir, ".env.local"), override: true });
 
-function parseS3Host(input: string): { host: string; port?: number; useSSL: boolean } {
+function parseS3Host(input: string): {
+  host: string;
+  port?: number;
+  useSSL: boolean;
+} {
   const trimmed = input.trim();
   if (!trimmed) {
     return { host: "", useSSL: true };
@@ -140,7 +144,7 @@ const envSchema = z
     {
       message:
         "JWT_SECRET and MONGODB_URI are required in production environment",
-    }
+    },
   )
   .superRefine((cfg, ctx) => {
     if (cfg.NODE_ENV !== "production") return;
@@ -150,7 +154,7 @@ const envSchema = z
     let url: URL;
     try {
       url = new URL(
-        raw.includes("://") ? raw : `https://${raw.replace(/^\/\//, "")}`
+        raw.includes("://") ? raw : `https://${raw.replace(/^\/\//, "")}`,
       );
     } catch {
       ctx.addIssue({

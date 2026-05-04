@@ -20,7 +20,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { RequireTreasureHunterSession } from "@/components/require-treasure-hunter-session";
 import { isVoucherActive } from "@/sections/home/home-voucher-helpers";
 import type { Drop } from "@shared/schema";
 import {
@@ -64,12 +63,11 @@ export default function ClaimHistoryPage() {
   const { data: profile } = useTreasureHunterProfileQuery();
 
   return (
-    <RequireTreasureHunterSession>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b">
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
-              <Link href="/profile">
+              <Link href="/">
                 <Button variant="ghost" size="icon" data-testid="button-back">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
@@ -127,7 +125,6 @@ export default function ClaimHistoryPage() {
           </Tabs>
         </main>
       </div>
-    </RequireTreasureHunterSession>
   );
 }
 

@@ -148,6 +148,15 @@ export class Voucher {
   @Prop({ type: RedeemedBy, default: {} })
   redeemedBy!: RedeemedBy;
 
+  @ApiProperty({
+    default: false,
+    description:
+      "True if claimed while hunter had no completed registration (fragile device-only identity)",
+  })
+  @IsBoolean()
+  @Prop({ type: Boolean, default: false })
+  claimedWithoutRegisteredAccount!: boolean;
+
   @ApiProperty({ nullable: true, description: "Soft delete timestamp" })
   @IsDate()
   @IsOptional()

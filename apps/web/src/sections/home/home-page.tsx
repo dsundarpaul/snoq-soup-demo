@@ -15,7 +15,6 @@ import {
 import { VoucherDisplay } from "@/components/voucher-display";
 import {
   Navigation,
-  Loader2,
   Clock,
   Gift,
   Target,
@@ -30,6 +29,11 @@ import { useLanguage } from "@/contexts/language-context";
 import { HomeHeader } from "@/sections/home/home-header";
 import { DropCard } from "@/sections/home/drop-card";
 import {
+  ClaimedRewardsSkeleton,
+  ActiveDropsSkeleton,
+  RedeemedRewardsSkeleton,
+} from "@/sections/home/home-skeletons";
+import {
   type StoredVoucher,
   isVoucherActive,
   formatRedemptionCountdown,
@@ -37,7 +41,7 @@ import {
 } from "@/sections/home/home-voucher-helpers";
 import { cn } from "@/lib/utils";
 import { useHomeActiveDropsQuery } from "@/hooks/api/drop/use-drop";
-import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
+import { useDeviceId } from "@/hooks/use-device-id";
 import {
   useHunterVouchersQuery,
   useTreasureHunterProfileQuery,
@@ -59,9 +63,9 @@ const HOME_REDEEMED_LIMIT = 2;
 export default function HomePage() {
   const { t } = useLanguage();
   const geo = useGeolocation();
-  const hasHunterCreds = useHasRoleCredentials("hunter");
-  const { data: hunterProfile, isPending: hunterProfilePending } =
-    useTreasureHunterProfileQuery();
+  const deviceId = useDeviceId();
+  const deviceReady = Boolean(deviceId);
+  const { data: hunterProfile } = useTreasureHunterProfileQuery();
 
   const {
     data: hunterVoucherBuckets,
@@ -72,14 +76,11 @@ export default function HomePage() {
   });
 
   const { data: drops = [], isPending: activeDropsPending } =
-    useHomeActiveDropsQuery(hasHunterCreds);
+    useHomeActiveDropsQuery(deviceReady);
 
   const hunterSignedIn = Boolean(hunterProfile?.email);
 
-  const homeListsPending =
-    hunterProfilePending ||
-    activeDropsPending ||
-    (hasHunterCreds && hunterVouchersPending);
+  const vouchersSectionPending = hunterVouchersPending;
 
   const unredeemedVouchers =
     hunterVoucherBuckets?.unredeemed ?? EMPTY_VOUCHER_ROWS;
@@ -178,14 +179,9 @@ export default function HomePage() {
       <HomeHeader geo={{ loading: geo.loading, error: geo.error }} />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {homeListsPending ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">{t("home.loadingDrops")}</p>
-          </div>
-        ) : (
-          <>
-        {hunterSignedIn && unredeemedVouchers.length > 0 && (
+        {vouchersSectionPending ? (
+          <ClaimedRewardsSkeleton count={HOME_UNREDEEMED_LIMIT} />
+        ) : deviceReady && unredeemedVouchers.length > 0 ? (
             <div className="space-y-6">
               <section>
                   <div className="flex items-center justify-between gap-3 mb-3">
@@ -334,9 +330,11 @@ export default function HomePage() {
                   </div>
                 </section>
             </div>
-          )}
+          ) : null}
 
-        {drops.length === 0 ? (
+        {activeDropsPending ? (
+          <ActiveDropsSkeleton />
+        ) : drops.length === 0 ? (
           <Card className="p-8 text-center">
             <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -446,7 +444,9 @@ export default function HomePage() {
           </>
         )}
 
-        {hunterSignedIn && redeemedVouchers.length > 0 && (
+        {vouchersSectionPending ? (
+          <RedeemedRewardsSkeleton count={HOME_REDEEMED_LIMIT} />
+        ) : deviceReady && redeemedVouchers.length > 0 ? (
           <section>
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 min-w-0">
@@ -544,17 +544,11 @@ export default function HomePage() {
               )}
             </div>
           </section>
-        )}
-          </>
-        )}
+        ) : null}
 
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2">
           <Link
-            href={
-              hunterSignedIn
-                ? "/hunt?readySwipe=1"
-                : `/login?next=${encodeURIComponent("/hunt?readySwipe=1")}`
-            }
+            href="/hunt?readySwipe=1"
             onClick={
               hunterSignedIn ? undefined : () => clearSessionsExcept("hunter")
             }

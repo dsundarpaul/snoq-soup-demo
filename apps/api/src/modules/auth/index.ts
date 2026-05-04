@@ -12,11 +12,9 @@ export { RefreshSessionResponseDto } from "./dto/response/token-response.dto";
 
 // Services and Strategies
 export { AuthService } from "./auth.service";
-export {
-  JwtStrategy,
-  JwtPayload,
-  RequestUser,
-} from "./strategies/jwt.strategy";
+export { JwtStrategy, RequestUser } from "./strategies/jwt.strategy";
+export type { JwtPayload } from "./jwt-auth-shared";
+export { extractJwtFromCookieOrHeader } from "./jwt-auth-shared";
 
 // Module
 export { AuthModule } from "./auth.module";

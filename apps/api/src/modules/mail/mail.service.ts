@@ -141,7 +141,7 @@ export class MailService {
           voucherUrl,
           dropName,
           merchantDisplayName,
-          base
+          base,
         );
 
       const transporter = this.getTransporter();
@@ -154,7 +154,7 @@ export class MailService {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to send reward claimed notification to ${to}: ${error}`
+        `Failed to send reward claimed notification to ${to}: ${error}`,
       );
     }
   }

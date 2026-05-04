@@ -87,7 +87,7 @@ function TreasureHunterSignInForm({
             className="h-14 w-auto max-w-[min(280px,85vw)] object-contain"
           />
         </div>
-        <h2 className="text-lg font-semibold text-foreground">{APP_NAME}</h2>
+        {/* <h2 className="text-lg font-semibold text-foreground">{APP_NAME}</h2> */}
         <p className="text-sm text-muted-foreground mt-1">
           {t("profile.welcomeBack")}
         </p>

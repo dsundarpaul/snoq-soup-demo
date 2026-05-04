@@ -146,11 +146,9 @@ const en = {
   "profile.yourHunterName": "Your hunter name",
   "profile.dateOfBirth": "Date of Birth",
   "profile.mobileLengthHint": "Expected length: {range}",
-  "profile.dobMinAgeHint":
-    "You must be at least 4 years old. Future dates cannot be selected.",
+  "profile.dobMinAgeHint": "You must be at least 4 years old.",
   "profile.dobInvalidMinAge": "Invalid date of birth",
-  "profile.dobInvalidMinAgeDesc":
-    "Choose a date that is not in the future and is at least 4 years ago.",
+  "profile.dobInvalidMinAgeDesc": "Choose a date that is at least 4 years ago.",
   "profile.gender": "Gender",
   "profile.selectGender": "Select gender",
   "profile.male": "Male",
@@ -212,6 +210,9 @@ const en = {
   "voucher.notFoundDesc":
     "This magic link is invalid or has expired. The voucher may have been removed.",
   "voucher.yourRewardAwaits": "Your Reward Awaits",
+  "voucher.anonymousClaimBannerTitle": "Save this reward everywhere",
+  "voucher.anonymousClaimBannerDesc":
+    "You claimed on this device only. Sign up or log in as a hunter to sync vouchers across devices.",
   "voucher.startNewHunt": "Start new hunt",
   "voucher.partnerCode": "Partner Code",
   "voucher.copyCode": "Copy Code",

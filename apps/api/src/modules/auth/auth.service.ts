@@ -11,6 +11,7 @@ import { JwtService } from "@nestjs/jwt";
 import { randomUUID, createHash } from "crypto";
 import * as bcrypt from "bcryptjs";
 import { Connection } from "mongoose";
+import type { Request } from "express";
 
 import { config } from "../../config/app.config";
 import { DatabaseService } from "../../database/database.service";
@@ -26,6 +27,7 @@ import { UserRole } from "../../common/enums/user-role.enum";
 import { RegisterMerchantDto } from "./dto/request/register-merchant.dto";
 import { RegisterHunterDto } from "./dto/request/register-hunter.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";
+import { isRegisteredHunterProfile } from "../hunter-identity/hunter-registration.util";
 
 type JwtPair = { accessToken: string; refreshToken: string };
 
@@ -179,29 +181,88 @@ export class AuthService {
   }
 
   async registerHunter(dto: RegisterHunterDto): Promise<AuthWithJwtPair> {
-    if (dto.email) {
-      const existingEmail = await this.database.hunters.findOne({
-        email: dto.email.toLowerCase(),
-        deletedAt: null,
-      });
-      if (existingEmail) {
-        throw new ConflictException(
-          `Email already registered with: ${dto.email.substring(0, 3)}***${dto.email.substring(dto.email.length - 3)}`,
-        );
-      }
+    const emailLower = dto.email.toLowerCase();
+    const existingEmail = await this.database.hunters.findOne({
+      email: emailLower,
+      deletedAt: null,
+    });
+    if (existingEmail) {
+      throw new ConflictException(
+        `Email already registered with: ${dto.email.substring(0, 3)}***${dto.email.substring(dto.email.length - 3)}`,
+      );
     }
+
+    const deviceCandidates = await this.database.hunters
+      .find({ deviceId: dto.deviceId, deletedAt: null })
+      .sort({ updatedAt: -1 })
+      .limit(10);
+
+    const pendingOnly =
+      deviceCandidates.length > 0 &&
+      deviceCandidates.every((h) => (h.mergeStatus ?? "none") === "pending");
+    if (pendingOnly) {
+      throw new ConflictException(
+        "Account migration in progress for this device; try again shortly",
+      );
+    }
+
+    const registeredOnDevice = deviceCandidates.find((h) =>
+      isRegisteredHunterProfile(h),
+    );
+    const anonymousBucket = deviceCandidates.find(
+      (h) =>
+        !isRegisteredHunterProfile(h) &&
+        (h.mergeStatus ?? "none") !== "pending",
+    );
 
     const hashedPassword = await this.hashPassword(dto.password);
 
+    if (anonymousBucket) {
+      await this.database.hunters.updateOne(
+        { _id: anonymousBucket._id },
+        {
+          $set: {
+            email: emailLower,
+            password: hashedPassword,
+            nickname: dto.nickname ?? null,
+            registrationCompleted: true,
+            mergeStatus: "none",
+          },
+        },
+      );
+      const upgraded = await this.database.hunters.findById(
+        anonymousBucket._id,
+      );
+      if (!upgraded) {
+        throw new ConflictException("Could not complete registration");
+      }
+      const tokens = await this.generateTokenPair(
+        upgraded._id.toString(),
+        UserRole.HUNTER,
+      );
+      return {
+        ...tokens,
+        user: this.mapHunterToUserDto(upgraded),
+      };
+    }
+
+    if (registeredOnDevice) {
+      throw new ConflictException(
+        "An account is already registered for this device",
+      );
+    }
+
     const hunter = await this.database.hunters.create({
       deviceId: dto.deviceId,
-      email: dto.email?.toLowerCase() || null,
+      email: emailLower,
       password: hashedPassword,
       nickname: dto.nickname || null,
       profile: {},
       passwordReset: {},
       stats: { totalClaims: 0, totalRedemptions: 0 },
       deletedAt: null,
+      registrationCompleted: true,
+      mergeStatus: "none",
     });
 
     const tokens = await this.generateTokenPair(
@@ -335,22 +396,41 @@ export class AuthService {
       { $set: { loginAttempts: 0, lockUntil: null } },
     );
 
+    const refreshed =
+      (await this.database.hunters.findById(hunter._id)) ?? hunter;
+
     const tokens = await this.generateTokenPair(
-      hunter._id.toString(),
+      refreshed._id.toString(),
       UserRole.HUNTER,
     );
 
     return {
       ...tokens,
-      user: this.mapHunterToUserDto(hunter),
+      user: this.mapHunterToUserDto(refreshed),
     };
   }
 
   async loginByDevice(deviceId: string): Promise<AuthWithJwtPair> {
-    let hunter = await this.database.hunters.findOne({
-      deviceId,
-      deletedAt: null,
-    });
+    const candidates = await this.database.hunters
+      .find({ deviceId, deletedAt: null })
+      .sort({ updatedAt: -1 })
+      .limit(5);
+
+    if (candidates.length > 1) {
+      this.logger.warn(
+        `loginByDevice duplicate deviceId count=${candidates.length}`,
+      );
+    }
+
+    let hunter =
+      candidates.find((h) => (h.mergeStatus ?? "none") !== "pending") ??
+      candidates[0];
+
+    if (hunter && (hunter.mergeStatus ?? "none") === "pending") {
+      throw new ConflictException(
+        "Account migration in progress; try again shortly",
+      );
+    }
 
     if (!hunter) {
       hunter = await this.database.hunters.create({
@@ -362,6 +442,8 @@ export class AuthService {
         passwordReset: {},
         stats: { totalClaims: 0, totalRedemptions: 0 },
         deletedAt: null,
+        registrationCompleted: false,
+        mergeStatus: "none",
       });
     }
 

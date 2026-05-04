@@ -159,6 +159,13 @@ export class VoucherResponseDto {
     description: "Last update timestamp",
   })
   updatedAt!: Date;
+
+  @ApiProperty({
+    example: false,
+    description:
+      "True if voucher was claimed while hunter had not completed registration (device-only identity)",
+  })
+  claimedWithoutRegisteredAccount!: boolean;
 }
 
 /**

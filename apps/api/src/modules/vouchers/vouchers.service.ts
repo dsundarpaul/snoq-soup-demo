@@ -32,6 +32,8 @@ import {
 import { config } from "../../config/app.config";
 import { MailService } from "../mail/mail.service";
 import { DropsService } from "../drops/drops.service";
+import { HunterIdentityResolverService } from "../hunter-identity/hunter-identity-resolver.service";
+import type { Request } from "express";
 
 // Type-safe refactor: Define proper interface for QR payload
 interface QRPayload {
@@ -105,48 +107,21 @@ export class VouchersService {
     private readonly database: DatabaseService,
     private readonly mailService: MailService,
     private readonly dropsService: DropsService,
+    private readonly hunterIdentityResolver: HunterIdentityResolverService,
   ) {}
 
   async claim(
-    dto: ClaimVoucherDto & { deviceResolvedHunterId?: string },
+    req: Request,
+    dto: ClaimVoucherDto,
   ): Promise<ClaimVoucherResponseDto> {
     const { dropId, deviceId } = dto;
-    const fromBody = dto.hunterId?.trim();
-    const resolvedFromDevice = dto.deviceResolvedHunterId?.trim();
-    if (fromBody && resolvedFromDevice && fromBody !== resolvedFromDevice) {
-      throw new BadRequestException("Hunter does not match device");
-    }
-    const hunterId = fromBody ?? resolvedFromDevice;
-    if (!hunterId) {
-      throw new BadRequestException(
-        "Hunter could not be resolved for this device",
-      );
-    }
+    const identity =
+      await this.hunterIdentityResolver.resolvePublicClaimIdentity(req, {
+        deviceId,
+        hunterId: dto.hunterId,
+      });
+    const hunterObjectId = identity.hunterObjectId;
 
-    let hunterObjectId: Types.ObjectId;
-    try {
-      hunterObjectId = new Types.ObjectId(hunterId);
-    } catch {
-      throw new BadRequestException("Invalid hunter ID");
-    }
-
-    const hunter = await this.database.hunters
-      .findOne({
-        _id: hunterObjectId,
-        deletedAt: null,
-      })
-      .select("_id email")
-      .lean();
-
-    if (!hunter) {
-      throw new BadRequestException("Hunter not found");
-    }
-
-    if (!hunter.email) {
-      throw new BadRequestException("Hunter not registered");
-    }
-
-    // Validate drop exists and is active
     const drop = await this.database.drops.findOne({
       _id: new Types.ObjectId(dropId),
       active: true,
@@ -157,7 +132,6 @@ export class VouchersService {
       throw new NotFoundException("Drop not found or inactive");
     }
 
-    // Check schedule constraints
     const now = new Date();
     if (drop.schedule?.start && now < drop.schedule.start) {
       throw new BadRequestException("Drop has not started yet");
@@ -193,33 +167,27 @@ export class VouchersService {
       }
     }
 
-    // Generate magic token
     const magicToken = randomBytes(16).toString("hex");
     const magicTokenHash = this.hashMagicToken(magicToken);
-    // const claimedAt = new Date();
-    // const expiresAt = this.computeVoucherExpiresAt(drop, claimedAt);
 
-    // Create voucher with hashed token for security
-    // The unique compound index {dropId, claimedBy, hunterId, deletedAt} ensures atomicity
     let voucher;
     try {
       voucher = await this.database.vouchers.create({
         dropId: new Types.ObjectId(dropId),
         merchantId: drop.merchantId,
-        magicToken, // Keep for backwards compatibility
-        magicTokenHash, // Secure hashed storage
+        magicToken,
+        magicTokenHash,
         claimedBy: {
           deviceId,
           hunterId: hunterObjectId,
         },
-        // claimedAt,
-        // expiresAt,
+        claimedWithoutRegisteredAccount:
+          identity.claimedWithoutRegisteredAccount,
         redeemed: false,
         redeemedAt: null,
         redeemedBy: {},
       });
     } catch (err: unknown) {
-      // Handle duplicate key error from unique compound index (race condition)
       const mongoError = err as {
         code?: number;
         keyValue?: Record<string, unknown>;
@@ -237,7 +205,6 @@ export class VouchersService {
       );
     }
 
-    // Assign promo code if available
     await this.assignPromoCode(
       voucher._id as Types.ObjectId,
       drop._id as Types.ObjectId,
@@ -267,20 +234,23 @@ export class VouchersService {
         ? drop.name.trim()
         : "Reward";
 
-    void this.mailService
-      .sendRewardClaimedNotification(
-        hunter.email,
-        this.buildPublicVoucherUrl(magicToken),
-        dropName,
-        merchantDisplayName,
-      )
-      .catch((err: unknown) => {
-        this.logger.warn(
-          `Failed to send reward claimed notification: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
-      });
+    const notifyEmail = identity.hunterEmailTrimmed;
+    if (notifyEmail) {
+      void this.mailService
+        .sendRewardClaimedNotification(
+          notifyEmail,
+          this.buildPublicVoucherUrl(magicToken),
+          dropName,
+          merchantDisplayName,
+        )
+        .catch((err: unknown) => {
+          this.logger.warn(
+            `Failed to send reward claimed notification: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        });
+    }
 
     const base = this.toResponseDto(voucher, drop);
     return {
@@ -1067,6 +1037,10 @@ export class VouchersService {
       qrData: this.generateQRData(voucher as VoucherDocument),
       createdAt: voucher.createdAt,
       updatedAt: voucher.updatedAt,
+      claimedWithoutRegisteredAccount: Boolean(
+        (voucher as { claimedWithoutRegisteredAccount?: boolean })
+          .claimedWithoutRegisteredAccount,
+      ),
     };
   }
 

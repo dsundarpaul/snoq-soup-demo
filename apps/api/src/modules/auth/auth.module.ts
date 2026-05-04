@@ -10,7 +10,6 @@ import { DatabaseModule } from "../../database/database.module";
 import { MailModule } from "../mail/mail.module";
 import { EmailVerificationTokenService } from "./email-verification-token.service";
 import { EmailVerificationCleanupService } from "./email-verification-cleanup.service";
-
 @Module({
   imports: [
     DatabaseModule,

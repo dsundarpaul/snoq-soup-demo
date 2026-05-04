@@ -232,7 +232,10 @@ ${frontendBase}`;
     preheader,
     title: "Reward redeemed",
     lead: "This is a quick confirmation for your records.",
-    bodyLines: [storeLine, "Thanks for hunting with us — we hope you enjoyed the drop."],
+    bodyLines: [
+      storeLine,
+      "Thanks for hunting with us — we hope you enjoyed the drop.",
+    ],
     ctaUrl: voucherUrl.replace(/"/g, "%22"),
     ctaLabel: "Open voucher page",
     secondaryNote:

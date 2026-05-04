@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiHeader,
 } from "@nestjs/swagger";
 import { Throttle, SkipThrottle } from "@nestjs/throttler";
 import { VouchersService } from "./vouchers.service";
@@ -24,11 +25,13 @@ import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Public } from "../../common/decorators/public.decorator";
+import { OptionalJwtAuthGuard } from "../../common/guards/optional-jwt-auth.guard";
+import { HunterResourceGuard } from "../../common/guards/hunter-resource.guard";
+import { CurrentHunterId } from "../../common/decorators/current-hunter-id.decorator";
 import {
   CurrentUser,
   CurrentUserType,
 } from "../../common/decorators/current-user.decorator";
-import { DeviceId } from "../../common/decorators/device-id.decorator";
 import { ClaimVoucherDto } from "./dto/request/claim-voucher.dto";
 import { RedeemVoucherDto } from "./dto/request/redeem-voucher.dto";
 import { SendEmailDto } from "./dto/request/send-email.dto";
@@ -59,15 +62,10 @@ export class VouchersController {
   @ApiResponse({ status: 409, description: "Already claimed by this hunter" })
   @HttpCode(HttpStatus.CREATED)
   async claim(
+    @Req() req: Request,
     @Body() dto: ClaimVoucherDto,
-    @DeviceId() deviceId: string,
-    @Req() req: Request & { hunterId?: string },
   ): Promise<ClaimVoucherResponseDto> {
-    return this.vouchersService.claim({
-      ...dto,
-      deviceId,
-      deviceResolvedHunterId: req.hunterId,
-    });
+    return this.vouchersService.claim(req, dto);
   }
 
   @Post("vouchers/redeem")
@@ -206,35 +204,46 @@ export class VouchersController {
   }
 
   @Get("hunters/me/vouchers")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("hunter")
+  @UseGuards(OptionalJwtAuthGuard, HunterResourceGuard)
   @ApiBearerAuth()
+  @ApiHeader({
+    name: "X-Device-Id",
+    required: false,
+    description:
+      "Used when no valid hunter JWT is sent; must match an existing hunter",
+  })
   @ApiOperation({
-    summary: "Get current hunter's vouchers (unredeemed and redeemed)",
+    summary:
+      "Hunter vouchers from JWT session or, when absent, from X-Device-Id",
   })
   @ApiQuery({ name: "unredeemedLimit", required: false, type: Number })
   @ApiQuery({ name: "redeemedLimit", required: false, type: Number })
   @ApiResponse({ status: 200, type: HunterVouchersBucketsDto })
   async findByHunter(
-    @CurrentUser() user: CurrentUserType,
+    @CurrentHunterId() hunterId: string,
     @Query("unredeemedLimit") unredeemedLimit?: string,
     @Query("redeemedLimit") redeemedLimit?: string,
   ): Promise<HunterVouchersBucketsDto> {
     const unredeemed = unredeemedLimit ? Number(unredeemedLimit) : undefined;
     const redeemed = redeemedLimit ? Number(redeemedLimit) : undefined;
     return this.vouchersService.findByHunter(
-      user.userId,
+      hunterId,
       Number.isFinite(unredeemed) ? unredeemed : undefined,
       Number.isFinite(redeemed) ? redeemed : undefined,
     );
   }
 
   @Get("hunters/me/vouchers/list")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("hunter")
+  @UseGuards(OptionalJwtAuthGuard, HunterResourceGuard)
   @ApiBearerAuth()
+  @ApiHeader({
+    name: "X-Device-Id",
+    required: false,
+    description:
+      "Used when no valid hunter JWT is sent; must match an existing hunter",
+  })
   @ApiOperation({
-    summary: "Paginated list of current hunter's vouchers",
+    summary: "Paginated hunter vouchers from JWT session or X-Device-Id",
   })
   @ApiQuery({
     name: "status",
@@ -245,7 +254,7 @@ export class VouchersController {
   @ApiQuery({ name: "limit", required: false, type: Number })
   @ApiResponse({ status: 200, type: HunterVouchersPageDto })
   async listByHunter(
-    @CurrentUser() user: CurrentUserType,
+    @CurrentHunterId() hunterId: string,
     @Query("status") status: "all" | "unredeemed" | "redeemed" = "all",
     @Query("page") page = 1,
     @Query("limit") limit = 20,
@@ -253,7 +262,7 @@ export class VouchersController {
     const normalized: "all" | "unredeemed" | "redeemed" =
       status === "unredeemed" || status === "redeemed" ? status : "all";
     return this.vouchersService.findByHunterPaginated(
-      user.userId,
+      hunterId,
       normalized,
       Number(page),
       Number(limit),

@@ -1,4 +1,4 @@
-import { IsString, Matches, IsNotEmpty } from "class-validator";
+import { IsString, Matches, IsNotEmpty, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ClaimVoucherDto {
@@ -23,6 +23,7 @@ export class ClaimVoucherDto {
       "Optional. When set, must match the hunter linked to this device.",
     required: false,
   })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   hunterId?: string;

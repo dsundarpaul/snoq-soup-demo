@@ -24,7 +24,7 @@ export async function fetchMerchantMeCredential() {
 export async function fetchHunterMeCredential() {
   const path = CREDENTIAL_PATH.hunter;
   const res = await apiFetchMaybeRetry("GET", path, { auth: "hunter" });
-  if (res.status === 401) return null;
+  if (res.status === 401 || res.status === 403) return null;
   await throwIfResNotOk(res, path, "hunter");
   const json = (await res.json()) as Record<string, unknown>;
   return mapHunterProfileToLegacy(json);

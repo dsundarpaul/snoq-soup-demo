@@ -32,7 +32,7 @@ export class PromoCodesService {
   async create(
     merchantId: string,
     dropId: string,
-    dto: CreatePromoCodeDto
+    dto: CreatePromoCodeDto,
   ): Promise<PromoCodeResponseDto> {
     const codeUpper = dto.code.toUpperCase().trim();
 
@@ -44,7 +44,7 @@ export class PromoCodesService {
 
     if (existing) {
       throw new ConflictException(
-        `Promo code '${codeUpper}' already exists for this drop`
+        `Promo code '${codeUpper}' already exists for this drop`,
       );
     }
 
@@ -65,18 +65,18 @@ export class PromoCodesService {
   async bulkCreate(
     dropId: string,
     dto: BulkCreatePromoCodesDto,
-    access: DropPromoAccess
+    access: DropPromoAccess,
   ): Promise<PromoCodeResponseDto[]> {
     const merchantId = await this.resolveMerchantIdForDrop(dropId, access);
 
     const codes = dto.codes.map((c) => c.code.toUpperCase().trim());
     const duplicates = codes.filter(
-      (item, index) => codes.indexOf(item) !== index
+      (item, index) => codes.indexOf(item) !== index,
     );
 
     if (duplicates.length > 0) {
       throw new BadRequestException(
-        `Duplicate codes in request: ${[...new Set(duplicates)].join(", ")}`
+        `Duplicate codes in request: ${[...new Set(duplicates)].join(", ")}`,
       );
     }
 
@@ -91,7 +91,7 @@ export class PromoCodesService {
     if (existingCodes.length > 0) {
       const existingCodeValues = existingCodes.map((c) => c.code);
       throw new ConflictException(
-        `Codes already exist for this drop: ${existingCodeValues.join(", ")}`
+        `Codes already exist for this drop: ${existingCodeValues.join(", ")}`,
       );
     }
 
@@ -108,12 +108,12 @@ export class PromoCodesService {
 
     const createdPromoCodes = await this.database.promoCodes.insertMany(
       promoCodeDocs,
-      { ordered: false }
+      { ordered: false },
     );
 
     // Type-safe refactor: cast to PromoCode[] since insertMany returns the created docs
     return (createdPromoCodes as PromoCode[]).map((pc) =>
-      this.toResponseDto(pc)
+      this.toResponseDto(pc),
     );
   }
 
@@ -121,7 +121,7 @@ export class PromoCodesService {
     dropId: string,
     status?: PromoCodeStatus,
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<PromoCodeListDto> {
     const match: Record<string, unknown> = {
       dropId: new Types.ObjectId(dropId),
@@ -167,7 +167,7 @@ export class PromoCodesService {
 
   private async resolveMerchantIdForDrop(
     dropId: string,
-    access: DropPromoAccess
+    access: DropPromoAccess,
   ): Promise<string> {
     if (access.scope === "merchant") {
       return access.merchantId;
@@ -184,7 +184,7 @@ export class PromoCodesService {
   }
 
   async findAvailableForDrop(
-    dropId: string
+    dropId: string,
   ): Promise<PromoCodeResponseDto | null> {
     const promoCode = await this.database.promoCodes
       .findOne({
@@ -199,7 +199,7 @@ export class PromoCodesService {
 
   async assignToVoucher(
     dropId: string,
-    voucherId: string
+    voucherId: string,
   ): Promise<PromoCodeResponseDto | null> {
     const promoCode = await this.database.promoCodes.findOneAndUpdate(
       {
@@ -214,7 +214,7 @@ export class PromoCodesService {
           assignedAt: new Date(),
         },
       },
-      { new: true }
+      { new: true },
     );
 
     return promoCode ? this.toResponseDto(promoCode) : null;
@@ -229,7 +229,7 @@ export class PromoCodesService {
       },
       {
         $set: { deletedAt: new Date() },
-      }
+      },
     );
 
     return { deletedCount: result.modifiedCount };
@@ -257,13 +257,13 @@ export class PromoCodesService {
 
     if (promoCode.status !== PromoCodeStatus.AVAILABLE) {
       throw new BadRequestException(
-        "Only available (unassigned) promo codes can be deleted"
+        "Only available (unassigned) promo codes can be deleted",
       );
     }
 
     await this.database.promoCodes.updateOne(
       { _id: new Types.ObjectId(codeId) },
-      { $set: { deletedAt: new Date() } }
+      { $set: { deletedAt: new Date() } },
     );
 
     return { deleted: true };
@@ -296,7 +296,7 @@ export class PromoCodesService {
   }
 
   private hunterSummaryFromLeanRef(
-    hunterId: unknown
+    hunterId: unknown,
   ): PromoCodeHunterSummaryDto | null {
     if (hunterId == null) return null;
     if (typeof hunterId !== "object" || hunterId instanceof Types.ObjectId) {

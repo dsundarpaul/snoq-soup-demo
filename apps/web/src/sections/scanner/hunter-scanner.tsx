@@ -159,13 +159,8 @@ export default function HunterScannerPage() {
   useEffect(() => {
     if (!hasHunterAuth) {
       router.replace(`/login?next=${encodeURIComponent("/hunter-scan")}`);
-      return;
     }
-    if (profileLoading) return;
-    if (!profile?.email) {
-      router.replace(`/login?next=${encodeURIComponent("/hunter-scan")}`);
-    }
-  }, [hasHunterAuth, profileLoading, profile?.email, router]);
+  }, [hasHunterAuth, router]);
 
   const stopScanner = useCallback(async () => {
     if (html5QrCodeRef.current) {

@@ -1,4 +1,5 @@
 import { API_ORIGIN } from "@/lib/app-config";
+import { getDeviceId } from "@/hooks/use-device-id";
 import {
   hadAuthSessionHint,
   invalidateAuthSession,
@@ -86,6 +87,13 @@ const defaultHeaders = (): Record<string, string> => ({
   "X-Requested-With": "fetch",
 });
 
+function resolveDeviceIdHeader(path: string, explicit?: string): string {
+  if (explicit) return explicit;
+  if (!path.includes("/hunters/me")) return "";
+  if (typeof window === "undefined") return "";
+  return getDeviceId();
+}
+
 export async function apiFetch(
   method: string,
   path: string,
@@ -96,8 +104,9 @@ export async function apiFetch(
   if (init?.body !== undefined && init?.json !== false) {
     headers["Content-Type"] = "application/json";
   }
-  if (init?.deviceId) {
-    headers["X-Device-Id"] = init.deviceId;
+  const deviceHeader = resolveDeviceIdHeader(path, init?.deviceId);
+  if (deviceHeader) {
+    headers["X-Device-Id"] = deviceHeader;
   }
   return fetch(url, {
     method,

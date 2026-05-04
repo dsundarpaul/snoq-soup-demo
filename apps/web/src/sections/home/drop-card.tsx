@@ -14,8 +14,6 @@ import {
   CheckCircle2,
   BadgeX,
   Hourglass,
-  ChevronsRightLeft,
-  ChevronRightIcon,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { DropDetailsDialog } from "@/sections/home/drop-details-dialog";
@@ -74,9 +72,7 @@ export function DropCard({
 
   const openDetails = () => setDetailsOpen(true);
 
-  const huntHref = hunterSignedIn
-    ? `/hunt?drop=${drop.id}`
-    : `/login?next=${encodeURIComponent(`/hunt?drop=${drop.id}`)}`;
+  const huntHref = `/hunt?drop=${drop.id}`;
 
   const handleHuntClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (!isActive) {

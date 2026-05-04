@@ -145,11 +145,9 @@ const ar = {
   "profile.yourHunterName": "اسم الصياد",
   "profile.dateOfBirth": "تاريخ الميلاد",
   "profile.mobileLengthHint": "الطول المتوقع: {range}",
-  "profile.dobMinAgeHint":
-    "يجب أن يكون عمرك 4 سنوات على الأقل. لا يمكن اختيار تواريخ مستقبلية.",
+  "profile.dobMinAgeHint": "يجب أن يكون عمرك 4 سنوات على الأقل.",
   "profile.dobInvalidMinAge": "تاريخ ميلاد غير صالح",
-  "profile.dobInvalidMinAgeDesc":
-    "اختر تاريخاً ليس في المستقبل ويكون قبل 4 سنوات على الأقل.",
+  "profile.dobInvalidMinAgeDesc": "اختر تاريخاً يكون قبل 4 سنوات على الأقل.",
   "profile.gender": "الجنس",
   "profile.selectGender": "اختر الجنس",
   "profile.male": "ذكر",
@@ -210,6 +208,9 @@ const ar = {
   "voucher.notFoundDesc":
     "هذا الرابط السحري غير صالح أو منتهي الصلاحية. قد تكون القسيمة محذوفة.",
   "voucher.yourRewardAwaits": "مكافأتك بانتظارك",
+  "voucher.anonymousClaimBannerTitle": "احفظ المكافأة على كل أجهزتك",
+  "voucher.anonymousClaimBannerDesc":
+    "تم الاقتناص على هذا الجهاز فقط. أنشئ حساباً أو سجّل الدخول كصائد كنوز لمزامنة القسائم.",
   "voucher.startNewHunt": "ابدأ جديدة الصيد",
   "voucher.partnerCode": "كود الشريك",
   "voucher.copyCode": "نسخ الكود",

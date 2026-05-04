@@ -18,7 +18,8 @@ Base path: **`/api/v1`** (all routes below are relative to this prefix).
 
 ### Hunter device header
 
-- Endpoints guarded by **`DeviceGuard`** expect **`X-Device-Id`** (e.g. claim voucher, some hunter routes). Ensure CORS allows this header in production (`CORS_ORIGIN`).
+- **`DeviceGuard`** still applies to authenticated hunter routes such as **`GET /hunters/me`** and related profile/history endpoints: send **`X-Device-Id`** when the client stores a device id (CORS must allow this header in production via `CORS_ORIGIN`).
+- **`POST /vouchers/claim`** is **public** (throttled). Identity is resolved from the **hunter access JWT** (cookie/header) when present; otherwise the **`deviceId`** in the JSON body creates or resolves an anonymous hunter record. Sending **`X-Device-Id`** on claim is optional but harmless if it matches body `deviceId`.
 
 ### Success responses
 
@@ -55,7 +56,7 @@ Validation errors may include **`details`** in non-production.
 | POST | `/auth/merchant/forgot-password` | Start password reset flow. | None | `ForgotPasswordDto`: `email` | **200** empty |
 | POST | `/auth/merchant/reset-password/:token` | Complete password reset. | None | `ResetPasswordDto`: `password` | **200** empty |
 | POST | `/auth/hunter/register` | Register hunter (device + optional email). | None | `RegisterHunterDto`: `deviceId`, `password`, optional `email`, `nickname` | **201** `AuthResponseDto` |
-| POST | `/auth/hunter/login` | Hunter email/password login. | None | `LoginDto` | **200** `AuthResponseDto` |
+| POST | `/auth/hunter/login` | Hunter email/password login. Optional **`deviceId`** in the body is ignored (does not merge or link sessions). | None | `LoginDto` + optional `deviceId` | **200** `AuthResponseDto` |
 | POST | `/auth/hunter/device-login` | Login or auto-create hunter by device. | None | JSON body: `{ "deviceId": string }` | **200** `AuthResponseDto` |
 | POST | `/auth/hunter/forgot-password` | Hunter reset request. | None | `ForgotPasswordDto` | **200** empty |
 | POST | `/auth/hunter/reset-password/:token` | Hunter reset. | None | `ResetPasswordDto` | **200** empty |
@@ -64,6 +65,12 @@ Validation errors may include **`details`** in non-production.
 | POST | `/auth/logout` | Revoke refresh token. | Bearer | `RefreshTokenDto` | **200** empty |
 
 **`AuthResponseDto`:** `accessToken`, `refreshToken`, `user` (`id`, `email`, `type`, merchant fields like `emailVerified`, `businessName`, `username`, or hunter `nickname`, `deviceId`, etc.).
+
+### Anonymous session vs registered account
+
+- **`POST /auth/hunter/login`** does **not** merge or move vouchers from an anonymous device hunter. Email/password login only issues tokens for the hunter matched by **email**.
+- **Upgrade path:** Register on the **same `deviceId`** as **`device-login`** (see **`POST /auth/hunter/register`**) so anonymous claims stay on one hunter document when adding email/password.
+- **Stale JWT:** If **`GET /hunters/me`** returns **401** (e.g. soft-deleted hunter or cookie/session mismatch), **`POST /auth/hunter/device-login`** with **`deviceId`** and **`credentials: 'include'`** can refresh cookies—avoid unbounded retry loops (cap attempts).
 
 ---
 
@@ -109,7 +116,7 @@ Validation errors may include **`details`** in non-production.
 
 | Method | Path | Intent | Auth | Body / query | Success |
 |--------|------|--------|------|--------------|---------|
-| POST | `/vouchers/claim` | Claim voucher for a drop. | `X-Device-Id` + throttling | `ClaimVoucherDto` | **201** `VoucherResponseDto` |
+| POST | `/vouchers/claim` | Claim voucher for a drop. | Public (rate-limited); optional hunter JWT | `ClaimVoucherDto`: **`dropId`**, **`deviceId`**, optional **`hunterId`** (must match session/device when sent). Response includes **`claimedWithoutRegisteredAccount`** when claim used device-only or unregistered JWT identity. | **201** `ClaimVoucherResponseDto` |
 | POST | `/vouchers/redeem` | Redeem (merchant, scanner, or linked hunter). | Bearer (merchant, scanner, or hunter with `redeemerMerchantId`) | `RedeemVoucherDto` | **200** `RedeemResultDto` |
 | GET | `/vouchers/magic/:token` | Voucher detail via magic link token. | None | — | **200** `VoucherDetailResponseDto` |
 | POST | `/vouchers/send-email` | Email voucher to user. | Bearer | `SendEmailDto` (`voucherId`, `email`, `magicLink`) | **200** `{ success: true }` |

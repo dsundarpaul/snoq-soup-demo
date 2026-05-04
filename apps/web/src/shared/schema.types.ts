@@ -68,6 +68,7 @@ export interface Voucher {
   deviceId: string | null;
   hunterId: string | null;
   expiresAt: Date | null;
+  claimedWithoutRegisteredAccount?: boolean;
 }
 
 export interface User {

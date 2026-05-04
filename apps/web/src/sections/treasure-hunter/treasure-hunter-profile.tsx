@@ -61,15 +61,11 @@ export default function ProfilePage() {
   const { data: profile, isLoading } = useTreasureHunterProfileQuery();
 
   useEffect(() => {
+    if (isLoading) return;
     if (!hasHunterAuth) {
       router.replace(`/login?next=${encodeURIComponent("/profile")}`);
-      return;
     }
-    if (isLoading) return;
-    if (!profile?.email) {
-      router.replace(`/login?next=${encodeURIComponent("/profile")}`);
-    }
-  }, [hasHunterAuth, isLoading, profile?.email, router]);
+  }, [hasHunterAuth, isLoading, router]);
 
   const updateProfileMutation = useTreasureHunterPatchProfileMutation({
     onSuccess: () => {
@@ -159,7 +155,7 @@ export default function ProfilePage() {
       </header>
 
       <main className="container max-w-lg mx-auto p-4">
-        {!hasHunterAuth || isLoading || !profile?.email ? (
+        {!hasHunterAuth || isLoading || !profile ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>

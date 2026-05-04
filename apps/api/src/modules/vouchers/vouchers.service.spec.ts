@@ -5,10 +5,12 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Types } from "mongoose";
+import type { Request } from "express";
 import { VouchersService } from "./vouchers.service";
 import { DatabaseService } from "../../database/database.service";
 import { MailService } from "../mail/mail.service";
 import { DropsService } from "../drops/drops.service";
+import { HunterIdentityResolverService } from "../hunter-identity/hunter-identity-resolver.service";
 
 describe("VouchersService", () => {
   let service: VouchersService;
@@ -31,6 +33,11 @@ describe("VouchersService", () => {
     hunters: { findByIdAndUpdate: jest.Mock; findOne: jest.Mock };
     merchants: { findById: jest.Mock };
   };
+  let hunterIdentityResolver: {
+    resolvePublicClaimIdentity: jest.Mock;
+  };
+
+  const mockReq = {} as Request;
 
   beforeEach(() => {
     mailService = {
@@ -72,10 +79,14 @@ describe("VouchersService", () => {
         }),
       },
     };
+    hunterIdentityResolver = {
+      resolvePublicClaimIdentity: jest.fn(),
+    };
     service = new VouchersService(
       database as unknown as DatabaseService,
       mailService as unknown as MailService,
       dropsService as unknown as DropsService,
+      hunterIdentityResolver as unknown as HunterIdentityResolverService,
     );
   });
 
@@ -94,56 +105,30 @@ describe("VouchersService", () => {
       availability: { type: "unlimited" as const },
     };
 
-    it("rejects when deviceResolvedHunterId is missing", async () => {
-      await expect(
-        service.claim({
-          dropId: dropId.toString(),
-          deviceId: "device_a",
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("rejects when body hunterId does not match device-resolved hunter", async () => {
-      const other = new Types.ObjectId();
-      await expect(
-        service.claim({
-          dropId: dropId.toString(),
-          deviceId: "device_a",
-          hunterId: other.toString(),
-          deviceResolvedHunterId: hunterId.toString(),
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("rejects when hunter is not found", async () => {
-      database.hunters.findOne.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(null),
-        }),
-      });
+    it("rejects when identity resolver fails", async () => {
+      hunterIdentityResolver.resolvePublicClaimIdentity.mockRejectedValue(
+        new BadRequestException("Hunter not found"),
+      );
 
       await expect(
-        service.claim({
+        service.claim(mockReq, {
           dropId: dropId.toString(),
           deviceId: "device_a",
-          hunterId: hunterId.toString(),
         }),
       ).rejects.toThrow(BadRequestException);
     });
 
     it("rejects when drop is missing", async () => {
-      database.hunters.findOne.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({
-            _id: hunterId,
-            email: "hunter@test.com",
-          }),
-        }),
+      hunterIdentityResolver.resolvePublicClaimIdentity.mockResolvedValue({
+        hunterObjectId: hunterId,
+        hunterEmailTrimmed: "hunter@test.com",
+        claimedWithoutRegisteredAccount: false,
+        resolutionSource: "jwt",
       });
       database.drops.findOne.mockResolvedValue(null);
 
       await expect(
-        service.claim({
+        service.claim(mockReq, {
           dropId: dropId.toString(),
           deviceId: "device_a",
           hunterId: hunterId.toString(),
@@ -152,19 +137,17 @@ describe("VouchersService", () => {
     });
 
     it("rejects duplicate claim for same hunter and drop", async () => {
-      database.hunters.findOne.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({
-            _id: hunterId,
-            email: "hunter@test.com",
-          }),
-        }),
+      hunterIdentityResolver.resolvePublicClaimIdentity.mockResolvedValue({
+        hunterObjectId: hunterId,
+        hunterEmailTrimmed: "hunter@test.com",
+        claimedWithoutRegisteredAccount: false,
+        resolutionSource: "jwt",
       });
       database.drops.findOne.mockResolvedValue(baseDrop);
       database.vouchers.findOne.mockResolvedValue({ _id: voucherId });
 
       await expect(
-        service.claim({
+        service.claim(mockReq, {
           dropId: dropId.toString(),
           deviceId: "device_a",
           hunterId: hunterId.toString(),
@@ -174,13 +157,11 @@ describe("VouchersService", () => {
 
     it("creates voucher scoped to resolved hunter", async () => {
       const now = new Date();
-      database.hunters.findOne.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue({
-            _id: hunterId,
-            email: "hunter@test.com",
-          }),
-        }),
+      hunterIdentityResolver.resolvePublicClaimIdentity.mockResolvedValue({
+        hunterObjectId: hunterId,
+        hunterEmailTrimmed: "hunter@test.com",
+        claimedWithoutRegisteredAccount: false,
+        resolutionSource: "jwt",
       });
       database.drops.findOne.mockResolvedValue(baseDrop);
       database.vouchers.findOne.mockResolvedValue(null);
@@ -191,6 +172,7 @@ describe("VouchersService", () => {
         merchantId,
         magicToken: "tok",
         claimedBy: { deviceId: "device_a", hunterId },
+        claimedWithoutRegisteredAccount: false,
         claimedAt: now,
         expiresAt: null,
         redeemed: false,
@@ -215,11 +197,10 @@ describe("VouchersService", () => {
         }),
       });
 
-      const claimResult = await service.claim({
+      const claimResult = await service.claim(mockReq, {
         dropId: dropId.toString(),
         deviceId: "device_a",
         hunterId: hunterId.toString(),
-        deviceResolvedHunterId: hunterId.toString(),
       });
 
       expect(claimResult.merchant.name).toBe("Test Merchant");
@@ -236,6 +217,7 @@ describe("VouchersService", () => {
             deviceId: "device_a",
             hunterId,
           },
+          claimedWithoutRegisteredAccount: false,
         }),
       );
       expect(database.hunters.findByIdAndUpdate).toHaveBeenCalledWith(

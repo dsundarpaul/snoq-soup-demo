@@ -30,6 +30,7 @@ import { ResetPasswordDto } from "./dto/request/reset-password.dto";
 import { RefreshTokenDto } from "./dto/request/refresh-token.dto";
 import { VerifyEmailDto } from "./dto/request/verify-email.dto";
 import { DeviceLoginDto } from "./dto/request/device-login.dto";
+import { HunterLoginDto } from "./dto/request/hunter-login.dto";
 import { AuthResponseDto } from "./dto/response/auth-response.dto";
 import { RefreshSessionResponseDto } from "./dto/response/token-response.dto";
 import { ResendVerificationResponseDto } from "./dto/response/resend-verification-response.dto";
@@ -260,7 +261,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: "Invalid credentials" })
   @ApiCookieAuth()
   async loginHunter(
-    @Body() dto: LoginDto,
+    @Body() dto: HunterLoginDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
     const result = await this.authService.loginHunter(dto.email, dto.password);

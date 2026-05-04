@@ -487,6 +487,59 @@ describe("Authentication E2E Tests", () => {
         .send({ email, password })
         .expect(401);
     });
+
+    it("should upgrade anonymous hunter in-place when registering with same deviceId", async () => {
+      const deviceId = randomDeviceId();
+      const email = randomEmail();
+      const password = randomPassword();
+
+      const deviceRes = await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/device-login")
+        .set("X-Requested-With", "fetch")
+        .send({ deviceId })
+        .expect(200);
+      const anonId = (deviceRes.body as AuthResponseBody).user.id;
+
+      const registerRes = await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/register")
+        .set("X-Requested-With", "fetch")
+        .send({
+          deviceId,
+          email,
+          password,
+          nickname: "Upgraded",
+        })
+        .expect(201);
+
+      expect((registerRes.body as AuthResponseBody).user.id).toBe(anonId);
+
+      const doc = await database.hunters.findById(anonId).lean();
+      expect(doc?.registrationCompleted).toBe(true);
+      expect(doc?.email).toBe(email.toLowerCase());
+    });
+
+    it("should complete hunter login with optional deviceId in body (no merge)", async () => {
+      const email = randomEmail();
+      const password = randomPassword();
+      const deviceId = randomDeviceId();
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/register")
+        .set("X-Requested-With", "fetch")
+        .send({
+          deviceId: randomDeviceId(),
+          email,
+          password,
+          nickname: "Test",
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post("/api/v1/auth/hunter/login")
+        .set("X-Requested-With", "fetch")
+        .send({ email, password, deviceId })
+        .expect(200);
+    });
   });
 
   describe("Admin Authentication Flow", () => {

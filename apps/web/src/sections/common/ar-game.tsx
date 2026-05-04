@@ -929,14 +929,6 @@ export default function ARGamePage() {
       const hunterId =
         typeof hunterProfile?.id === "string" ? hunterProfile.id : undefined;
 
-      if (!hunterId) {
-        toast({
-          title: t("common.error"),
-          variant: "destructive",
-        });
-        return;
-      }
-
       claimMutation.mutate({
         dropId: activeDrop.id,
         deviceId,

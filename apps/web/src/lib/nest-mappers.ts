@@ -337,7 +337,10 @@ export function mapNestVoucherToLegacy(
     expiresAt: raw.expiresAt
       ? toDate(raw.expiresAt as Date | string | null | undefined)
       : null,
-  } as Voucher;
+    claimedWithoutRegisteredAccount: Boolean(
+      raw.claimedWithoutRegisteredAccount,
+    ),
+  };
 }
 
 export function mapRedeemResultToLegacy(raw: Record<string, unknown>): {
@@ -582,6 +585,9 @@ export function mapVoucherMagicDetailToView(raw: Record<string, unknown>): {
     expiresAt: raw.expiresAt
       ? toDate(raw.expiresAt as Date | string | null | undefined)
       : null,
+    claimedWithoutRegisteredAccount: Boolean(
+      raw.claimedWithoutRegisteredAccount,
+    ),
   } as Voucher;
   const drop = enrichDropWithMerchantProfile(
     mapNestDropToLegacy({

@@ -1,5 +1,8 @@
 // Guards
 export { JwtAuthGuard } from "./guards/jwt-auth.guard";
+export { OptionalJwtAuthGuard } from "./guards/optional-jwt-auth.guard";
+export { HunterResourceGuard } from "./guards/hunter-resource.guard";
+export { RegisteredHunterGuard } from "./guards/registered-hunter.guard";
 export { RolesGuard } from "./guards/roles.guard";
 export { DeviceGuard } from "./guards/device.guard";
 export { OwnershipGuard } from "./guards/ownership.guard";
@@ -16,6 +19,7 @@ export {
   AuthenticatedUser,
   CurrentUserType,
 } from "./decorators/current-user.decorator";
+export { CurrentHunterId } from "./decorators/current-hunter-id.decorator";
 export { DeviceId } from "./decorators/device-id.decorator";
 export { VerifyDropOwnership } from "./decorators/verify-drop-ownership.decorator";
 

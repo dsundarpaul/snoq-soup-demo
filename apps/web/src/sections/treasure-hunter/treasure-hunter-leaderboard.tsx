@@ -16,7 +16,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { RequireTreasureHunterSession } from "@/components/require-treasure-hunter-session";
 import {
   useLeaderboardQuery,
   useTreasureHunterProfileQuery,
@@ -64,8 +63,7 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <RequireTreasureHunterSession>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b">
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
@@ -187,6 +185,5 @@ export default function LeaderboardPage() {
           )}
         </main>
       </div>
-    </RequireTreasureHunterSession>
   );
 }

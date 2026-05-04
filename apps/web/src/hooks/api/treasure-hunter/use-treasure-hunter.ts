@@ -16,7 +16,7 @@ import {
   setAuthSessionHint,
   setHunterSuppressDeviceLoginAfterLogout,
 } from "@/lib/auth-session";
-import { useHasRoleCredentials } from "@/hooks/use-role-credentials";
+import { useDeviceId } from "@/hooks/use-device-id";
 import {
   apiFetch,
   apiFetchMaybeRetry,
@@ -51,7 +51,8 @@ export function useHunterVouchersQuery(options?: {
   unredeemedLimit?: number;
   redeemedLimit?: number;
 }) {
-  const hasHunterAuth = useHasRoleCredentials("hunter");
+  const deviceId = useDeviceId();
+  const deviceReady = Boolean(deviceId);
   const { unredeemedLimit, redeemedLimit } = options ?? {};
   return useQuery({
     queryKey: treasureHunterQueryKeys.vouchersSummary(
@@ -87,7 +88,7 @@ export function useHunterVouchersQuery(options?: {
       const json = (await res.json()) as Record<string, unknown>;
       return mapHunterVouchersBucketsToLegacy(json);
     },
-    enabled: hasHunterAuth,
+    enabled: deviceReady,
   });
 }
 
@@ -95,10 +96,11 @@ export function useHunterVouchersInfiniteQuery(
   status: HunterVoucherStatus = "all",
   pageSize = 10
 ) {
-  const hasHunterAuth = useHasRoleCredentials("hunter");
+  const deviceId = useDeviceId();
+  const deviceReady = Boolean(deviceId);
   return useInfiniteQuery({
     queryKey: treasureHunterQueryKeys.vouchersList(status, pageSize),
-    enabled: hasHunterAuth,
+    enabled: deviceReady,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams();
@@ -169,7 +171,11 @@ export function useTreasureHunterLoginMutation(
       const res = await apiRequest(
         "POST",
         "/api/v1/auth/hunter/login",
-        { email: data.email, password: data.password },
+        {
+          email: data.email,
+          password: data.password,
+          deviceId: data.deviceId,
+        },
         { auth: undefined }
       );
       const body = (await res.json()) as {
@@ -343,7 +349,8 @@ export function useTreasureHunterResetPasswordMutation(token: string) {
 }
 
 export function useTreasureHunterHistoryQuery() {
-  const hasHunterAuth = useHasRoleCredentials("hunter");
+  const deviceId = useDeviceId();
+  const deviceReady = Boolean(deviceId);
   return useQuery({
     queryKey: treasureHunterQueryKeys.history,
     queryFn: async () => {
@@ -351,11 +358,17 @@ export function useTreasureHunterHistoryQuery() {
       const res = await apiFetchMaybeRetry("GET", path, {
         auth: "hunter",
       });
+      if (res.status === 401) {
+        if (hadAuthSessionHint()) {
+          invalidateAuthSession("hunter");
+        }
+        return mapHunterHistoryToVoucherRows({});
+      }
       await throwIfResNotOk(res, path, "hunter");
       const json = (await res.json()) as Record<string, unknown>;
       return mapHunterHistoryToVoucherRows(json);
     },
-    enabled: hasHunterAuth,
+    enabled: deviceReady,
   });
 }
 

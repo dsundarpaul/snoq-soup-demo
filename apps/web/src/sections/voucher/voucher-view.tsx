@@ -7,7 +7,8 @@ import { useLanguage } from "@/contexts/language-context";
 import { VoucherDisplay } from "@/components/voucher-display";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Home, ArrowLeft } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, AlertCircle, Home, ArrowLeft, Info } from "lucide-react";
 import type { Voucher, Drop } from "@shared/schema";
 import { useVoucherByMagicTokenQuery } from "@/hooks/api/voucher/use-voucher";
 import { mapVoucherMagicDetailToView } from "@/lib/nest-mappers";
@@ -115,6 +116,18 @@ export default function VoucherViewPage() {
           </p>
         </div>
       </div>
+
+      {data.voucher.claimedWithoutRegisteredAccount ? (
+        <div className="max-w-md mx-auto mb-6">
+          <Alert className="border-primary/30 bg-primary/5">
+            <Info className="h-4 w-4" />
+            <AlertTitle>{t("voucher.anonymousClaimBannerTitle")}</AlertTitle>
+            <AlertDescription>
+              {t("voucher.anonymousClaimBannerDesc")}
+            </AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
 
       <VoucherDisplay
         voucher={data.voucher}

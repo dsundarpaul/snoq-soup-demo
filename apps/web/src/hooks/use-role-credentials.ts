@@ -5,7 +5,10 @@ import type { AuthRole } from "@/lib/auth-tokens";
 import { merchantQueryKeys } from "@/hooks/api/merchant/use-merchant";
 import { adminQueryKeys } from "@/hooks/api/admin/use-admin";
 import { treasureHunterQueryKeys } from "@/hooks/api/treasure-hunter/treasure-hunter.query-keys";
-import { credentialQueryFn } from "@/hooks/auth-role-queries";
+import {
+  credentialQueryFn,
+  fetchHunterMeCredential,
+} from "@/hooks/auth-role-queries";
 
 const CREDENTIAL_QUERY_KEY: Record<AuthRole, readonly unknown[]> = {
   merchant: merchantQueryKeys.me,
@@ -17,6 +20,22 @@ export function useRoleCredentialState(role: AuthRole): {
   hasCredentials: boolean;
   isLoading: boolean;
 } {
+  if (role === "hunter") {
+    const q = useQuery({
+      queryKey: treasureHunterQueryKeys.profile,
+      queryFn: fetchHunterMeCredential,
+      retry: false,
+      refetchOnWindowFocus: true,
+    });
+    const email = String(
+      (q.data as { email?: string } | undefined)?.email ?? "",
+    ).trim();
+    return {
+      hasCredentials: Boolean(email),
+      isLoading: q.isPending || q.isFetching,
+    };
+  }
+
   const q = useQuery<unknown>({
     queryKey: CREDENTIAL_QUERY_KEY[role],
     queryFn: credentialQueryFn(role) as () => Promise<unknown>,

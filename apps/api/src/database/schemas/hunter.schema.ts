@@ -152,6 +152,23 @@ export class Hunter {
   @Prop({ type: Types.ObjectId, ref: "Merchant", default: null })
   redeemerMerchantId!: Types.ObjectId | null;
 
+  @ApiProperty({
+    description:
+      "False until email/password registration completes (anonymous device hunters)",
+    default: false,
+  })
+  @Prop({ type: Boolean, default: false })
+  registrationCompleted!: boolean;
+
+  @ApiProperty({
+    enum: ["none", "pending"],
+    description: "Merge lock for anonymous→registered migration",
+    default: "none",
+  })
+  @IsOptional()
+  @Prop({ type: String, enum: ["none", "pending"], default: "none" })
+  mergeStatus!: "none" | "pending";
+
   @ApiProperty({ nullable: true, description: "Soft delete timestamp" })
   @IsDate()
   @IsOptional()
@@ -177,3 +194,4 @@ HunterSchema.index(
 HunterSchema.index({ "stats.totalClaims": -1 });
 HunterSchema.index({ deletedAt: 1 });
 HunterSchema.index({ redeemerMerchantId: 1 }, { sparse: true });
+HunterSchema.index({ deviceId: 1, deletedAt: 1 });
