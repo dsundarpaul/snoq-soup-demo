@@ -221,7 +221,7 @@ export function DropCard({
           </div>
 
           {variant === "browse" && state.kind === "hunt" ? (
-            <div className="mt-1.5 flex w-full flex-wrap items-center justify-start gap-2 pointer-events-auto">
+            <div className="mt-1.5 flex w-full items-center justify-end gap-2 pointer-events-auto">
               {distance !== null ? (
                 <button
                   type="button"
@@ -280,7 +280,7 @@ export function DropCard({
                 tabIndex={isActive ? undefined : -1}
                 data-testid={`button-hunt-${drop.id}`}
                 className={cn(
-                  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-sm px-5 py-1.5 text-[12px]  leading-none shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background active:scale-[0.97]",
+                  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-sm px-6 py-1.5 text-[12px]  leading-none shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background active:scale-[0.97]",
                   isActive
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "pointer-events-none bg-muted text-muted-foreground opacity-70 shadow-none"
