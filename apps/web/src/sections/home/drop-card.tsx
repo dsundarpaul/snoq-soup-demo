@@ -246,7 +246,7 @@ export function DropCard({
                       : t("home.directions")
                   }
                   data-testid={`button-directions-${drop.id}`}
-                  className="group inline-flex h-7 shrink-0 items-center gap-1 rounded-sm border border-border/70 bg-background/40 px-2 text-xs leading-none text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
+                  className="group inline-flex h-8 shrink-0 items-center gap-1 rounded-sm border border-border/70 bg-background/40 px-2 text-xs leading-none text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
                 >
                   <Navigation className="h-3 w-3 shrink-0 transition-transform group-hover:-rotate-12" />
                   <span className="max-w-[4.5rem] truncate ">
@@ -284,7 +284,7 @@ export function DropCard({
                 tabIndex={isActive ? undefined : -1}
                 data-testid={`button-hunt-${drop.id}`}
                 className={cn(
-                  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-sm px-3 py-1.5 text-[12px]  leading-none shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background active:scale-[0.97]",
+                  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-sm px-5 py-1.5 text-[12px]  leading-none shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background active:scale-[0.97]",
                   isActive
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "pointer-events-none bg-muted text-muted-foreground opacity-70 shadow-none"
