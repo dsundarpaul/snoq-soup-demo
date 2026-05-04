@@ -268,10 +268,10 @@ export function DropCard({
                   aria-label={t("home.directions")}
                   title={t("home.directions")}
                   data-testid={`button-directions-${drop.id}`}
-                  className="group inline-flex h-7 shrink-0 items-center gap-1 rounded-sm border border-border/70 bg-background/40 px-2 text-[12px] font-semibold uppercase leading-none tracking-wider text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
+                  className="group inline-flex h-8 shrink-0 items-center gap-1 rounded-sm border border-border/70 bg-background/40 px-2 text-[12px] font-semibold uppercase leading-none tracking-wider text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-[0.97]"
                 >
                   <Navigation className="h-3 w-3 shrink-0 transition-transform group-hover:-rotate-12" />
-                  {t("home.map")}
+                  Navigate
                 </button>
               )}
               <Link
