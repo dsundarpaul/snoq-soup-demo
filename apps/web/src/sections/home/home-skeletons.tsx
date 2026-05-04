@@ -2,51 +2,41 @@
 
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gift, History, Target } from "lucide-react";
+import { History, Target } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 
 type SkeletonCountProps = {
   count?: number;
 };
 
-export function ClaimedRewardsSkeleton({ count = 4 }: SkeletonCountProps) {
-  const { t } = useLanguage();
-
+export function ClaimedRewardsGridSkeleton({ count = 4 }: SkeletonCountProps) {
   return (
-    <section data-testid="skeleton-claimed-rewards">
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Gift className="w-5 h-5 shrink-0 text-teal" />
-          <h2 className="font-semibold text-lg text-foreground truncate">
-            {t("home.claimedDrops")}
-          </h2>
-          <Skeleton className="h-5 w-8 rounded-full" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {Array.from({ length: count }).map((_, index) => (
-          <Card
-            key={index}
-            className="p-0 overflow-hidden border-teal/20"
-          >
-            <div className="flex min-h-[7rem]">
-              <Skeleton className="w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 rounded-none" />
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
-                <Skeleton className="h-5 w-4/5" />
-                <Skeleton className="h-4 w-3/5" />
-                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                  <Skeleton className="h-6 w-16 rounded-md" />
-                  <Skeleton className="h-6 w-24 rounded-lg" />
-                </div>
-              </div>
-              <div className="flex w-11 shrink-0 items-center justify-center">
-                <Skeleton className="h-5 w-5 rounded-md" />
+    <div
+      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+      data-testid="skeleton-claimed-rewards-grid"
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <Card
+          key={index}
+          className="p-0 overflow-hidden border-teal/20"
+        >
+          <div className="flex min-h-[7rem]">
+            <Skeleton className="w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 rounded-none" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+              <Skeleton className="h-5 w-4/5" />
+              <Skeleton className="h-4 w-3/5" />
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                <Skeleton className="h-6 w-16 rounded-md" />
+                <Skeleton className="h-6 w-24 rounded-lg" />
               </div>
             </div>
-          </Card>
-        ))}
-      </div>
-    </section>
+            <div className="flex w-11 shrink-0 items-center justify-center">
+              <Skeleton className="h-5 w-5 rounded-md" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
 

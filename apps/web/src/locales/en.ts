@@ -27,6 +27,8 @@ const en = {
   "home.activeDropsSection": "Active hunts",
   "home.startingSoon": "Starting soon",
   "home.claimedDrops": "Claimed rewards",
+  "home.noClaimedRewardsCta":
+    "You have no claimed rewards yet. Claim one by hunting the drops below.",
   "home.redeemedRewards": "Redeemed rewards",
   "home.showMore": "View more",
   "home.timeToRedeem": "Time to redeem",

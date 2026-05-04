@@ -6,6 +6,7 @@ import { useGeolocation, calculateDistance } from "@/hooks/use-geolocation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { HomeHeader } from "@/sections/home/home-header";
 import { DropCard } from "@/sections/home/drop-card";
 import {
-  ClaimedRewardsSkeleton,
+  ClaimedRewardsGridSkeleton,
   ActiveDropsSkeleton,
   RedeemedRewardsSkeleton,
 } from "@/sections/home/home-skeletons";
@@ -179,158 +180,170 @@ export default function HomePage() {
       <HomeHeader geo={{ loading: geo.loading, error: geo.error }} />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {vouchersSectionPending ? (
-          <ClaimedRewardsSkeleton count={HOME_UNREDEEMED_LIMIT} />
-        ) : deviceReady && unredeemedVouchers.length > 0 ? (
-            <div className="space-y-6">
-              <section>
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Gift className="w-5 h-5 shrink-0 text-teal" />
-                      <h2 className="font-semibold text-lg text-foreground truncate">
-                        {t("home.claimedDrops")}
-                      </h2>
-                      <Badge className="shrink-0 bg-teal/10 text-teal border-teal/20">
-                        {unredeemedTotal}
-                      </Badge>
-                    </div>
-                    {unredeemedTotal > unredeemedVouchers.length ? (
-                      <Link href="/history?tab=unredeemed" className="shrink-0">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          data-testid="button-show-more-claimed"
-                        >
-                          {t("home.showMore")}
-                          <ChevronRight className="w-4 h-4" aria-hidden />
-                        </Button>
-                      </Link>
-                    ) : null}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {unredeemedVouchers.map(
-                      ({
-                        voucher,
-                        drop,
-                        businessName,
-                        merchantLogoUrl,
-                        merchantStoreLocation,
-                        merchantBusinessPhone,
-                        merchantBusinessHours,
-                      }) => {
-                        const status = voucherStatuses[voucher.id];
-                        const openVoucher = () =>
-                          setSelectedVoucher({
-                            voucher,
-                            drop,
-                            claimedAt: voucher.claimedAt?.toString() || "",
-                            businessName,
-                            merchantLogoUrl,
-                            merchantStoreLocation,
-                            merchantBusinessPhone,
-                            merchantBusinessHours,
-                          });
-                        return (
-                          <Card
-                            key={voucher.id}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`${drop.name}. ${t("home.view")}`}
-                            className="p-0 overflow-hidden hover-elevate cursor-pointer border-teal/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                            onClick={openVoucher}
-                            onKeyDown={(e) => {
-                              if (e.key !== "Enter" && e.key !== " ") return;
-                              e.preventDefault();
-                              openVoucher();
-                            }}
-                            data-testid={`card-voucher-${voucher.id}`}
-                          >
-                            <div className="flex min-h-[7rem]">
-                              <div className="relative w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
-                                {drop.logoUrl ? (
-                                  <img
-                                    src={drop.logoUrl}
-                                    alt=""
-                                    loading="lazy"
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <Trophy className="w-10 h-10 text-primary/50" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
-                                <h3 className="font-semibold text-foreground leading-tight line-clamp-2">
-                                  {drop.name}
-                                </h3>
-                                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-teal/10 text-teal border-teal/20 gap-1 px-1.5 py-0.5 text-xs"
-                                  >
-                                    <Gift className="w-3 h-3" />
-                                    {drop.rewardValue}
-                                  </Badge>
-                                  {status?.timeRemaining === 0 && (
-                                    <Badge
-                                      variant="destructive"
-                                      className="text-xs shrink-0"
-                                    >
-                                      {t("status.expired")}
-                                    </Badge>
-                                  )}
-                                  {status?.active &&
-                                    status.timeRemaining === null && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {t("home.redeemAnytime")}
-                                      </span>
-                                    )}
-                                  {status?.timeRemaining !== null &&
-                                    status?.timeRemaining > 0 && (
-                                      <div
-                                        className={cn(
-                                          "inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-xs font-medium tabular-nums w-auto",
-                                          voucherRedemptionTimerRowClass(
-                                            status.timeRemaining
-                                          )
-                                        )}
-                                      >
-                                        <Timer
-                                          className="h-3 w-3 shrink-0"
-                                          aria-hidden
-                                        />
-                                        <span className="min-w-0 leading-snug">
-                                          <span className="mr-1.5 inline opacity-90">
-                                            {t("home.timeToRedeem")}
-                                          </span>
-                                          <span className="font-semibold">
-                                            {formatRedemptionCountdown(
-                                              status.timeRemaining
-                                            )}
-                                          </span>
-                                        </span>
-                                      </div>
-                                    )}
-                                </div>
-                              </div>
-                              <div
-                                className="flex w-11 shrink-0 flex-col items-center justify-center"
-                                aria-hidden
-                              >
-                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            </div>
-                          </Card>
-                        );
-                      }
-                    )}
-                  </div>
-                </section>
+        <section data-testid="section-claimed-rewards">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Gift className="w-5 h-5 shrink-0 text-teal" />
+              <h2 className="font-semibold text-lg text-foreground truncate">
+                {t("home.claimedDrops")}
+              </h2>
+              {vouchersSectionPending ? (
+                <Skeleton className="h-5 w-8 shrink-0 rounded-full" />
+              ) : (
+                <Badge className="shrink-0 bg-teal/10 text-teal border-teal/20">
+                  {unredeemedTotal}
+                </Badge>
+              )}
             </div>
-          ) : null}
+            {!vouchersSectionPending &&
+            unredeemedTotal > unredeemedVouchers.length ? (
+              <Link href="/history?tab=unredeemed" className="shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  data-testid="button-show-more-claimed"
+                >
+                  {t("home.showMore")}
+                  <ChevronRight className="w-4 h-4" aria-hidden />
+                </Button>
+              </Link>
+            ) : null}
+          </div>
+          {vouchersSectionPending ? (
+            <ClaimedRewardsGridSkeleton count={HOME_UNREDEEMED_LIMIT} />
+          ) : unredeemedVouchers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {unredeemedVouchers.map(
+                ({
+                  voucher,
+                  drop,
+                  businessName,
+                  merchantLogoUrl,
+                  merchantStoreLocation,
+                  merchantBusinessPhone,
+                  merchantBusinessHours,
+                }) => {
+                  const status = voucherStatuses[voucher.id];
+                  const openVoucher = () =>
+                    setSelectedVoucher({
+                      voucher,
+                      drop,
+                      claimedAt: voucher.claimedAt?.toString() || "",
+                      businessName,
+                      merchantLogoUrl,
+                      merchantStoreLocation,
+                      merchantBusinessPhone,
+                      merchantBusinessHours,
+                    });
+                  return (
+                    <Card
+                      key={voucher.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${drop.name}. ${t("home.view")}`}
+                      className="p-0 overflow-hidden hover-elevate cursor-pointer border-teal/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      onClick={openVoucher}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        openVoucher();
+                      }}
+                      data-testid={`card-voucher-${voucher.id}`}
+                    >
+                      <div className="flex min-h-[7rem]">
+                        <div className="relative w-[36%] min-w-[6.5rem] max-w-[10rem] shrink-0 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-teal/10">
+                          {drop.logoUrl ? (
+                            <img
+                              src={drop.logoUrl}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Trophy className="w-10 h-10 text-primary/50" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+                          <h3 className="font-semibold text-foreground leading-tight line-clamp-2">
+                            {drop.name}
+                          </h3>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                            <Badge
+                              variant="secondary"
+                              className="bg-teal/10 text-teal border-teal/20 gap-1 px-1.5 py-0.5 text-xs"
+                            >
+                              <Gift className="w-3 h-3" />
+                              {drop.rewardValue}
+                            </Badge>
+                            {status?.timeRemaining === 0 && (
+                              <Badge
+                                variant="destructive"
+                                className="text-xs shrink-0"
+                              >
+                                {t("status.expired")}
+                              </Badge>
+                            )}
+                            {status?.active &&
+                              status.timeRemaining === null && (
+                                <span className="text-xs text-muted-foreground">
+                                  {t("home.redeemAnytime")}
+                                </span>
+                              )}
+                            {status?.timeRemaining !== null &&
+                              status?.timeRemaining > 0 && (
+                                <div
+                                  className={cn(
+                                    "inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-xs font-medium tabular-nums w-auto",
+                                    voucherRedemptionTimerRowClass(
+                                      status.timeRemaining
+                                    )
+                                  )}
+                                >
+                                  <Timer
+                                    className="h-3 w-3 shrink-0"
+                                    aria-hidden
+                                  />
+                                  <span className="min-w-0 leading-snug">
+                                    <span className="mr-1.5 inline opacity-90">
+                                      {t("home.timeToRedeem")}
+                                    </span>
+                                    <span className="font-semibold">
+                                      {formatRedemptionCountdown(
+                                        status.timeRemaining
+                                      )}
+                                    </span>
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                        <div
+                          className="flex w-11 shrink-0 flex-col items-center justify-center"
+                          aria-hidden
+                        >
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                }
+              )}
+            </div>
+          ) : (
+            <Card
+              className="border-dashed border-muted-foreground/25 bg-muted/30 p-6"
+              data-testid="empty-claimed-rewards"
+            >
+              <p className="text-center text-sm text-muted-foreground leading-relaxed">
+                {t("home.noClaimedRewardsCta")}
+              </p>
+            </Card>
+          )}
+        </section>
 
         {activeDropsPending ? (
           <ActiveDropsSkeleton />

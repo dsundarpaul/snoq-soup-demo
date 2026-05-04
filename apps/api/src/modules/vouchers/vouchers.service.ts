@@ -33,6 +33,7 @@ import { config } from "../../config/app.config";
 import { MailService } from "../mail/mail.service";
 import { DropsService } from "../drops/drops.service";
 import { HunterIdentityResolverService } from "../hunter-identity/hunter-identity-resolver.service";
+import type { HunterClaimIdentity } from "../hunter-identity/hunter-identity.types";
 import type { Request } from "express";
 
 // Type-safe refactor: Define proper interface for QR payload
@@ -110,6 +111,15 @@ export class VouchersService {
     private readonly hunterIdentityResolver: HunterIdentityResolverService,
   ) {}
 
+  private duplicateClaimConflict(identity: HunterClaimIdentity): never {
+    if (!identity.claimedWithoutRegisteredAccount) {
+      throw new ConflictException(
+        "You already claimed this reward with your registered account. Please log in to view your vouchers.",
+      );
+    }
+    throw new ConflictException("Voucher already claimed by this hunter");
+  }
+
   async claim(
     req: Request,
     dto: ClaimVoucherDto,
@@ -147,7 +157,7 @@ export class VouchersService {
     });
 
     if (existingClaim) {
-      throw new ConflictException("Voucher already claimed by this hunter");
+      this.duplicateClaimConflict(identity);
     }
 
     const cap = this.getLimitedAvailabilityCap(drop);
@@ -193,7 +203,7 @@ export class VouchersService {
         keyValue?: Record<string, unknown>;
       };
       if (mongoError.code === 11000) {
-        throw new ConflictException("Voucher already claimed by this hunter");
+        this.duplicateClaimConflict(identity);
       }
       throw err;
     }
@@ -572,6 +582,9 @@ export class VouchersService {
       .lean();
 
     if (!hunter) {
+      this.logger.warn(
+        `findByHunter hunterId=${hunterId} not found or deleted; returning empty buckets`,
+      );
       return {
         unredeemed: [],
         redeemed: [],
@@ -622,6 +635,10 @@ export class VouchersService {
       .map((id) => (id ? String(id) : ""))
       .filter(Boolean);
 
+    this.logger.log(
+      `findByHunter hunterId=${hunterId} unredeemedLimit=${unredeemedLimit ?? "none"} redeemedLimit=${redeemedLimit ?? "none"} unredeemedSampleLen=${unredeemed.length} redeemedSampleLen=${redeemed.length} unredeemedTotal=${unredeemedTotal} redeemedTotal=${redeemedTotal} claimedDropIdsLen=${claimedDropIds.length}`,
+    );
+
     return {
       unredeemed,
       redeemed,
@@ -646,6 +663,9 @@ export class VouchersService {
       .lean();
 
     if (!hunter) {
+      this.logger.warn(
+        `findByHunterPaginated hunterId=${hunterId} not found or deleted; returning empty page`,
+      );
       return {
         items: [],
         total: 0,
@@ -674,12 +694,17 @@ export class VouchersService {
 
     const items = await this.hydrateHunterVoucherItems(docs);
 
+    const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+    this.logger.log(
+      `findByHunterPaginated hunterId=${hunterId} status=${status} page=${safePage} limit=${safeLimit} itemsLen=${items.length} total=${total} totalPages=${totalPages}`,
+    );
+
     return {
       items,
       total,
       page: safePage,
       limit: safeLimit,
-      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+      totalPages,
     };
   }
 

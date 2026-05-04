@@ -27,6 +27,8 @@ const ar = {
   "home.activeDropsSection": "صيد نشط",
   "home.startingSoon": "يبدأ قريباً",
   "home.claimedDrops": "مكافآت مُقتَنصة",
+  "home.noClaimedRewardsCta":
+    "لا توجد لديك مكافآت مُقتَنصة بعد. اقتنص مكافأة من خلال الصيد أدناه.",
   "home.redeemedRewards": "مكافآت مُستَردّة",
   "home.showMore": "شاهد المزيد",
   "home.timeToRedeem": "الوقت للاسترداد",
